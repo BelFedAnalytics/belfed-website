@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BelFed Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --black: #0a0a0a;
+      --white: #f5f5f0;
+      --gray: #888;
+      --light-gray: #e8e8e3;
+      --border: #d0d0ca;
+      --green: #1a6b3a;
+      --red: #8b1a1a;
+      --font: 'Courier Prime', 'Courier New', monospace;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font);
+      background: var(--white);
+      color: var(--black);
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    /* NAV */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 40px;
+      height: 56px;
+    }
+    .nav-logo {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-decoration: none;
+      color: var(--black);
+    }
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      list-style: none;
+    }
+    .nav-links a {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-decoration: none;
+      color: var(--black);
+      transition: opacity 0.2s;
+    }
+    .nav-links a:hover { opacity: 0.5; }
+    .nav-cta {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-decoration: none;
+      color: var(--white);
+      background: var(--black);
+      padding: 10px 20px;
+      border: 1px solid var(--black);
+      transition: background 0.2s, color 0.2s;
+    }
+    .nav-cta:hover { background: transparent; color: var(--black); }
+    /* MAIN */
+    main { padding-top: 56px; }
+    /* HERO */
+    .hero {
+      padding: 80px 40px 60px;
+      max-width: 900px;
+    }
+    .hero-tag {
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--gray);
+      margin-bottom: 32px;
+    }
+    .hero-tag span { margin: 0 8px; }
+    .hero h1 {
+      font-size: clamp(36px, 6vw, 72px);
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -0.01em;
+      margin-bottom: 28px;
+    }
+    .hero h1 .cursor {
+      display: inline-block;
+      width: 3px;
+      height: 0.85em;
+      background: var(--black);
+      margin-left: 4px;
+      vertical-align: middle;
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    .hero-desc {
+      font-size: 16px;
+      line-height: 1.7;
+      max-width: 560px;
+      color: #333;
+      margin-bottom: 36px;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .btn-primary {
+      font-family: var(--font);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-decoration: none;
+      color: var(--white);
+      background: var(--black);
+      padding: 14px 28px;
+      border: 1px solid var(--black);
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .btn-primary:hover { background: transparent; color: var(--black); }
+    .btn-secondary {
+      font-family: var(--font);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-decoration: none;
+      color: var(--black);
+      background: transparent;
+      padding: 14px 28px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .btn-secondary:hover { border-color: var(--black); }
+    /* STATS */
+    .stats-bar {
+      border-top: 1px solid var(--border);
+      padding: 40px;
+      display: flex;
+      gap: 60px;
+    }
+    .stat-item .stat-value {
+      font-size: 36px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+    .stat-item .stat-label {
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--gray);
+      margin-top: 6px;
+    }
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 24px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--gray);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    footer a { color: var(--gray); text-decoration: none; }
+    footer a:hover { color: var(--black); }
+    .footer-links { display: flex; gap: 20px; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/" class="nav-logo">BELFED_</a>
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/trades.html">Trades</a></li>
+      <li><a href="#products">Products</a></li>
+      <li><a href="#about">About</a></li>
+      <li><a href="#subscribe">Subscribe</a></li>
+    </ul>
+    <a href="#" class="nav-cta">Member Login</a>
+  </nav>
+  <main>
+    <section class="hero">
+      <p class="hero-tag">// BELFED ANALYTICS <span>&middot;</span> EST. 2025</p>
+      <h1>Research-Driven<br>Trading Int<span class="cursor"></span></h1>
+      <p class="hero-desc">Institutional-grade trading signals, market research, and premium analytics &mdash; engineered for serious participants in global financial markets.</p>
+      <div class="hero-actions">
+        <a href="#products" class="btn-primary">Explore Products</a>
+        <a href="/trades.html" class="btn-secondary">2025 Track Record &darr;</a>
+      </div>
+    </section>
+    <section class="stats-bar">
+      <div class="stat-item">
+        <div class="stat-value">+68.4%</div>
+        <div class="stat-label">2025 Return</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">74%</div>
+        <div class="stat-label">Win Rate</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">47</div>
+        <div class="stat-label">Closed Trades</div>
+      </div>
+    </section>
+  </main>
+  <footer>
+    <span>&copy; 2025&ndash;2026 BelFed Analytics. All rights reserved.</span>
+    <div class="footer-links">
+      <a href="#">Disclaimer</a>
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+      <span>Not financial advice.</span>
+    </div>
+  </footer>
+  <script>
+    // Typing animation for hero headline
+    const target = 'elligence.';
+    const cursor = document.querySelector('.hero h1 .cursor');
+    const h1 = document.querySelector('.hero h1');
+    let i = 0;
+    function typeNext() {
+      if (i < target.length) {
+        cursor.insertAdjacentText('beforebegin', target[i]);
+        i++;
+        setTimeout(typeNext, 80 + Math.random() * 60);
+      }
+    }
+    setTimeout(typeNext, 600);
+  </script>
+</body>
+</html>
