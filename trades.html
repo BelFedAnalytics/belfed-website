@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trades | BelFed Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --black: #0a0a0a;
+      --white: #f5f5f0;
+      --gray: #888;
+      --light-gray: #e8e8e3;
+      --border: #d0d0ca;
+      --green: #1a6b3a;
+      --red: #8b1a1a;
+      --font: 'Courier Prime', 'Courier New', monospace;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font);
+      background: var(--white);
+      color: var(--black);
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: var(--white); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 40px; height: 56px;
+    }
+    .nav-logo { font-size: 17px; font-weight: 700; letter-spacing: 0.05em; text-decoration: none; color: var(--black); }
+    .nav-links { display: flex; gap: 32px; list-style: none; }
+    .nav-links a { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; color: var(--black); transition: opacity 0.2s; }
+    .nav-links a:hover { opacity: 0.5; }
+    .nav-cta { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; color: var(--white); background: var(--black); padding: 10px 20px; border: 1px solid var(--black); transition: background 0.2s, color 0.2s; }
+    .nav-cta:hover { background: transparent; color: var(--black); }
+    main { padding-top: 56px; }
+    .trades-header { padding: 60px 40px 40px; }
+    .trades-tag { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); margin-bottom: 28px; }
+    .trades-tag span { margin: 0 8px; }
+    .trades-header h1 { font-size: 48px; font-weight: 700; line-height: 1.1; margin-bottom: 20px; }
+    .trades-header p { font-size: 16px; line-height: 1.7; max-width: 680px; color: #333; }
+    .stats-bar { border-top: 1px solid var(--border); padding: 40px; display: flex; gap: 60px; flex-wrap: wrap; }
+    .stat-item .stat-value { font-size: 36px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+    .stat-item .stat-label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); margin-top: 6px; }
+    .tabs { border-top: 1px solid var(--border); padding: 20px 40px 0; display: flex; gap: 20px; }
+    .tab-btn { font-family: var(--font); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gray); background: none; border: none; border-bottom: 2px solid transparent; padding-bottom: 18px; cursor: pointer; transition: color 0.2s; }
+    .tab-btn.active { color: var(--black); border-bottom-color: var(--black); }
+    .table-container { padding: 0 40px 80px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead { border-bottom: 1px solid var(--border); }
+    th { text-align: left; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gray); font-weight: 400; padding: 12px 16px 12px 0; }
+    th:first-child, td:first-child { padding-left: 0; }
+    tbody tr { border-bottom: 1px solid var(--light-gray); }
+    td { padding: 20px 16px 20px 0; }
+    .direction-badge { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 10px; border: 1px solid var(--black); display: inline-block; }
+    .result-positive { color: var(--green); font-weight: 700; }
+    .result-negative { color: var(--red); font-weight: 700; }
+    .link-btn { font-size: 11px; color: var(--gray); text-decoration: none; }
+    .link-btn:hover { color: var(--black); }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/" class="nav-logo">BELFED_</a>
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/trades.html">Trades</a></li>
+      <li><a href="/#products">Products</a></li>
+      <li><a href="/#about">About</a></li>
+      <li><a href="/#subscribe">Subscribe</a></li>
+    </ul>
+    <a href="#" class="nav-cta">Member Login</a>
+  </nav>
+  <main>
+    <section class="trades-header">
+      <p class="trades-tag">// TRACK RECORD <span>&middot;</span> ALL CLOSED POSITIONS</p>
+      <h1>2025&ndash;2026 Trades</h1>
+      <p>Full transparency on every closed position. Entries, exits, and risk-reward outcomes &mdash; publicly visible and unedited. Every trade links to the original analysis published at time of entry.</p>
+    </section>
+    <section class="stats-bar">
+      <div class="stat-item"><div class="stat-value">+105.21R</div><div class="stat-label">Total Result</div></div>
+      <div class="stat-item"><div class="stat-value">68.75%</div><div class="stat-label">Win Rate</div></div>
+      <div class="stat-item"><div class="stat-value">16</div><div class="stat-label">Closed Trades</div></div>
+      <div class="stat-item"><div class="stat-value">6.58R</div><div class="stat-label">Avg Winner</div></div>
+    </section>
+    <div class="tabs">
+      <button class="tab-btn active">Crypto</button>
+      <button class="tab-btn">Equities</button>
+    </div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Ticker</th>
+            <th>Direction</th>
+            <th>Entry Date</th>
+            <th>Exit Date</th>
+            <th>Entry $</th>
+            <th>Exit $</th>
+            <th>Result (R)</th>
+            <th>Analysis</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>01</td><td>LTC</td><td><span class="direction-badge">SHORT</span></td>
+            <td>27.03.2025</td><td>07.04.2025</td>
+            <td>94.25</td><td>69.00</td>
+            <td class="result-positive">+33.67R</td>
+            <td><a href="https://www.tradingview.com/chart/LTCUSDT/ibfZoVwN-LTC-USDT-at-important-resistance/" class="link-btn" target="_blank">TV</a></td>
+          </tr>
+          <tr>
+            <td>02</td><td>ICP</td><td><span class="direction-badge">LONG</span></td>
+            <td>27.04.2025</td><td>22.09.2025</td>
+            <td>5.11</td><td>4.18</td>
+            <td class="result-negative">&minus;1.00R</td>
+            <td><a href="https://www.tradingview.com/chart/ICPUSD/93f00G48-ICP-USDT-In-the-Macro-Support-Zone/" class="link-btn" target="_blank">TV</a></td>
+          </tr>
+          <tr>
+            <td>03</td><td>BTC</td><td><span class="direction-badge">LONG</span></td>
+            <td>03.08.2025</td><td>14.08.2025</td>
+            <td>114,192</td><td>124,000</td>
+            <td class="result-positive">+2.34R</td>
+            <td><a href="https://www.tradingview.com/chart/BTCUSD/6PtTxWnr-Altcoins-and-BTC-Macro-Structures-Key-Levels-and-What-s-Next/" class="link-btn" target="_blank">TV</a></td>
+          </tr>
+          <tr>
+            <td>04</td><td>ETH</td><td><span class="direction-badge">LONG</span></td>
+            <td>03.08.2025</td><td>14.08.2025</td>
+            <td>3,506</td><td>4,550</td>
+            <td class="result-positive">+3.41R</td>
+            <td><a href="https://www.tradingview.com/chart/BTCUSD/6PtTxWnr-Altcoins-and-BTC-Macro-Structures-Key-Levels-and-What-s-Next/" class="link-btn" target="_blank">TV</a></td>
+          </tr>
+          <tr>
+            <td>05</td><td>XRP</td><td><span class="direction-badge">LONG</span></td>
+            <td>03.08.2025</td><td>10.10.2025</td>
+            <td>2.88</td><td>2.60</td>
+            <td class="result-negative">&minus;1.00R</td>
+            <td><a href="https://www.tradingview.com/chart/BTCUSD/6PtTxWnr-Altcoins-and-BTC-Macro-Structures-Key-Levels-and-What-s-Next/" class="link-btn" target="_blank">TV</a></td>
+          </tr>
+          <tr>
+            <td>06</td><td>SOL</td><td><span class="direction-badge">LONG</span></td>
+            <td>03.08.2025</td><td>22.09.2025</td>
+            <td>162.85</td><td>237.50</td>
+            <td class="result-positive">+26.19R</td>
+            <td><a href="https://www.tradingview.com/chart/BTCUSD/6PtTxWnr-Altcoins-and-BTC-Macro-Structures-Key-Levels-and-What-s-Next/" class="link-btn" target="_blank">TV</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</body>
+</html>
