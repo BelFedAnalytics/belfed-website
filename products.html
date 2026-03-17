@@ -201,6 +201,41 @@ main {
   border-color: var(--black);
 }
 
+      /* SUBSCRIPTION FORM */
+    #subscribe-form {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    #subscribe-form input[type="email"] {
+      font-family: var(--font);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 14px 20px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--black);
+      min-width: 280px;
+      flex: 1;
+      transition: border-color 0.2s;
+    }
+
+    #subscribe-form input[type="email"]::placeholder {
+      color: var(--gray);
+      text-transform: none;
+      letter-spacing: 0.05em;
+      font-size: 10px;
+    }
+
+    #subscribe-form input[type="email"]:focus {
+      outline: none;
+      border-color: var(--black);
+    
+    }
+
 /* FOOTER */
 footer {
   border-top: 1px solid var(--border);
@@ -276,7 +311,19 @@ footer a:hover {
     
     <div class="cs-actions">
       <a href="/trades.html" class="btn-primary">View Track Record</a>
-      <a href="/#subscribe" class="btn-secondary">Get Early Access</a>
+      id="subscribe-form">
+        <input type="email" id="email" name="email" placeholder="Enter your email" required>
+        <button type="submit" class="btn-secondary">Subscribe to Get Early Access</button>
+      </form>
+<form 
+      <script>
+        document.getElementById('subscribe-form').addEventListener('submit', function(e) {
+          e.preventDefault();
+          const email = document.getElementById('email').value;
+          alert('Thank you for subscribing! We\'ll notify you when we launch.');
+          // Here you can add actual email submission logic (e.g., to Mailchimp, ConvertKit, etc.)
+        });
+      </script
     </div>
   </div>
 </main>
