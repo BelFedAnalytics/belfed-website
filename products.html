@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Products | BelFed Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com/">
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --black: #0a0a0a;
+  --white: #f5f5f0;
+  --gray: #888;
+  --light-gray: #e8e8e3;
+  --border: #d0d0ca;
+  --green: #1a6b3a;
+  --red: #8b1a1a;
+  --font: 'Courier Prime', 'Courier New', monospace;
+}
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  background: var(--white);
+  color: var(--black);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* NAV */
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px;
+  height: 56px;
+}
+.nav-logo {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  color: var(--black);
+}
+.nav-links {
+  display: flex;
+  gap: 32px;
+  list-style: none;
+}
+.nav-links a {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--black);
+  transition: opacity 0.2s;
+}
+.nav-links a:hover { opacity: 0.5; }
+.nav-links a.nav-active {
+  border-bottom: 1px solid var(--black);
+  padding-bottom: 2px;
+}
+.nav-cta {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--white);
+  background: var(--black);
+  padding: 10px 20px;
+  border: 1px solid var(--black);
+  transition: background 0.2s, color 0.2s;
+}
+.nav-cta:hover {
+  background: transparent;
+  color: var(--black);
+}
+
+/* MAIN */
+main {
+  padding-top: 56px;
+  min-height: calc(100vh - 56px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* COMING SOON SECTION */
+.coming-soon {
+  padding: 80px 40px;
+  max-width: 760px;
+  margin: 0 auto;
+  text-align: center;
+}
+.cs-tag {
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--gray);
+  margin-bottom: 24px;
+}
+.cs-tag span {
+  margin: 0 8px;
+}
+.cs-title {
+  font-size: clamp(40px, 6vw, 64px);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  margin-bottom: 20px;
+}
+.cs-subtitle {
+  font-size: 18px;
+  line-height: 1.5;
+  color: #333;
+  margin-bottom: 40px;
+  max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.cs-launch {
+  background: var(--light-gray);
+  border: 1px solid var(--border);
+  padding: 32px;
+  margin-bottom: 36px;
+}
+.cs-launch-label {
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--gray);
+  margin-bottom: 8px;
+}
+.cs-launch-date {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--black);
+  letter-spacing: -0.01em;
+}
+
+.cs-description {
+  font-size: 15px;
+  line-height: 1.8;
+  color: #555;
+  margin-bottom: 40px;
+  text-align: left;
+  max-width: 580px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.cs-description p {
+  margin-bottom: 16px;
+}
+
+.cs-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.btn-primary {
+  font-family: var(--font);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--white);
+  background: var(--black);
+  padding: 14px 28px;
+  border: 1px solid var(--black);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.btn-primary:hover {
+  background: transparent;
+  color: var(--black);
+}
+.btn-secondary {
+  font-family: var(--font);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--black);
+  background: transparent;
+  padding: 14px 28px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.btn-secondary:hover {
+  border-color: var(--black);
+}
+
+/* FOOTER */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 24px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--gray);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+footer a {
+  color: var(--gray);
+  text-decoration: none;
+}
+footer a:hover {
+  color: var(--black);
+}
+.footer-links {
+  display: flex;
+  gap: 20px;
+}
+
+@media(max-width: 768px) {
+  nav { padding: 0 20px; }
+  .nav-links { display: none; }
+  .coming-soon { padding: 60px 20px; }
+  .cs-title { font-size: 36px; }
+  .cs-launch { padding: 24px; }
+  .cs-launch-date { font-size: 24px; }
+  footer {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo">BELFED_</a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/trades.html">Trades</a>
+    <a href="/products.html" class="nav-active">Products</a>
+    <a href="/#about">About</a>
+    <a href="/#subscribe">Subscribe</a>
+    <a href="#" class="nav-cta">Member Login</a>
+  </div>
+</nav>
+
+<main>
+  <div class="coming-soon">
+    <div class="cs-tag">// PRODUCTS · COMING SOON</div>
+    
+    <h1 class="cs-title">Premium Trading Intelligence</h1>
+    
+    <p class="cs-subtitle">Our flagship products are currently in development and will launch before May 1, 2026.</p>
+    
+    <div class="cs-launch">
+      <div class="cs-launch-label">EXPECTED LAUNCH</div>
+      <div class="cs-launch-date">Before May 1, 2026</div>
+    </div>
+    
+    <div class="cs-description">
+      <p>We're building a suite of professional-grade tools and analytics for serious market participants:</p>
+      <p><strong>Real-time trading signals</strong> across crypto, equities, commodities, and forex markets.</p>
+      <p><strong>In-depth market research</strong> with institutional-quality analysis and actionable insights.</p>
+      <p><strong>Premium subscription tiers</strong> designed for different trading styles and experience levels.</p>
+    </div>
+    
+    <div class="cs-actions">
+      <a href="/trades.html" class="btn-primary">View Track Record</a>
+      <a href="/#subscribe" class="btn-secondary">Get Early Access</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div>&copy; 2025–2026 BelFed Analytics. All rights reserved.</div>
+  <div class="footer-links">
+    <a href="#">Disclaimer</a>
+    <a href="#">Privacy</a>
+    <a href="#">Terms</a>
+  </div>
+  <div>Not financial advice.</div>
+</footer>
+
+</body>
+</html>
