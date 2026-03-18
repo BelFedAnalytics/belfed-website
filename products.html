@@ -319,12 +319,12 @@ footer a:hover {
       document.getElementById('subscribe-form').addEventListener('submit', function(e) {
         e.preventDefault();
         const email = document.getElementById('email').value;
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbwwCX2TTa0MLm81cX1RPkyUktKm5S6B9SwBWU2HoEqPL6zWoA2pG2pcGJ7SsHxyPPSCL/exec';
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbw33WG3rfzB3Edp7vM3hAAlTp1SMcqUzodzDoQEQtm6SmNalNDvxOQAhQUhgdYHDt4E/exec';
         
         fetch(scriptURL, {
           method: 'POST',
           mode: 'no-cors',
-          body: new URLSearchParams({email: email})
+          body: 'email=' + encodeURIComponent(email) + '&source=Products'
         })
         .then(response => {
           alert('Thank you for subscribing! We\'ll notify you when we launch.');
