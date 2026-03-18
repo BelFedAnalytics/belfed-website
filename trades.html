@@ -268,4 +268,75 @@ footer{padding:32px 48px;border-top:1px solid #111;display:flex;justify-content:
   }).catch(function(e){console.error('Failed to load trades:',e);});
 })();
 </script>
+
+  <script>
+(function(){
+var css=document.createElement('style');
+css.textContent='.pht{display:flex;align-items:baseline;justify-content:space-between;gap:24px}.yf{display:flex;gap:8px;align-items:center}.yfb{font-family:inherit;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 14px;border:1px solid #ccc;background:transparent;color:#888;cursor:pointer;transition:all .2s}.yfb:hover{border-color:#111;color:#111}.yfb.on{background:#111;color:#fff;border-color:#111}';
+document.head.appendChild(css);
+var h1=document.querySelector('.page-title');
+var ph=h1.parentNode;
+var wrap=document.createElement('div');
+wrap.className='pht';
+var yf=document.createElement('div');
+yf.className='yf';
+['all','2026','2025'].forEach(function(y,i){
+var b=document.createElement('button');
+b.className='yfb'+(i===0?' on':'');
+b.setAttribute('data-y',y);
+b.textContent=y==='all'?'Total':y;
+yf.appendChild(b);
+});
+ph.insertBefore(wrap,h1);
+wrap.appendChild(h1);
+wrap.appendChild(yf);
+function go(yr){
+var rows=document.querySelectorAll('tbody tr');
+var sb=document.querySelector('.summary-bar');
+var stb=document.querySelector('.stats-bar');
+var tR=0,w=0,l=0,wR=0,lR=0,n=0;
+rows.forEach(function(r){
+var c=r.querySelectorAll('td');
+if(c.length<8)return;
+var d=c[3].textContent.trim().split('.');
+var ey=d.length===3?parseInt(d[2]):0;
+var ok=yr==='all'||ey===parseInt(yr);
+r.style.display=ok?'':'none';
+if(ok){
+n++;
+var rv=parseFloat(c[7].textContent.trim().replace('R','').replace(',',''))||0;
+tR+=rv;
+if(rv>0){w++;wR+=rv}else{l++;lR+=rv}
+c[0].textContent=String(n).padStart(2,'0');
+}
+});
+var wr=n>0?((w/n)*100).toFixed(2):'0.00';
+var aW=w>0?'+'+(wR/w).toFixed(2)+'R':'0R';
+var aL=l>0?(lR/l).toFixed(2)+'R':'0R';
+var ts=(tR>=0?'+':'')+tR.toFixed(2)+'R';
+if(sb){
+var si=sb.querySelectorAll('.s-item');
+if(si[0])si[0].querySelector('.s-val').textContent=ts;
+if(si[1])si[1].querySelector('.s-val').textContent=w;
+if(si[2])si[2].querySelector('.s-val').textContent=l;
+if(si[3])si[3].querySelector('.s-val').textContent=wr+'%';
+if(si[4])si[4].querySelector('.s-val').textContent=aW;
+if(si[5])si[5].querySelector('.s-val').textContent=aL;
+}
+if(stb){
+var st=stb.querySelectorAll('.stat-item');
+if(st[0])st[0].querySelector('.stat-value').textContent=ts;
+if(st[1])st[1].querySelector('.stat-value').textContent=wr+'%';
+if(st[2])st[2].querySelector('.stat-value').textContent=n;
+if(st[3])st[3].querySelector('.stat-value').textContent=aW;
+}
+}
+yf.addEventListener('click',function(e){
+if(!e.target.classList.contains('yfb'))return;
+yf.querySelectorAll('.yfb').forEach(function(b){b.classList.remove('on')});
+e.target.classList.add('on');
+go(e.target.getAttribute('data-y'));
+});
+})();
+</script>
 </body></html>
