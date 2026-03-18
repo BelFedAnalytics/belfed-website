@@ -188,7 +188,7 @@ footer{padding:32px 48px;border-top:1px solid #111;display:flex;justify-content:
       var r=rows[i];
       // Equities: cols A=Number,B=Ticker,C=Direction,D=Status,E=EntryDate,F=ExitDate,G=EntryPrice,H=RiskLevel,I=ExitPrice,J=Result,K=TVlink
       // Crypto: similar structure - detect by checking if col B looks like a ticker
-      if(i<3)continue; // skip header rows
+      if(i<1)continue; // skip header rows
       if(!r[1]||r[1].trim()==''||r[1].trim().toLowerCase()==='ticker')continue;
       dataRows.push(r);
     }
