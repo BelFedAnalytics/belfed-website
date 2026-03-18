@@ -299,8 +299,8 @@ else if(ch==','&&!inQ){cols.push(cur.trim());cur='';}
 else{cur+=ch;}}
 cols.push(cur.trim());results.push(cols);}
 return results;}
-function makeRClass(val){var n=parseFloat(val);if(isNaN(n))return'';return n>0?'win':'loss';}
-function formatR(val){var n=parseFloat(val);if(isNaN(n)||val===''||val===null)return'\u2014';return(n>0?'+':'')+n.toFixed(2)+'R';}
+function makeRClass(val){var n=parseFloat(String(val).replace(',','.'));if(isNaN(n))return'';return n>0?'win':'loss';}
+function formatR(val){var n=parseFloat(String(val).replace(',','.'));if(isNaN(n)||val===''||val===null)return'\u2014';return(n>0?'+':'')+n.toFixed(2)+'R';}
       fetch(csvUrl).then(function(r){return r.text();}).then(function(text){
 var rows=parseCSV(text);
 var dataRows=[];
@@ -323,7 +323,7 @@ var exitP=(r[8]||'').trim();
 var result=(r[9]||'').trim();
 var tvLink=(r[10]||'').trim();
 if(!ticker)return;
-var rVal=parseFloat(result);
+var rVal=parseFloat(result.replace(',','.'));
 var isClosed=status.toLowerCase()==='closed';
   if(!isClosed)return;
 if(isClosed&&!isNaN(rVal)){totalR+=rVal;closed++;if(rVal>0){wins++;winSum+=rVal;}else{losses++;lossSum+=rVal;}}
