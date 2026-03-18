@@ -281,5 +281,79 @@ go(e.target.getAttribute('data-y'));
 });
 })();
 </script>
+  <script>
+    (function(){
+var SHEET_ID='1bBpKZP74HEVrLZJlazz7gY7jbuBj9R5rPBcV2KklwDo';
+var GID='0';
+var csvUrl='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:csv&gid='+GID+'&single=true';
+function parseCSV(text){
+var lines=text.split(/\r?\n/);
+var results=[];
+for(var i=0;i<lines.length;i++){
+var cols=[];var cur='';var inQ=false;
+for(var c=0;c<lines[i].length;c++){
+var ch=lines[i][c];
+if(ch=='"'&&inQ&&lines[i][c+1]=='"'){cur+='"';c++;}
+else if(ch=='"'){inQ=!inQ;}
+else if(ch==','&&!inQ){cols.push(cur.trim());cur='';}
+else{cur+=ch;}}
+cols.push(cur.trim());results.push(cols);}
+return results;}
+function makeRClass(val){var n=parseFloat(val);if(isNaN(n))return'';return n>0?'win':'loss';}
+function formatR(val){var n=parseFloat(val);if(isNaN(n)||val===''||val===null)return'\u2014';return(n>0?'+':'')+n.toFixed(2)+'R';}
+      fetch(csvUrl).then(function(r){return r.text();}).then(function(text){
+var rows=parseCSV(text);
+var dataRows=[];
+for(var i=0;i<rows.length;i++){
+var r=rows[i];
+if(i<1)continue;
+if(!r[1]||r[1].trim()==''||r[1].trim().toLowerCase()==='ticker')continue;
+dataRows.push(r);}
+var tbody=document.querySelector('tbody');
+tbody.innerHTML='';
+var totalR=0,wins=0,losses=0,winSum=0,lossSum=0,closed=0;
+dataRows.forEach(function(r,idx){
+var ticker=(r[1]||'').trim();
+var dir=(r[2]||'').trim();
+var status=(r[3]||'').trim();
+var entryDate=(r[4]||'').trim();
+var exitDate=(r[5]||'').trim();
+var entryP=(r[6]||'').trim();
+var exitP=(r[8]||'').trim();
+var result=(r[9]||'').trim();
+var tvLink=(r[10]||'').trim();
+if(!ticker)return;
+var rVal=parseFloat(result);
+var isClosed=status.toLowerCase()==='closed';
+if(isClosed&&!isNaN(rVal)){totalR+=rVal;closed++;if(rVal>0){wins++;winSum+=rVal;}else{losses++;lossSum+=rVal;}}
+var dirClass=dir.toLowerCase()==='long'?'badge-long':'badge-short';
+var rClass=makeRClass(result);
+var rDisplay=formatR(result);
+var analysisCell=tvLink&&tvLink.startsWith('http')?'<a class="tv-link" href="'+tvLink+'" target="_blank">TV <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H3M9 1V7"/></svg></a>':'<span class="no-link">\u2014</span>';
+var tr=document.createElement('tr');
+tr.innerHTML='<td class="num">'+(idx+1).toString().padStart(2,'0')+'</td><td><span class="ticker">'+ticker+'</span></td><td><span class="badge '+dirClass+'">'+dir+'</span></td><td>'+entryDate+'</td><td>'+(exitDate||'\u2014')+'</td><td>'+entryP+'</td><td>'+(exitP||'\u2014')+'</td><td class="'+rClass+'">'+rDisplay+'</td><td>'+analysisCell+'</td>';
+tbody.appendChild(tr);});
+        var avgWin=wins>0?(winSum/wins):0;
+var avgLoss=losses>0?(lossSum/losses):0;
+var winRate=closed>0?((wins/closed)*100):0;
+var sb=document.querySelector('.summary-bar');
+var stb=document.querySelector('.stats-bar');
+if(sb){
+var si=sb.querySelectorAll('.s-item');
+if(si[0])si[0].querySelector('.s-val').textContent=(totalR>0?'+':'')+totalR.toFixed(2)+'R';
+if(si[1])si[1].querySelector('.s-val').textContent=wins;
+if(si[2])si[2].querySelector('.s-val').textContent=losses;
+if(si[3])si[3].querySelector('.s-val').textContent=winRate.toFixed(1)+'%';
+if(si[4])si[4].querySelector('.s-val').textContent=(avgWin>0?'+':'')+avgWin.toFixed(2)+'R';
+if(si[5])si[5].querySelector('.s-val').textContent=avgLoss.toFixed(2)+'R';}
+if(stb){
+var st=stb.querySelectorAll('.stat-item');
+if(st[0])st[0].querySelector('.stat-value').textContent=(totalR>0?'+':'')+totalR.toFixed(2)+'R';
+if(st[1])st[1].querySelector('.stat-value').textContent=winRate.toFixed(1)+'%';
+if(st[2])st[2].querySelector('.stat-value').textContent=closed;
+if(st[3])st[3].querySelector('.stat-value').textContent=(avgWin>0?'+':'')+avgWin.toFixed(2)+'R';}
+}).catch(function(e){console.error('Failed to load trades:',e);});
+})();
+    </script>
 
 </body></html>
