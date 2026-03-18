@@ -325,6 +325,7 @@ var tvLink=(r[10]||'').trim();
 if(!ticker)return;
 var rVal=parseFloat(result);
 var isClosed=status.toLowerCase()==='closed';
+  if(!isClosed)return;
 if(isClosed&&!isNaN(rVal)){totalR+=rVal;closed++;if(rVal>0){wins++;winSum+=rVal;}else{losses++;lossSum+=rVal;}}
 var dirClass=dir.toLowerCase()==='long'?'badge-long':'badge-short';
 var rClass=makeRClass(result);
