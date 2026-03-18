@@ -166,6 +166,29 @@
       color: var(--gray);
       margin-top: 6px;
     }
+        .stats-columns {
+      border-top: 1px solid var(--border);
+      display: flex;
+      padding: 0;
+    }
+    .stats-column {
+      flex: 1;
+      padding: 40px;
+    }
+    .stats-column:first-child {
+      border-right: 1px solid var(--border);
+    }
+    .stats-column-header {
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--gray);
+      margin-bottom: 24px;
+    }
+    .stats-column-items {
+      display: flex;
+      gap: 48px;
+    }
     /* FOOTER */
     footer {
       border-top: 1px solid var(--border);
@@ -205,18 +228,40 @@
         <a href="/trades.html" class="btn-secondary">Track Record &darr;</a>
       </div>
     </section>
-    <section class="stats-bar">
-      <div class="stat-item">
-        <div class="stat-value">+68.4%</div>
-        <div class="stat-label">2025 Return</div>
+    <section class="stats-columns">
+      <div class="stats-column">
+        <div class="stats-column-header">// 2025 Equities</div>
+        <div class="stats-column-items">
+          <div class="stat-item">
+            <div class="stat-value">+94.1R</div>
+            <div class="stat-label">Return</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">74%</div>
+            <div class="stat-label">Win Rate</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">47</div>
+            <div class="stat-label">Closed Trades</div>
+          </div>
+        </div>
       </div>
-      <div class="stat-item">
-        <div class="stat-value">74%</div>
-        <div class="stat-label">Win Rate</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-value">47</div>
-        <div class="stat-label">Closed Trades</div>
+      <div class="stats-column">
+        <div class="stats-column-header">// 2025 Crypto</div>
+        <div class="stats-column-items">
+          <div class="stat-item">
+            <div class="stat-value">+105.2R</div>
+            <div class="stat-label">Return</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">69%</div>
+            <div class="stat-label">Win Rate</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">16</div>
+            <div class="stat-label">Closed Trades</div>
+          </div>
+        </div>
       </div>
     </section>
   </main>
