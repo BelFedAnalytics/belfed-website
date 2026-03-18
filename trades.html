@@ -3,7 +3,7 @@
 <html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Trades | BelFed Analytics</title>
+<title id="page-title">Crypto Trades | BelFed Analytics</title>
 <link rel="preconnect" href="https://fonts.googleapis.com/">
 <link href="./trades_files/css2" rel="stylesheet">
 <style>
@@ -86,10 +86,10 @@ footer{padding:32px 48px;border-top:1px solid #111;display:flex;justify-content:
 </div>
 
 <div class="stats-bar">
-  <div class="stat-item"><div class="stat-value">+105.21R</div><div class="stat-label">Total Result</div></div>
-  <div class="stat-item"><div class="stat-value">68.75%</div><div class="stat-label">Win Rate</div></div>
-  <div class="stat-item"><div class="stat-value">16</div><div class="stat-label">Closed Trades</div></div>
-  <div class="stat-item"><div class="stat-value">6.58R</div><div class="stat-label">Avg Winner</div></div>
+      <div class="stat-item"><div class="stat-value" id="stat-total">—</div><div class="stat-label">Total Result</div></div>
+    <div class="stat-item"><div class="stat-value" id="stat-winrate">—</div><div class="stat-label">Win Rate</div></div>
+    <div class="stat-item"><div class="stat-value" id="stat-closed">—</div><div class="stat-label">Closed Trades</div></div>
+    <div class="stat-item"><div class="stat-value" id="stat-avgwin">—</div><div class="stat-label">Avg Winner</div></div>
 </div>
 
 <div class="tab-bar">
@@ -106,33 +106,17 @@ footer{padding:32px 48px;border-top:1px solid #111;display:flex;justify-content:
   <th>Result (R)</th><th>Analysis</th>
 </tr></thead>
 <tbody>
-<tr><td class="num">01</td><td><span class="ticker">LTC</span></td><td><span class="badge badge-short">Short</span></td><td>27.03.2025</td><td>07.04.2025</td><td>94.25</td><td>69.00</td><td><span class="win">+33.67R</span></td><td><a href="https://www.tradingview.com/chart/LTCUSDT/ibfZoVwN-LTC-USDT-at-important-resistance/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
-<tr><td class="num">02</td><td><span class="ticker">ICP</span></td><td><span class="badge badge-long">Long</span></td><td>27.04.2025</td><td>22.09.2025</td><td>5.11</td><td>4.18</td><td><span class="loss">−1.00R</span></td><td><a href="https://www.tradingview.com/chart/ICPUSD/93f00G48-ICP-USDT-In-the-Macro-Support-Zone/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
-<tr><td class="num">03</td><td><span class="ticker">BTC</span></td><td><span class="badge badge-long">Long</span></td><td>03.08.2025</td><td>14.08.2025</td><td>114,192</td><td>124,000</td><td><span class="win">+2.34R</span></td><td><a href="https://www.tradingview.com/chart/BTCUSD/6PtTxWnr-Altcoins-and-BTC-Macro-Structures-Key-Levels-and-What-s-Next/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
-<tr><td class="num">04</td><td><span class="ticker">ETH</span></td><td><span class="badge badge-long">Long</span></td><td>03.08.2025</td><td>14.08.2025</td><td>3,506</td><td>4,550</td><td><span class="win">+3.41R</span></td><td><a href="https://www.tradingview.com/chart/BTCUSD/6PtTxWnr-Altcoins-and-BTC-Macro-Structures-Key-Levels-and-What-s-Next/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
-<tr><td class="num">05</td><td><span class="ticker">XRP</span></td><td><span class="badge badge-long">Long</span></td><td>03.08.2025</td><td>10.10.2025</td><td>2.88</td><td>2.60</td><td><span class="loss">−1.00R</span></td><td><a href="https://www.tradingview.com/chart/BTCUSD/6PtTxWnr-Altcoins-and-BTC-Macro-Structures-Key-Levels-and-What-s-Next/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
-<tr><td class="num">06</td><td><span class="ticker">SOL</span></td><td><span class="badge badge-long">Long</span></td><td>03.08.2025</td><td>22.09.2025</td><td>162.85</td><td>237.50</td><td><span class="win">+26.19R</span></td><td><a href="https://www.tradingview.com/chart/BTCUSD/6PtTxWnr-Altcoins-and-BTC-Macro-Structures-Key-Levels-and-What-s-Next/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
-<tr><td class="num">07</td><td><span class="ticker">HYPE</span></td><td><span class="badge badge-long">Long</span></td><td>03.08.2025</td><td>21.09.2025</td><td>39.00</td><td>54.50</td><td><span class="win">+2.38R</span></td><td><a href="https://www.tradingview.com/chart/BTCUSD/6PtTxWnr-Altcoins-and-BTC-Macro-Structures-Key-Levels-and-What-s-Next/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
-<tr><td class="num">08</td><td><span class="ticker">BNB</span></td><td><span class="badge badge-long">Long</span></td><td>03.08.2025</td><td>03.10.2025</td><td>752.60</td><td>1,153.33</td><td><span class="win">+6.40R</span></td><td><a href="https://www.tradingview.com/chart/BTCUSD/6PtTxWnr-Altcoins-and-BTC-Macro-Structures-Key-Levels-and-What-s-Next/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
-<tr><td class="num">09</td><td><span class="ticker">ZEC</span></td><td><span class="badge badge-short">Short</span></td><td>09.11.2025</td><td>04.02.2026</td><td>664.84</td><td>300.45</td><td><span class="win">+3.64R</span></td><td><a href="https://www.tradingview.com/chart/ZECUSDT.P/RIuLnaSB-ZECUSDT-at-key-resistance-zone/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
-<tr><td class="num">10</td><td><span class="ticker">MNT</span></td><td><span class="badge badge-short">Short</span></td><td>10.11.2025</td><td>21.11.2025</td><td>1.3436</td><td>0.97</td><td><span class="win">+10.25R</span></td><td><a href="https://www.tradingview.com/chart/MNTUSDT.P/o74EZlVB-MNT-USDT-bearish-look/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
-<tr><td class="num">11</td><td><span class="ticker">BTC</span></td><td><span class="badge badge-short">Short</span></td><td>08.12.2025</td><td>12.01.2026</td><td>89,892</td><td>94,700</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/BTCUSDT.P/oshaCG4n-Weekly-crypto-review-BTC-macro-short-term-bearish-look/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
-<tr><td class="num">12</td><td><span class="ticker">ZEC</span></td><td><span class="badge badge-short">Short</span></td><td>12.12.2025</td><td>17.12.2025</td><td>463.24</td><td>398.00</td><td><span class="win">+5.11R</span></td><td><a href="https://www.tradingview.com/chart/BTCUSDT.P/gyryEOjI-Crypto-market-review-and-potential-trade-opportunities/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
-<tr><td class="num">13</td><td><span class="ticker">ZEC</span></td><td><span class="badge badge-short">Short</span></td><td>15.01.2026</td><td>05.02.2026</td><td>407.46</td><td>292.67</td><td><span class="win">+2.76R</span></td><td><a href="https://www.tradingview.com/chart/ZECUSDT.P/RIuLnaSB-ZECUSDT-at-key-resistance-zone/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
-<tr><td class="num">14</td><td><span class="ticker">BTC</span></td><td><span class="badge badge-short">Short</span></td><td>18.01.2026</td><td>31.01.2026</td><td>93,584</td><td>77,910</td><td><span class="win">+14.04R</span></td><td><a href="https://www.tradingview.com/chart/BTCUSDT.P/oshaCG4n-Weekly-crypto-review-BTC-macro-short-term-bearish-look/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
-<tr><td class="num">15</td><td><span class="ticker">BTC</span></td><td><span class="badge badge-long">Long</span></td><td>20.02.2026</td><td>23.02.2026</td><td>68,156</td><td>65,000</td><td><span class="loss">-1.00R</span></td><td><span class="no-link">—</span></td></tr>
-<tr><td class="num">16</td><td><span class="ticker">SOL</span></td><td><span class="badge badge-long">Long</span></td><td>02.03.2026</td><td>08.03.2026</td><td>88.43</td><td>82.00</td><td><span class="loss">-1.00R</span></td><td><span class="no-link">—</span></td></tr>
+<tr id="loading-row"><td colspan="9" style="text-align:center;padding:40px;color:#888;letter-spacing:1px;font-size:12px;">Loading trades...</td></tr>
 </tbody>
-</table>
 </div>
 
 <div class="summary-bar">
-  <div class="s-item"><div class="s-val pos">+105.21R</div><div class="s-lbl">Total R</div></div>
-  <div class="s-item"><div class="s-val">11</div><div class="s-lbl">Wins</div></div>
-  <div class="s-item"><div class="s-val">5</div><div class="s-lbl">Losses</div></div>
-  <div class="s-item"><div class="s-val">68.75%</div><div class="s-lbl">Win Rate</div></div>
-  <div class="s-item"><div class="s-val">+11.00R</div><div class="s-lbl">Avg Win</div></div>
-  <div class="s-item"><div class="s-val">-1.00R</div><div class="s-lbl">Avg Loss</div></div>
+      <div class="s-item"><div class="s-val pos" id="sum-total">—</div><div class="s-lbl">Total R</div></div>
+    <div class="s-item"><div class="s-val" id="sum-wins">—</div><div class="s-lbl">Wins</div></div>
+    <div class="s-item"><div class="s-val" id="sum-losses">—</div><div class="s-lbl">Losses</div></div>
+    <div class="s-item"><div class="s-val" id="sum-winrate">—</div><div class="s-lbl">Win Rate</div></div>
+    <div class="s-item"><div class="s-val pos" id="sum-avgwin">—</div><div class="s-lbl">Avg Win</div></div>
+    <div class="s-item"><div class="s-val loss" id="sum-avgloss">—</div><div class="s-lbl">Avg Loss</div></div>
 </div>
 
 <div class="disclaimer">
@@ -144,4 +128,144 @@ footer{padding:32px 48px;border-top:1px solid #111;display:flex;justify-content:
 </footer>
 
 
+<script>
+(function(){
+  var SHEET_ID = '1bBpKZP74HEVrLZJlazz7gY7jbuBj9R5rPBcV2KklwDo';
+  var CRYPTO_GID = '1219794768';
+  var EQUITIES_GID = '0';
+  var isCrypto = window.location.pathname.includes('trades.html') && !window.location.pathname.includes('equities');
+  var gid = isCrypto ? CRYPTO_GID : EQUITIES_GID;
+  var csvUrl = 'https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/export?format=csv&gid='+gid+'&single=true';
+
+  // Page title switching
+  var titleEl = document.getElementById('page-title');
+  var equitiesLink = document.querySelector('a[href*="equities-trades"]');
+  var cryptoLink = document.querySelector('a[href*="trades.html"]');
+  if(equitiesLink){
+    equitiesLink.addEventListener('click',function(){
+      if(titleEl) titleEl.textContent='Equities Trades | BelFed Analytics';
+    });
+  }
+  if(!isCrypto && titleEl){
+    titleEl.textContent='Equities Trades | BelFed Analytics';
+    document.title='Equities Trades | BelFed Analytics';
+  }
+
+  function parseCSV(text){
+    var lines=text.split(/\r?\n/);
+    var results=[];
+    for(var i=0;i<lines.length;i++){
+      var cols=[]; var cur=''; var inQ=false;
+      for(var c=0;c<lines[i].length;c++){
+        var ch=lines[i][c];
+        if(ch=='"'&&inQ&&lines[i][c+1]=='"'){cur+='"';c++;}
+        else if(ch=='"'){inQ=!inQ;}
+        else if(ch==','&&!inQ){cols.push(cur.trim());cur='';}
+        else{cur+=ch;}
+      }
+      cols.push(cur.trim());
+      results.push(cols);
+    }
+    return results;
+  }
+
+  function makeRClass(val){
+    var n=parseFloat(val);
+    if(isNaN(n))return'';
+    return n>0?'win':'loss';
+  }
+  function formatR(val){
+    var n=parseFloat(val);
+    if(isNaN(n)||val===''||val===null)return'—';
+    return(n>0?'+':'')+n.toFixed(2)+'R';
+  }
+
+  fetch(csvUrl).then(function(r){return r.text();}).then(function(text){
+    var rows=parseCSV(text);
+    // Find header row (row with "Number" or "Ticker" in col B)
+    var dataRows=[];
+    for(var i=0;i<rows.length;i++){
+      var r=rows[i];
+      // Equities: cols A=Number,B=Ticker,C=Direction,D=Status,E=EntryDate,F=ExitDate,G=EntryPrice,H=RiskLevel,I=ExitPrice,J=Result,K=TVlink
+      // Crypto: similar structure - detect by checking if col B looks like a ticker
+      if(i<3)continue; // skip header rows
+      if(!r[1]||r[1].trim()==''||r[1].trim().toLowerCase()==='ticker')continue;
+      dataRows.push(r);
+    }
+
+    var tbody=document.querySelector('tbody');
+    tbody.innerHTML='';
+
+    var totalR=0,wins=0,losses=0,winSum=0,lossSum=0,closed=0;
+
+    dataRows.forEach(function(r,idx){
+      var ticker=(r[1]||'').trim();
+      var dir=(r[2]||'').trim();
+      var status=(r[3]||'').trim();
+      var entryDate=(r[4]||'').trim();
+      var exitDate=(r[5]||'').trim();
+      var entryP=(r[6]||'').trim();
+      var exitP=(r[8]||'').trim();
+      var result=(r[9]||'').trim();
+      var tvLink=(r[10]||'').trim();
+      if(!ticker)return;
+
+      var rVal=parseFloat(result);
+      var isClosed=status.toLowerCase()==='closed';
+      if(isClosed&&!isNaN(rVal)){
+        totalR+=rVal;closed++;
+        if(rVal>0){wins++;winSum+=rVal;}
+        else{losses++;lossSum+=rVal;}
+      }
+
+      var dirClass=dir.toLowerCase()==='long'?'badge-long':'badge-short';
+      var rClass=makeRClass(result);
+      var rDisplay=formatR(result);
+      var analysisCell=tvLink&&tvLink.startsWith('http')
+        ?'<a class="tv-link" href="'+tvLink+'" target="_blank">TV <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H3M9 1V7"/></svg></a>'
+        :'<span class="no-link">—</span>';
+
+      var tr=document.createElement('tr');
+      tr.innerHTML='<td class="num">'+(idx+1).toString().padStart(2,'0')+'</td>'
+        +'<td><span class="ticker">'+ticker+'</span></td>'
+        +'<td><span class="badge '+dirClass+'">'+dir+'</span></td>'
+        +'<td>'+entryDate+'</td>'
+        +'<td>'+(exitDate||'—')+'</td>'
+        +'<td>'+entryP+'</td>'
+        +'<td>'+(exitP||'—')+'</td>'
+        +'<td class="'+rClass+'">'+rDisplay+'</td>'
+        +'<td>'+analysisCell+'</td>';
+      tbody.appendChild(tr);
+    });
+
+    // Update stats-bar
+    var avgWin=wins>0?(winSum/wins):0;
+    var avgLoss=losses>0?(lossSum/losses):0;
+    var winRate=closed>0?((wins/closed)*100):0;
+    var s=document.getElementById('stat-total');
+    var sr=document.getElementById('stat-winrate');
+    var sc=document.getElementById('stat-closed');
+    var sa=document.getElementById('stat-avgwin');
+    if(s)s.textContent=(totalR>0?'+':'')+totalR.toFixed(2)+'R';
+    if(sr)sr.textContent=winRate.toFixed(1)+'%';
+    if(sc)sc.textContent=closed;
+    if(sa)sa.textContent=(avgWin>0?'+':'')+avgWin.toFixed(2)+'R';
+
+    // Update summary-bar
+    var st=document.getElementById('sum-total');
+    var sw=document.getElementById('sum-wins');
+    var sl=document.getElementById('sum-losses');
+    var swr=document.getElementById('sum-winrate');
+    var saw=document.getElementById('sum-avgwin');
+    var sal=document.getElementById('sum-avgloss');
+    if(st)st.textContent=(totalR>0?'+':'')+totalR.toFixed(2)+'R';
+    if(sw)sw.textContent=wins;
+    if(sl)sl.textContent=losses;
+    if(swr)swr.textContent=winRate.toFixed(1)+'%';
+    if(saw)saw.textContent=(avgWin>0?'+':'')+avgWin.toFixed(2)+'R';
+    if(sal)sal.textContent=avgLoss.toFixed(2)+'R';
+
+  }).catch(function(e){console.error('Failed to load trades:',e);});
+})();
+</script>
 </body></html>
