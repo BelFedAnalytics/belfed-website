@@ -80,8 +80,8 @@ footer{padding:32px 48px;border-top:1px solid #111;display:flex;justify-content:
 </nav>
 
 <div class="page-header">
-  <div class="page-label">// Track Record · All Closed Positions</div>
-  <h1 class="page-title">2025–2026 Trades</h1>
+  <div class="page-label">// Track Record · All Closed Positions · Crypto</div>
+  <h1 class="page-title">Crypto Trades</h1>
   <p class="page-subtitle">Full transparency on every closed position. Entries, exits, and risk-reward outcomes — publicly visible and unedited. Every trade links to the original analysis published at time of entry.</p>
 </div>
 
@@ -135,7 +135,7 @@ footer{padding:32px 48px;border-top:1px solid #111;display:flex;justify-content:
   var EQUITIES_GID = '0';
   var isCrypto = window.location.pathname.includes('trades.html') && !window.location.pathname.includes('equities');
   var gid = isCrypto ? CRYPTO_GID : EQUITIES_GID;
-  var csvUrl = 'https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/export?format=csv&gid='+gid+'&single=true';
+  var csvUrl = 'https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:csv&gid='+gid+'&single=true';
 
   // Page title switching
   var titleEl = document.getElementById('page-title');
