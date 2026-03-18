@@ -189,6 +189,67 @@
       display: flex;
       gap: 48px;
     }
+    /* SUBSCRIBE */
+    .subscribe-section {
+      border-top: 1px solid var(--border);
+      padding: 60px 40px;
+      max-width: 600px;
+    }
+    .subscribe-section h2 {
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--gray);
+      margin-bottom: 16px;
+    }
+    .subscribe-section p {
+      font-size: 14px;
+      color: #333;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+    .subscribe-form {
+      display: flex;
+      gap: 12px;
+    }
+    .subscribe-form input[type="email"] {
+      font-family: var(--font);
+      font-size: 13px;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      background: var(--white);
+      color: var(--black);
+      flex: 1;
+      outline: none;
+    }
+    .subscribe-form input[type="email"]:focus {
+      border-color: var(--black);
+    }
+    .subscribe-form button {
+      font-family: var(--font);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--white);
+      background: var(--black);
+      padding: 12px 24px;
+      border: 1px solid var(--black);
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .subscribe-form button:hover {
+      background: transparent;
+      color: var(--black);
+    }
+    .subscribe-msg {
+      font-size: 13px;
+      margin-top: 12px;
+      display: none;
+    }
+    .subscribe-msg.success { color: var(--green); display: block; }
+    .subscribe-msg.error { color: var(--red); display: block; }
+
+    
     /* FOOTER */
     footer {
       border-top: 1px solid var(--border);
@@ -264,10 +325,22 @@
         </div>
       </div>
     </section>
+
+        <!-- SUBSCRIBE SECTION -->
+    <section class="subscribe-section" id="subscribe">
+      <h2>// Subscribe</h2>
+      <p>Get trading signals and market research delivered to your inbox. No spam, unsubscribe anytime.</p>
+      <form class="subscribe-form" id="subscribeForm">
+        <input type="email" id="subscribeEmail" placeholder="your@email.com" required>
+        <button type="submit">Subscribe</button>
+      </form>
+      <div class="subscribe-msg" id="subscribeMsg"></div>
+    </section>
   </main>
   <footer>
     <span>&copy; 2025&ndash;2026 BelFed Analytics. All rights reserved.</span>
     <div class="footer-links">
+      
       <a href="#">Disclaimer</a>
       <a href="#">Privacy</a>
       <a href="#">Terms</a>
@@ -288,6 +361,38 @@
       }
     }
     setTimeout(typeNext, 600);
+
+        // Subscribe form handler
+    const subscribeForm = document.getElementById('subscribeForm');
+    const subscribeMsg = document.getElementById('subscribeMsg');
+    if (subscribeForm) {
+      subscribeForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const email = document.getElementById('subscribeEmail').value;
+        const btn = subscribeForm.querySelector('button');
+        btn.textContent = 'Sending...';
+        btn.disabled = true;
+        fetch('https://script.google.com/macros/s/AKfycbw33WG3rfzB3Edp7vM3hAAlTp1SMcqUzodzDoQEQtm6SmNalNDvxOQAhQUhgdYHDt4E/exec', {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'email=' + encodeURIComponent(email)
+        }).then(function() {
+          subscribeMsg.className = 'subscribe-msg success';
+          subscribeMsg.textContent = 'Subscribed successfully!';
+          subscribeForm.reset();
+          btn.textContent = 'Subscribe';
+          btn.disabled = false;
+        }).catch(function() {
+          subscribeMsg.className = 'subscribe-msg error';
+          subscribeMsg.textContent = 'Something went wrong. Please try again.';
+          btn.textContent = 'Subscribe';
+          btn.disabled = false;
+        });
+      });
+    }
   </script>
+
+  
 </body>
 </html>
