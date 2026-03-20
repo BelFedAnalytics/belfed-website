@@ -233,12 +233,11 @@ yf.appendChild(b);
 ph.insertBefore(wrap,h1);
 wrap.appendChild(h1);
 wrap.appendChild(yf);
-var rows=document.querySelectorAll('tbody tr');
-var sb=document.querySelector('.summary-bar');
+var rows=document.querySelectorAll('tbody tr'); window._eqGoFilter=go;var sb=document.querySelector('.summary-bar');
 var stb=document.querySelector('.stats-bar');
 function go(yr){
 var tR=0,w=0,l=0,wR=0,lR=0,n=0;
-rows.forEach(function(r){
+document.querySelectorAll('tbody tr').forEach(function(r){
 var c=r.querySelectorAll('td');
 if(c.length<8)return;
 var d=c[3].textContent.trim().split('.');
@@ -353,6 +352,7 @@ if(st[0])st[0].querySelector('.stat-value').textContent=(totalR>0?'+':'')+totalR
 if(st[1])st[1].querySelector('.stat-value').textContent=winRate.toFixed(1)+'%';
 if(st[2])st[2].querySelector('.stat-value').textContent=closed;
 if(st[3])st[3].querySelector('.stat-value').textContent=(avgWin>0?'+':'')+avgWin.toFixed(2)+'R';}
+        var activeBtn=document.querySelector('.yfb.on'); if(activeBtn&&window._eqGoFilter){window._eqGoFilter(activeBtn.getAttribute('data-y'));}
 }).catch(function(e){console.error('Failed to load trades:',e);});
 })();
     </script>
