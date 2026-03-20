@@ -171,12 +171,12 @@ footer{padding:32px 48px;border-top:1px solid #111;display:flex;justify-content:
   }
 
   function makeRClass(val){
-    var n=parseFloat(val);
+    var n=parseFloat(String(val).replace(',','.'));
     if(isNaN(n))return'';
     return n>0?'win':'loss';
   }
   function formatR(val){
-    var n=parseFloat(val);
+    var n=parseFloat(String(val).replace(',','.'));
     if(isNaN(n)||val===''||val===null)return'—';
     return(n>0?'+':'')+n.toFixed(2)+'R';
   }
@@ -211,7 +211,7 @@ footer{padding:32px 48px;border-top:1px solid #111;display:flex;justify-content:
       var tvLink=(r[10]||'').trim();
       if(!ticker)return;
 
-      var rVal=parseFloat(result);
+      var rVal=parseFloat(result.replace(',','.'));
       var isClosed=status.toLowerCase()==='closed';
       if(isClosed&&!isNaN(rVal)){
         totalR+=rVal;closed++;
