@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://script.google.com https://docs.google.com https://finnhub.io; img-src 'self'; frame-src 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://script.google.com https://docs.google.com; img-src 'self'; frame-src 'none';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BELFED ANALYTICS — LIVE TRADE TRACKER</title>
 <style>
@@ -141,7 +141,7 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 var SHEET_ID='1bBpKZP74HEVrLZJlazz7gY7jbuBj9R5rPBcV2KklwDo';
 var GID='0';
 var CSVURL='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:csv&gid='+GID+'&single=true';
-var FINNHUB_KEY='d70pb51r01ql6rg05c0gd70pb51r01ql6rg05c10';
+var YAHOO_PROXY='https://script.google.com/macros/s/AKfycbyXYFW0kFYR4aa9mCvX_wew6he08YtaLMjUjEyBUoGi-SSHqhddhVwl1RXDmpKQIZnv/exec';
 var allTrades=[];
 var livePrices={};
 
@@ -172,28 +172,34 @@ function buildTrades(rows){
 }
 
 async function fetchLivePrices(trades){
-  var openTrades=trades.filter(function(t){return t.status==='open';});
-  var uniqueTickers=[...new Set(openTrades.map(function(t){return t.ticker;}))];
-  var note=document.getElementById('priceNote');
-  if(!FINNHUB_KEY||FINNHUB_KEY==='YOUR_FINNHUB_API_KEY'){note.textContent='Add Finnhub API key for live prices';return;}
-  note.textContent='Fetching live prices...';
-  var fetched=0;
-  for(var i=0;i<uniqueTickers.length;i++){
-    var sym=uniqueTickers[i];
+    var openTrades=trades.filter(function(t){return t.status==='open';});
+    var uniqueTickers=[...new Set(openTrades.map(function(t){return t.ticker;}))];
+    var note=document.getElementById('priceNote');
+    if(!YAHOO_PROXY){note.textContent='Yahoo proxy not configured';return;}
+    note.textContent='Fetching live prices via Yahoo Finance...';
     try{
-      var res=await fetch('https://finnhub.io/api/v1/quote?symbol='+encodeURIComponent(sym)+'&token='+FINNHUB_KEY);
-      if(res.ok){
-        var data=await res.json();
-        if(data.c&&data.c>0){livePrices[sym]=data.c;fetched++;}
-        else if(data.pc&&data.pc>0){livePrices[sym]=data.pc;fetched++;}
-      }
-    }catch(e){console.warn('Price fetch failed for '+sym,e);}
-    if(i<uniqueTickers.length-1)await new Promise(function(r){setTimeout(r,120);});
-  }
-  openTrades.forEach(function(t){if(livePrices[t.ticker])t.livePrice=livePrices[t.ticker];});
-  note.textContent=fetched>0?'Live prices via Finnhub ('+fetched+'/'+uniqueTickers.length+' tickers) • Updates on page reload':'Could not fetch live prices';
-  renderOpenTrades(allTrades);
-  renderAlerts(allTrades);
+        var url=YAHOO_PROXY+'?symbols='+encodeURIComponent(uniqueTickers.join(','));
+        var res=await fetch(url);
+        if(!res.ok)throw new Error('HTTP '+res.status);
+        var text=await res.text();
+        var finalUrl=res.url||url;
+        if(text.startsWith('<!DOCTYPE')||text.startsWith('<html')){
+            var redir=await fetch(finalUrl);
+            text=await redir.text();
+        }
+        var data=JSON.parse(text);
+        var fetched=0;
+        Object.keys(data).forEach(function(sym){
+            if(data[sym]&&data[sym].price>0){livePrices[sym]=data[sym].price;fetched++;}
+        });
+        openTrades.forEach(function(t){if(livePrices[t.ticker])t.livePrice=livePrices[t.ticker];});
+        note.textContent=fetched>0?'Live prices via Yahoo Finance ('+fetched+'/'+uniqueTickers.length+' tickers) \u2022 Updates on page reload':'Could not fetch live prices';
+    }catch(err){
+        console.error('Yahoo proxy error:',err);
+        note.textContent='Error fetching prices: '+err.message;
+    }
+    renderOpenTrades(allTrades);
+    renderAlerts(allTrades);
 }
 
 function getCurrentPrice(t){
