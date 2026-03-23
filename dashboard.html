@@ -56,7 +56,7 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 <body>
 <div class="container">
 <header>
-<h1>— BELFED ANALYTICS / LIVE TRADE TRACKER —</h1>
+<h1>&mdash; BELFED ANALYTICS / LIVE TRADE TRACKER &mdash;</h1>
 <div class="updated">Updated: <span id="currentTime"></span></div>
 </header>
 <div id="loadingIndicator" class="loading">Loading trade data...</div>
@@ -67,31 +67,39 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 <div class="section-title">OPEN TRADES <span class="count-badge" id="openCount">0</span></div>
 <div class="search-box"><input type="text" id="searchTicker" placeholder="Search ticker..."></div>
 <div class="table-wrap">
-<table id="openTable"><thead><tr>
+<table id="openTable">
+<thead><tr>
 <th class="sortable" data-col="ticker">Ticker</th>
 <th class="sortable" data-col="direction">Direction</th>
 <th class="sortable" data-col="entry">Entry $</th>
 <th class="sortable" data-col="current">Current $</th>
-<th class="sortable" data-col="pnl">P&L %</th>
-<th data-col="status">Status</th>
-<th data-col="risk">Risk Level</th>
-<th data-col="link">Analysis</th>
-</tr></thead><tbody id="openBody"></tbody></table>
-</div></div>
+<th class="sortable" data-col="pnl">P&amp;L %</th>
+<th>Status</th>
+<th>Risk Level</th>
+<th>Analysis</th>
+</tr></thead>
+<tbody id="openBody"></tbody>
+</table>
+</div>
+</div>
 <!-- CLOSED THIS WEEK -->
 <div class="section">
 <div class="section-title">CLOSED THIS WEEK <span class="count-badge" id="closedWeekCount">0</span></div>
 <div class="table-wrap">
-<table id="closedWeekTable"><thead><tr>
+<table id="closedWeekTable">
+<thead><tr>
 <th class="sortable" data-col="ticker">Ticker</th>
 <th class="sortable" data-col="direction">Direction</th>
 <th class="sortable" data-col="entry">Entry $</th>
 <th class="sortable" data-col="exit">Exit $</th>
 <th class="sortable" data-col="exitDate">Exit Date</th>
 <th class="sortable" data-col="result">Result / Risk</th>
-<th data-col="link">Analysis</th>
-</tr></thead><tbody id="closedWeekBody"></tbody></table>
-</div></div>
+<th>Analysis</th>
+</tr></thead>
+<tbody id="closedWeekBody"></tbody>
+</table>
+</div>
+</div>
 <!-- WEEKLY STATS -->
 <div class="section">
 <div class="section-title">WEEKLY STATS</div>
@@ -99,56 +107,246 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 <div class="stat-box"><div class="stat-label">TOTAL TRADES</div><div class="stat-value" id="wTotal">0</div></div>
 <div class="stat-box"><div class="stat-label">WINNERS</div><div class="stat-value positive" id="wWinners">0</div></div>
 <div class="stat-box"><div class="stat-label">LOSERS</div><div class="stat-value negative" id="wLosers">0</div></div>
-<div class="stat-box"><div class="stat-label">WIN RATE</div><div class="stat-value" id="wWinRate">—</div></div>
-<div class="stat-box"><div class="stat-label">AVG R</div><div class="stat-value" id="wAvgR">—</div></div>
-<div class="stat-box"><div class="stat-label">BEST TRADE</div><div class="stat-value positive" id="wBest">—</div></div>
-<div class="stat-box"><div class="stat-label">WORST TRADE</div><div class="stat-value negative" id="wWorst">—</div></div>
-</div></div>
+<div class="stat-box"><div class="stat-label">WIN RATE</div><div class="stat-value" id="wWinRate">&mdash;</div></div>
+<div class="stat-box"><div class="stat-label">AVG R</div><div class="stat-value" id="wAvgR">&mdash;</div></div>
+<div class="stat-box"><div class="stat-label">BEST TRADE</div><div class="stat-value positive" id="wBest">&mdash;</div></div>
+<div class="stat-box"><div class="stat-label">WORST TRADE</div><div class="stat-value negative" id="wWorst">&mdash;</div></div>
+</div>
+</div>
 <!-- YTD SCORECARD -->
 <div class="section">
 <div class="section-title">YTD SCORECARD</div>
 <div class="ytd-grid">
-<div class="ytd-box"><div class="ytd-label">TOTAL R</div><div class="ytd-value" id="ytdR">—</div></div>
-<div class="ytd-box"><div class="ytd-label">WIN RATE</div><div class="ytd-value" id="ytdWR">—</div></div>
-<div class="ytd-box"><div class="ytd-label">CLOSED TRADES</div><div class="ytd-value" id="ytdTotal">—</div></div>
-</div></div>
+<div class="ytd-box"><div class="ytd-label">TOTAL R</div><div class="ytd-value" id="ytdR">&mdash;</div></div>
+<div class="ytd-box"><div class="ytd-label">WIN RATE</div><div class="ytd-value" id="ytdWR">&mdash;</div></div>
+<div class="ytd-box"><div class="ytd-label">CLOSED TRADES</div><div class="ytd-value" id="ytdTotal">&mdash;</div></div>
+</div>
+</div>
 <!-- ALERTS -->
 <div class="section">
-<div class="section-title">\u26A0 ALERTS</div>
-<div class="alert-box" id="alertsBox"><div class="no-data">No significant moves detected</div></div>
+<div class="section-title">&#9888; ALERTS</div>
+<div class="alert-box" id="alertsBox"><div class="no-data">No significant moves detected (&gt;5%)</div></div>
 </div>
 </div><!-- mainContent -->
 <footer>Educational purposes only. belfed.com</footer>
 </div><!-- container -->
 <script>
-const SHEET_ID='1bBpKZP74HEVrLZJlazz7gY7jbuBj9R5rPBcV2KklwDo';
-const GID='0';
-const CSVURL='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:csv&gid='+GID+'&single=true';
-let allTrades=[];
+var SHEET_ID='1bBpKZP74HEVrLZJlazz7gY7jbuBj9R5rPBcV2KklwDo';
+var GID='0';
+var CSVURL='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:csv&gid='+GID+'&single=true';
+var allTrades=[];
+
 function mskTime(){return new Date().toLocaleString('en-GB',{timeZone:'Europe/Moscow',year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})+' MSK';}
-function parseNum(v){if(v===null||v===undefined||v==='')return NaN;var s=String(v).trim().replace(/ /g,'').replace(',','.');return parseFloat(s);}
-function parseDate(s){if(!s||!s.trim())return null;var p=s.trim().split('.');if(p.length===3){var d=parseInt(p[0],10),m=parseInt(p[1],10)-1,y=parseInt(p[2],10);var dt=new Date(y,m,d);return isNaN(dt.getTime())?null:dt;}return null;}
+
+function parseNum(v){if(v===null||v===undefined||v==='')return NaN;var s=String(v).trim().replace(/ /g,'').replace(/,/g,'.');return parseFloat(s);}
+
+function parseDate(s){if(!s||!s.trim())return null;var p=s.trim().split('.');if(p.length===3){var d=parseInt(p[0],10),m=parseInt(p[1],10)-1,y=parseInt(p[2],10);if(y<100)y+=2000;var dt=new Date(y,m,d);return isNaN(dt.getTime())?null:dt;}return null;}
+
 function isLastNDays(dateStr,n){var d=parseDate(dateStr);if(!d)return false;var cutoff=new Date();cutoff.setDate(cutoff.getDate()-n);cutoff.setHours(0,0,0,0);return d>=cutoff;}
-function calcPnL(entry,current,dir){if(isNaN(entry)||isNaN(current)||entry===0)return NaN;var d=dir.toLowerCase();return d.includes('short')?(entry-current)/entry*100:(current-entry)/entry*100;}
+
+function calcPnL(entry,current,dir){if(isNaN(entry)||isNaN(current)||entry===0)return NaN;return dir.toLowerCase().includes('short')?(entry-current)/entry*100:(current-entry)/entry*100;}
+
 function fmtPnL(v){if(isNaN(v))return '\u2014';return(v>0?'+':'')+v.toFixed(2)+'%';}
 function fmtR(v){if(isNaN(v))return '\u2014';return(v>0?'+':'')+v.toFixed(2)+'R';}
 function fmtPrice(v){if(isNaN(v))return '\u2014';return v.toFixed(2);}
 function cls(v){if(isNaN(v)||v===0)return 'neutral';return v>0?'positive':'negative';}
-function statusLabel(pnl){if(isNaN(pnl)||pnl===0)return '\u2300 Breakeven';return pnl>0?'\uD83D\uDFE2 In Profit':'\uD83D\uDD34 Underwater';}
+function statusLabel(pnl){if(isNaN(pnl)||pnl===0)return '\u2300 Breakeven';return pnl>0?'\uD83D\uDFE2 Profit':'\uD83D\uDD34 Underwater';}
 function tvLink(url){if(!url||!url.startsWith('http'))return '\u2014';return '<a class="tv-link" href="'+url+'" target="_blank" rel="noopener">\u2197 View</a>';}
-function parseCSV(text){var rows=[],row=[],field='',inQ=false;for(var i=0;i<text.length;i++){var c=text[i],n=text[i+1];if(inQ){if(c==='"'&&n==='"'){field+='"';i++;}else if(c==='"'){inQ=false;}else{field+=c;}}else{if(c==='"'){inQ=true;}else if(c===','){row.push(field);field='';}else if(c==='\n'){row.push(field);rows.push(row);row=[];field='';if(n==='\r')i++;}else if(c==='\r'){row.push(field);rows.push(row);row=[];field='';}else{field+=c;}}}if(field||row.length){row.push(field);rows.push(row);}return rows;}
-function buildTrades(rows){var headerIdx=-1;for(var i=0;i<rows.length;i++){var r=rows[i];if(r.some(function(c){return c.trim()==='Ticker'})&&r.some(function(c){return c.trim()==='Direction'})){headerIdx=i;break;}}if(headerIdx<0)throw new Error('Header row not found');var headers=rows[headerIdx].map(function(h){return h.trim().toLowerCase();});var col=function(k){return headers.indexOf(k);};var iTicker=col('ticker'),iDir=col('direction'),iStatus=col('status');var iEntryD=col('date of entry'),iExitD=col('date of exit');var iEntry=headers.findIndex(function(h){return h.includes('price')&&(h.includes('entry')||h.includes('(entry)'));});var iRisk=col('full risk level');var iExit=headers.findIndex(function(h){return h.includes('price')&&(h.includes('exit')||h.includes('(exit)'));});var iResult=headers.findIndex(function(h){return h.includes('result')||h.includes('risk-rev');});var iTV=col('tradingview');var trades=[];for(var i=headerIdx+1;i<rows.length;i++){var r=rows[i];var ticker=r[iTicker]?r[iTicker].trim():'';if(!ticker)continue;var status=r[iStatus]?r[iStatus].trim():'';if(!status)continue;trades.push({ticker:ticker,dir:r[iDir]?r[iDir].trim():'',status:status.toLowerCase(),entryDate:r[iEntryD]?r[iEntryD].trim():'',exitDate:r[iExitD]?r[iExitD].trim():'',entry:parseNum(r[iEntry]),riskLevel:parseNum(r[iRisk]),exit:parseNum(r[iExit]),result:parseNum(r[iResult]),tvUrl:r[iTV]?r[iTV].trim():''});}return trades;}
+
+function parseCSV(text){var rows=[],row=[],field='',inQ=false;for(var i=0;i<text.length;i++){var c=text[i],nx=text[i+1];if(inQ){if(c==='"'&&nx==='"'){field+='"';i++;}else if(c==='"'){inQ=false;}else{field+=c;}}else{if(c==='"'){inQ=true;}else if(c===','){row.push(field);field='';}else if(c==='\n'){row.push(field);rows.push(row);row=[];field='';if(nx==='\r')i++;}else if(c==='\r'){row.push(field);rows.push(row);row=[];field='';if(nx==='\n')i++;}else{field+=c;}}}if(field||row.length){row.push(field);rows.push(row);}return rows;}
+
+function buildTrades(rows){
+  var headerIdx=-1;
+  for(var i=0;i<rows.length;i++){
+    var r=rows[i];
+    if(r.some(function(c){return c.trim()==='Ticker';})&&r.some(function(c){return c.trim()==='Direction';})){headerIdx=i;break;}
+  }
+  if(headerIdx<0)throw new Error('Header row not found in CSV');
+  var trades=[];
+  for(var i=headerIdx+1;i<rows.length;i++){
+    var r=rows[i];
+    var ticker=(r[1]||'').trim();
+    if(!ticker)continue;
+    var status=(r[3]||'').trim();
+    if(!status)continue;
+    trades.push({
+      ticker:ticker,
+      dir:(r[2]||'').trim(),
+      status:status.toLowerCase(),
+      entryDate:(r[4]||'').trim(),
+      exitDate:(r[5]||'').trim(),
+      entry:parseNum(r[6]),
+      riskLevel:parseNum(r[7]),
+      exit:parseNum(r[8]),
+      result:parseNum(r[9]),
+      tvUrl:(r[10]||'').trim()
+    });
+  }
+  return trades;
+}
+
 function emptyRow(cols,msg){return '<tr><td colspan="'+cols+'" class="no-data">'+msg+'</td></tr>';}
-function renderOpenRows(rows){if(!rows.length)return emptyRow(8,'No open trades');return rows.map(function(t){var current=(!isNaN(t.exit)&&t.exit!==0)?t.exit:t.entry;var pnl=calcPnL(t.entry,current,t.dir);var dirCls=t.dir.toLowerCase().includes('short')?'dir-short':'dir-long';return '<tr><td class="ticker-cell">'+t.ticker+'</td><td class="'+dirCls+'">'+t.dir+'</td><td>'+fmtPrice(t.entry)+'</td><td>'+fmtPrice(current)+'</td><td class="'+cls(pnl)+'">'+fmtPnL(pnl)+'</td><td class="'+cls(pnl)+'">'+statusLabel(pnl)+'</td><td>'+(isNaN(t.riskLevel)?'\u2014':fmtPrice(t.riskLevel))+'</td><td>'+tvLink(t.tvUrl)+'</td></tr>';}).join('');}
-function renderClosedWeekRows(rows){if(!rows.length)return emptyRow(7,'No closed trades this week');return rows.map(function(t){var dirCls=t.dir.toLowerCase().includes('short')?'dir-short':'dir-long';return '<tr><td class="ticker-cell">'+t.ticker+'</td><td class="'+dirCls+'">'+t.dir+'</td><td>'+fmtPrice(t.entry)+'</td><td>'+fmtPrice(t.exit)+'</td><td>'+t.exitDate+'</td><td class="'+cls(t.result)+'">'+fmtR(t.result)+'</td><td>'+tvLink(t.tvUrl)+'</td></tr>';}).join('');}
-function renderOpenTrades(trades){var open=trades.filter(function(t){return t.status==='open';});document.getElementById('openCount').textContent=open.length;document.getElementById('openBody').innerHTML=renderOpenRows(open);}
-function renderClosedWeek(trades){var cw=trades.filter(function(t){return t.status==='closed'&&isLastNDays(t.exitDate,7);});document.getElementById('closedWeekCount').textContent=cw.length;document.getElementById('closedWeekBody').innerHTML=renderClosedWeekRows(cw);}
-function renderWeeklyStats(trades){var cw=trades.filter(function(t){return t.status==='closed'&&isLastNDays(t.exitDate,7);});var total=cw.length;var winners=cw.filter(function(t){return t.result>0;}).length;var losers=cw.filter(function(t){return t.result<0;}).length;var wr=total?(winners/total*100).toFixed(1):'\u2014';var valid=cw.filter(function(t){return !isNaN(t.result);});var avgR=valid.length?valid.reduce(function(s,t){return s+t.result;},0)/valid.length:NaN;var best=null,worst=null;cw.forEach(function(t){if(!best||t.result>best.result)best=t;if(!worst||t.result<worst.result)worst=t;});document.getElementById('wTotal').textContent=total;document.getElementById('wWinners').textContent=winners;document.getElementById('wLosers').textContent=losers;document.getElementById('wWinRate').textContent=wr==='\u2014'?wr:wr+'%';var avgEl=document.getElementById('wAvgR');avgEl.textContent=fmtR(avgR);avgEl.className='stat-value '+cls(avgR);document.getElementById('wBest').textContent=best?best.ticker+' '+fmtR(best.result):'\u2014';document.getElementById('wWorst').textContent=worst?worst.ticker+' '+fmtR(worst.result):'\u2014';}
-function renderYTD(trades){var closed=trades.filter(function(t){return t.status==='closed';});var total=closed.length;var valid=closed.filter(function(t){return !isNaN(t.result);});var totalR=valid.reduce(function(s,t){return s+t.result;},0);var winners=closed.filter(function(t){return t.result>0;}).length;var wr=total?(winners/total*100).toFixed(1):'\u2014';var rEl=document.getElementById('ytdR');rEl.textContent=fmtR(totalR);rEl.className='ytd-value '+cls(totalR);document.getElementById('ytdWR').textContent=wr==='\u2014'?wr:wr+'%';document.getElementById('ytdTotal').textContent=total;}
-function renderAlerts(trades){var open=trades.filter(function(t){return t.status==='open';});var box=document.getElementById('alertsBox');var items=[];open.forEach(function(t){var current=(!isNaN(t.exit)&&t.exit!==0)?t.exit:t.entry;var pnl=calcPnL(t.entry,current,t.dir);if(!isNaN(pnl)&&Math.abs(pnl)>5){var lbl=pnl>0?'strong profit':'underwater';items.push('<div class="alert-item"><strong>'+t.ticker+'</strong> &mdash; P&amp;L <span class="'+cls(pnl)+'">'+fmtPnL(pnl)+'</span> ('+lbl+')</div>');}});box.innerHTML=items.length?items.join(''):'<div class="no-data">No significant moves detected (&gt;5%)</div>';}
-function setupSort(tableId,getDataFn){var table=document.getElementById(tableId);var sortCol=null,asc=true;table.querySelectorAll('th.sortable').forEach(function(th){th.addEventListener('click',function(){var col=th.dataset.col;if(sortCol===col){asc=!asc;}else{sortCol=col;asc=true;}table.querySelectorAll('th').forEach(function(h){h.classList.remove('sort-asc','sort-desc');});table.querySelectorAll('th.sortable').forEach(function(h){if(h.dataset.col===col){h.classList.add(asc?'sort-asc':'sort-desc');}});var rows=getDataFn().slice().sort(function(a,b){var av,bv;switch(col){case 'ticker':av=a.ticker;bv=b.ticker;break;case 'direction':av=a.dir;bv=b.dir;break;case 'entry':av=a.entry;bv=b.entry;break;case 'current':av=(!isNaN(a.exit)&&a.exit!==0)?a.exit:a.entry;bv=(!isNaN(b.exit)&&b.exit!==0)?b.exit:b.entry;break;case 'exit':av=a.exit;bv=b.exit;break;case 'exitDate':av=parseDate(a.exitDate)||0;bv=parseDate(b.exitDate)||0;break;case 'pnl':var ca=(!isNaN(a.exit)&&a.exit!==0)?a.exit:a.entry;var cb=(!isNaN(b.exit)&&b.exit!==0)?b.exit:b.entry;av=calcPnL(a.entry,ca,a.dir);bv=calcPnL(b.entry,cb,b.dir);break;case 'result':av=a.result;bv=b.result;break;default:return 0;}if(typeof av==='string')return asc?av.localeCompare(bv):bv.localeCompare(av);av=isNaN(av)?-Infinity:av;bv=isNaN(bv)?-Infinity:bv;return asc?av-bv:bv-av;});var tbody=table.querySelector('tbody');if(tableId==='openTable'){tbody.innerHTML=renderOpenRows(rows);}else{tbody.innerHTML=renderClosedWeekRows(rows);}});});}
-function setupSearch(){document.getElementById('searchTicker').addEventListener('input',function(e){var q=e.target.value.trim().toLowerCase();var open=allTrades.filter(function(t){return t.status==='open';});var filtered=q?open.filter(function(t){return t.ticker.toLowerCase().includes(q);}):open;document.getElementById('openCount').textContent=filtered.length;document.getElementById('openBody').innerHTML=renderOpenRows(filtered);});}
-async function init(){document.getElementById('currentTime').textContent=mskTime();try{var res=await fetch(CSVURL);if(!res.ok)throw new Error('HTTP '+res.status);var text=await res.text();var rows=parseCSV(text);allTrades=buildTrades(rows);document.getElementById('loadingIndicator').style.display='none';document.getElementById('mainContent').style.display='block';renderOpenTrades(allTrades);renderClosedWeek(allTrades);renderWeeklyStats(allTrades);renderYTD(allTrades);renderAlerts(allTrades);setupSort('openTable',function(){return allTrades.filter(function(t){return t.status==='open';});});setupSort('closedWeekTable',function(){return allTrades.filter(function(t){return t.status==='closed'&&isLastNDays(t.exitDate,7);});});setupSearch();}catch(err){document.getElementById('loadingIndicator').style.display='none';var box=document.getElementById('errorBox');box.textContent='Error loading data: '+err.message+'. Please refresh.';box.style.display='block';console.error(err);}}
+
+function renderOpenRows(rows){
+  if(!rows.length)return emptyRow(8,'No open trades');
+  return rows.map(function(t){
+    var current=(!isNaN(t.exit)&&t.exit!==0)?t.exit:NaN;
+    var pnl=calcPnL(t.entry,current,t.dir);
+    var dirCls=t.dir.toLowerCase().includes('short')?'dir-short':'dir-long';
+    return '<tr><td class="ticker-cell">'+t.ticker+'</td>'+
+      '<td class="'+dirCls+'">'+t.dir+'</td>'+
+      '<td>'+fmtPrice(t.entry)+'</td>'+
+      '<td>'+fmtPrice(current)+'</td>'+
+      '<td class="'+cls(pnl)+'">'+fmtPnL(pnl)+'</td>'+
+      '<td class="'+cls(pnl)+'">'+statusLabel(pnl)+'</td>'+
+      '<td>'+(isNaN(t.riskLevel)?'\u2014':fmtPrice(t.riskLevel))+'</td>'+
+      '<td>'+tvLink(t.tvUrl)+'</td></tr>';
+  }).join('');
+}
+
+function renderClosedWeekRows(rows){
+  if(!rows.length)return emptyRow(7,'No closed trades this week');
+  return rows.map(function(t){
+    var dirCls=t.dir.toLowerCase().includes('short')?'dir-short':'dir-long';
+    return '<tr><td class="ticker-cell">'+t.ticker+'</td>'+
+      '<td class="'+dirCls+'">'+t.dir+'</td>'+
+      '<td>'+fmtPrice(t.entry)+'</td>'+
+      '<td>'+fmtPrice(t.exit)+'</td>'+
+      '<td>'+t.exitDate+'</td>'+
+      '<td class="'+cls(t.result)+'">'+fmtR(t.result)+'</td>'+
+      '<td>'+tvLink(t.tvUrl)+'</td></tr>';
+  }).join('');
+}
+
+function renderOpenTrades(trades){
+  var open=trades.filter(function(t){return t.status==='open';});
+  document.getElementById('openCount').textContent=open.length;
+  document.getElementById('openBody').innerHTML=renderOpenRows(open);
+}
+
+function renderClosedWeek(trades){
+  var cw=trades.filter(function(t){return t.status==='closed'&&isLastNDays(t.exitDate,7);});
+  document.getElementById('closedWeekCount').textContent=cw.length;
+  document.getElementById('closedWeekBody').innerHTML=renderClosedWeekRows(cw);
+}
+
+function renderWeeklyStats(trades){
+  var cw=trades.filter(function(t){return t.status==='closed'&&isLastNDays(t.exitDate,7);});
+  var total=cw.length;
+  var winners=cw.filter(function(t){return t.result>0;}).length;
+  var losers=cw.filter(function(t){return t.result<0;}).length;
+  var wr=total?(winners/total*100).toFixed(1):'\u2014';
+  var valid=cw.filter(function(t){return !isNaN(t.result);});
+  var avgR=valid.length?valid.reduce(function(s,t){return s+t.result;},0)/valid.length:NaN;
+  var best=null,worst=null;
+  cw.forEach(function(t){if(!isNaN(t.result)){if(!best||t.result>best.result)best=t;if(!worst||t.result<worst.result)worst=t;}});
+  document.getElementById('wTotal').textContent=total;
+  document.getElementById('wWinners').textContent=winners;
+  document.getElementById('wLosers').textContent=losers;
+  document.getElementById('wWinRate').textContent=wr==='\u2014'?wr:wr+'%';
+  var avgEl=document.getElementById('wAvgR');
+  avgEl.textContent=fmtR(avgR);avgEl.className='stat-value '+cls(avgR);
+  document.getElementById('wBest').textContent=best?best.ticker+' '+fmtR(best.result):'\u2014';
+  document.getElementById('wWorst').textContent=worst?worst.ticker+' '+fmtR(worst.result):'\u2014';
+}
+
+function renderYTD(trades){
+  var closed=trades.filter(function(t){return t.status==='closed';});
+  var total=closed.length;
+  var valid=closed.filter(function(t){return !isNaN(t.result);});
+  var totalR=valid.reduce(function(s,t){return s+t.result;},0);
+  var winners=valid.filter(function(t){return t.result>0;}).length;
+  var wr=valid.length?(winners/valid.length*100).toFixed(1):'\u2014';
+  var rEl=document.getElementById('ytdR');
+  rEl.textContent=fmtR(totalR);rEl.className='ytd-value '+cls(totalR);
+  document.getElementById('ytdWR').textContent=wr==='\u2014'?wr:wr+'%';
+  document.getElementById('ytdTotal').textContent=total;
+}
+
+function renderAlerts(trades){
+  var open=trades.filter(function(t){return t.status==='open';});
+  var box=document.getElementById('alertsBox');
+  var items=[];
+  open.forEach(function(t){
+    var current=(!isNaN(t.exit)&&t.exit!==0)?t.exit:t.entry;
+    var pnl=calcPnL(t.entry,current,t.dir);
+    if(!isNaN(pnl)&&Math.abs(pnl)>5){
+      var lbl=pnl>0?'strong profit':'underwater';
+      items.push('<div class="alert-item"><strong>'+t.ticker+'</strong> &mdash; P&amp;L <span class="'+cls(pnl)+'">'+fmtPnL(pnl)+'</span> ('+lbl+')</div>');
+    }
+  });
+  box.innerHTML=items.length?items.join(''):'<div class="no-data">No significant moves detected (&gt;5%)</div>';
+}
+
+function setupSort(tableId,getDataFn){
+  var table=document.getElementById(tableId);if(!table)return;
+  var sortCol=null,asc=true;
+  table.querySelectorAll('th.sortable').forEach(function(th){
+    th.addEventListener('click',function(){
+      var col=th.dataset.col;
+      if(sortCol===col){asc=!asc;}else{sortCol=col;asc=true;}
+      table.querySelectorAll('th').forEach(function(h){h.classList.remove('sort-asc','sort-desc');});
+      th.classList.add(asc?'sort-asc':'sort-desc');
+      var rows=getDataFn().slice().sort(function(a,b){
+        var av,bv;
+        switch(col){
+          case 'ticker':av=a.ticker;bv=b.ticker;break;
+          case 'direction':av=a.dir;bv=b.dir;break;
+          case 'entry':av=a.entry;bv=b.entry;break;
+          case 'current':av=(!isNaN(a.exit)&&a.exit!==0)?a.exit:a.entry;bv=(!isNaN(b.exit)&&b.exit!==0)?b.exit:b.entry;break;
+          case 'exit':av=a.exit;bv=b.exit;break;
+          case 'exitDate':av=parseDate(a.exitDate)||0;bv=parseDate(b.exitDate)||0;break;
+          case 'pnl':var ca=(!isNaN(a.exit)&&a.exit!==0)?a.exit:a.entry;var cb=(!isNaN(b.exit)&&b.exit!==0)?b.exit:b.entry;av=calcPnL(a.entry,ca,a.dir);bv=calcPnL(b.entry,cb,b.dir);break;
+          case 'result':av=a.result;bv=b.result;break;
+          default:return 0;
+        }
+        if(typeof av==='string')return asc?av.localeCompare(bv):bv.localeCompare(av);
+        av=isNaN(av)?-Infinity:av;bv=isNaN(bv)?-Infinity:bv;
+        return asc?av-bv:bv-av;
+      });
+      var tbody=table.querySelector('tbody');
+      if(tableId==='openTable'){tbody.innerHTML=renderOpenRows(rows);}
+      else{tbody.innerHTML=renderClosedWeekRows(rows);}
+    });
+  });
+}
+
+function setupSearch(){
+  document.getElementById('searchTicker').addEventListener('input',function(e){
+    var q=e.target.value.trim().toLowerCase();
+    var open=allTrades.filter(function(t){return t.status==='open';});
+    var filtered=q?open.filter(function(t){return t.ticker.toLowerCase().includes(q);}):open;
+    document.getElementById('openCount').textContent=filtered.length;
+    document.getElementById('openBody').innerHTML=renderOpenRows(filtered);
+  });
+}
+
+async function init(){
+  document.getElementById('currentTime').textContent=mskTime();
+  try{
+    var res=await fetch(CSVURL);
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    var text=await res.text();
+    var rows=parseCSV(text);
+    allTrades=buildTrades(rows);
+    document.getElementById('loadingIndicator').style.display='none';
+    document.getElementById('mainContent').style.display='block';
+    renderOpenTrades(allTrades);
+    renderClosedWeek(allTrades);
+    renderWeeklyStats(allTrades);
+    renderYTD(allTrades);
+    renderAlerts(allTrades);
+    setupSort('openTable',function(){return allTrades.filter(function(t){return t.status==='open';});});
+    setupSort('closedWeekTable',function(){return allTrades.filter(function(t){return t.status==='closed'&&isLastNDays(t.exitDate,7);});});
+    setupSearch();
+  }catch(err){
+    document.getElementById('loadingIndicator').style.display='none';
+    var box=document.getElementById('errorBox');
+    box.textContent='Error loading data: '+err.message+'. Please refresh.';
+    box.style.display='block';
+    console.error(err);
+  }
+}
 init();
 </script>
 </body>
