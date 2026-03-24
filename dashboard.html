@@ -56,6 +56,10 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 .error-box{background:#fff0f0;border:1px solid #c50000;padding:20px;margin:20px 0;text-align:center;color:#c50000;font-size:13px}
 .price-note{font-size:10px;color:#999;letter-spacing:1px;margin-top:6px}
 @media(max-width:900px){body{padding:12px 10px;font-size:12px}h1{font-size:16px;letter-spacing:1px}th,td{padding:7px 8px;font-size:11px}.stat-value{font-size:20px}.ytd-value{font-size:32px}.stats-grid{grid-template-columns:1fr 1fr}.ytd-grid{grid-template-columns:1fr}}
+.tab-bar{display:flex;gap:0;margin-bottom:30px;border-bottom:2px solid #000}
+.tab-btn{font-family:'Courier New',monospace;font-size:13px;font-weight:bold;letter-spacing:2px;padding:10px 24px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;color:#999;transition:color 0.2s,border-color 0.2s}
+.tab-btn:hover{color:#000}
+.tab-btn.active{color:#000;border-bottom-color:#000}
 </style>
 </head>
 <body>
@@ -68,10 +72,6 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 <button class="tab-btn active" onclick="switchTab('equities')">EQUITIES</button>
 <button class="tab-btn" onclick="switchTab('crypto')">CRYPTO</button>
 </div>
-<div id="loadingIndicator" class="loading">Loading trade data...</div>
-<div id="errorBox" class="error-box" style="display:none"></div>
-<div id="mainContent" style="display:none">
-<!-- OPEN TRADES -->
 <div class="section">
 <div class="section-title">OPEN TRADES <span class="count-badge" id="openCount">0</span></div>
 <div class="search-box"><input type="text" id="searchTicker" placeholder="Search ticker..."></div>
