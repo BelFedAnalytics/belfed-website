@@ -64,6 +64,10 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 <h1>&mdash; BELFED ANALYTICS / LIVE TRADE TRACKER &mdash;</h1>
 <div class="updated">Updated: <span id="currentTime"></span></div>
 </header>
+<div class="tab-bar">
+<button class="tab-btn active" onclick="switchTab('equities')">EQUITIES</button>
+<button class="tab-btn" onclick="switchTab('crypto')">CRYPTO</button>
+</div>
 <div id="loadingIndicator" class="loading">Loading trade data...</div>
 <div id="errorBox" class="error-box" style="display:none"></div>
 <div id="mainContent" style="display:none">
@@ -162,6 +166,8 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 <script>
 var SHEET_ID='1bBpKZP74HEVrLZJlazz7gY7jbuBj9R5rPBcV2KklwDo';
 var GID='0';
+var CRYPTO_GID='1219794768';
+var currentTab='equities';
 var CSVURL='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:csv&gid='+GID+'&single=true';
 var YAHOO_PROXY='https://script.google.com/macros/s/AKfycbyXYFW0kFYR4aa9mCvX_wew6he08YtaLMjUjEyBUoGi-SSHqhddhVwl1RXDmpKQIZnv/exec';
 var allTrades=[];
@@ -404,6 +410,39 @@ function setupSearch(){
     document.getElementById('openCount').textContent=filtered.length;
     document.getElementById('openBody').innerHTML=renderOpenRows(filtered);
   });
+}
+
+async function switchTab(tab){
+if(tab===currentTab)return;
+currentTab=tab;
+document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+document.querySelector('.tab-btn[onclick*="'+tab+'"]').classList.add('active');
+var gid=tab==='crypto'?CRYPTO_GID:GID;
+var url='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:csv&gid='+gid+'&single=true';
+document.getElementById('loadingIndicator').style.display='block';
+document.getElementById('mainContent').style.display='none';
+livePrices={};
+try{
+var res=await fetch(url);
+if(!res.ok)throw new Error('HTTP '+res.status);
+var text=await res.text();
+var rows=parseCSV(text);
+allTrades=buildTrades(rows);
+document.getElementById('loadingIndicator').style.display='none';
+document.getElementById('mainContent').style.display='block';
+renderOpenTrades(allTrades);
+renderOpenedThisWeek(allTrades);
+renderClosedWeek(allTrades);
+renderWeeklyStats(allTrades);
+renderYTD(allTrades);
+renderAlerts(allTrades);
+await fetchLivePrices(allTrades);
+}catch(err){
+document.getElementById('loadingIndicator').style.display='none';
+var box=document.getElementById('errorBox');
+box.textContent='Error loading data: '+err.message+'. Please refresh.';
+box.style.display='block';
+}
 }
 
 async function init(){
