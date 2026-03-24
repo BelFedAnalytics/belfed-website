@@ -72,6 +72,10 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 <button class="tab-btn active" onclick="switchTab('equities')">EQUITIES</button>
 <button class="tab-btn" onclick="switchTab('crypto')">CRYPTO</button>
 </div>
+  <div id="loadingIndicator" class="loading">Loading trade data...</div>
+<div id="errorBox" class="error-box" style="display:none"></div>
+<div id="mainContent" style="display:none">
+<!-- OPEN TRADES -->
 <div class="section">
 <div class="section-title">OPEN TRADES <span class="count-badge" id="openCount">0</span></div>
 <div class="search-box"><input type="text" id="searchTicker" placeholder="Search ticker..."></div>
