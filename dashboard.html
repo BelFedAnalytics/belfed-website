@@ -89,6 +89,28 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 </div>
 <div class="price-note" id="priceNote"></div>
 </div>
+
+<!-- OPENED THIS WEEK -->
+<div class="section">
+<div class="section-title">OPENED THIS WEEK <span class="count-badge" id="openedWeekCount">0</span></div>
+<div class="table-wrap">
+<table id="openedWeekTable">
+<thead><tr>
+<th class="sortable" data-col="ticker">Ticker</th>
+<th class="sortable" data-col="direction">Direction</th>
+<th class="sortable" data-col="entry">Entry $</th>
+<th class="sortable" data-col="current">Current $</th>
+<th class="sortable" data-col="pnl">P&amp;L %</th>
+<th>Status</th>
+<th>Risk Level</th>
+<th class="sortable" data-col="stopDist">Stop Dist %</th>
+<th class="sortable" data-col="entryDate">Entry Date</th>
+<th>Analysis</th>
+</tr></thead>
+<tbody id="openedWeekBody"></tbody>
+</table>
+</div>
+</div>
 <!-- CLOSED THIS WEEK -->
 <div class="section">
 <div class="section-title">CLOSED THIS WEEK <span class="count-badge" id="closedWeekCount">0</span></div>
@@ -199,8 +221,9 @@ async function fetchLivePrices(trades){
         note.textContent='Error fetching prices: '+err.message;
     }
     renderOpenTrades(allTrades);
+    renderOpenedThisWeek(allTrades);
     renderAlerts(allTrades);
-}
+  }
 
 function getCurrentPrice(t){
   if(!isNaN(t.livePrice)&&t.livePrice>0)return t.livePrice;
@@ -245,6 +268,28 @@ function renderClosedWeekRows(rows){
   }).join('');
 }
 
+function renderOpenedWeekRows(rows){
+if(!rows.length)return emptyRow(10,'No new trades opened this week');
+return rows.map(function(t){
+var current=getCurrentPrice(t);
+var pnl=calcPnL(t.entry,current,t.dir);
+var stopDist=calcStopDist(current,t.riskLevel,t.dir);
+var dirCls=t.dir.toLowerCase().includes('short')?'dir-short':'dir-long';
+var priceCell=isNaN(current)?'<span class="price-loading">loading...</span>':fmtPrice(current);
+var stopDistFmt=isNaN(stopDist)?'\u2014':stopDist.toFixed(1)+'%';
+return '<tr><td class="ticker-cell">'+t.ticker+'</td>'+
+'<td class="'+dirCls+'">'+t.dir+'</td>'+
+'<td>'+fmtPrice(t.entry)+'</td>'+
+'<td>'+priceCell+'</td>'+
+'<td class="'+cls(pnl)+'">'+fmtPnL(pnl)+'</td>'+
+'<td class="'+cls(pnl)+'">'+statusLabel(pnl)+'</td>'+
+'<td>'+(isNaN(t.riskLevel)?'\u2014':fmtPrice(t.riskLevel))+'</td>'+
+'<td class="'+stopCls(stopDist)+'">'+stopDistFmt+'</td>'+
+'<td>'+t.entryDate+'</td>'+
+'<td>'+tvLink(t.tvUrl)+'</td></tr>';
+}).join('');
+}
+
 function renderOpenTrades(trades){
   var open=trades.filter(function(t){return t.status==='open';});
   document.getElementById('openCount').textContent=open.length;
@@ -255,6 +300,12 @@ function renderClosedWeek(trades){
   var cw=trades.filter(function(t){return t.status==='closed'&&isLastNDays(t.exitDate,7);});
   document.getElementById('closedWeekCount').textContent=cw.length;
   document.getElementById('closedWeekBody').innerHTML=renderClosedWeekRows(cw);
+}
+
+function renderOpenedThisWeek(trades){
+var ow=trades.filter(function(t){return t.status==='open'&&isLastNDays(t.entryDate,7);});
+document.getElementById('openedWeekCount').textContent=ow.length;
+document.getElementById('openedWeekBody').innerHTML=renderOpenedWeekRows(ow);
 }
 
 function renderWeeklyStats(trades){
@@ -327,6 +378,7 @@ function setupSort(tableId,getDataFn){
           case 'current':av=getCurrentPrice(a);bv=getCurrentPrice(b);break;
           case 'exit':av=a.exit;bv=b.exit;break;
           case 'exitDate':av=parseDate(a.exitDate)||0;bv=parseDate(b.exitDate)||0;break;
+          case 'entryDate':av=parseDate(a.entryDate)||0;bv=parseDate(b.entryDate)||0;break;
           case 'pnl':av=calcPnL(a.entry,getCurrentPrice(a),a.dir);bv=calcPnL(b.entry,getCurrentPrice(b),b.dir);break;
           case 'result':av=a.result;bv=b.result;break;
           case 'stopDist':av=calcStopDist(getCurrentPrice(a),a.riskLevel,a.dir);bv=calcStopDist(getCurrentPrice(b),b.riskLevel,b.dir);break;
@@ -338,7 +390,8 @@ function setupSort(tableId,getDataFn){
       });
       var tbody=table.querySelector('tbody');
       if(tableId==='openTable'){tbody.innerHTML=renderOpenRows(rows);}
-      else{tbody.innerHTML=renderClosedWeekRows(rows);}
+else if(tableId==='openedWeekTable'){tbody.innerHTML=renderOpenedWeekRows(rows);}
+else{tbody.innerHTML=renderClosedWeekRows(rows);}
     });
   });
 }
@@ -364,12 +417,14 @@ async function init(){
     document.getElementById('loadingIndicator').style.display='none';
     document.getElementById('mainContent').style.display='block';
     renderOpenTrades(allTrades);
+    renderOpenedThisWeek(allTrades);
     renderClosedWeek(allTrades);
     renderWeeklyStats(allTrades);
     renderYTD(allTrades);
     renderAlerts(allTrades);
     setupSort('openTable',function(){return allTrades.filter(function(t){return t.status==='open';});});
     setupSort('closedWeekTable',function(){return allTrades.filter(function(t){return t.status==='closed'&&isLastNDays(t.exitDate,7);});});
+    setupSort('openedWeekTable',function(){return allTrades.filter(function(t){return t.status==='open'&&isLastNDays(t.entryDate,7);});});
     setupSearch();
     await fetchLivePrices(allTrades);
   }catch(err){
