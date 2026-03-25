@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Email Confirmed — BelFed Analytics</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background-color:#f5f2eb;font-family:'Courier New',Courier,monospace;color:#000;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px}
+.confirm-box{background:#fff;border:2px solid #000;padding:50px 40px;max-width:480px;width:100%;text-align:center}
+.confirm-box h1{font-size:18px;letter-spacing:3px;margin-bottom:8px}
+.confirm-box .sub{font-size:11px;opacity:0.5;margin-bottom:30px;letter-spacing:1px}
+.checkmark{font-size:64px;margin-bottom:20px}
+.confirm-box h2{font-size:16px;letter-spacing:2px;margin-bottom:12px;color:#1a7a1a}
+.confirm-box p{font-size:13px;line-height:1.8;margin-bottom:20px;opacity:0.7}
+.confirm-box .countdown{font-size:12px;opacity:0.5;margin-bottom:20px}
+.confirm-box .go-btn{font-family:'Courier New',monospace;display:inline-block;padding:12px 28px;font-size:13px;font-weight:bold;letter-spacing:2px;background:#000;color:#f5f2eb;border:none;cursor:pointer;text-decoration:none}
+.confirm-box .go-btn:hover{background:#222}
+</style>
+</head>
+<body>
+<div class="confirm-box">
+<h1>— BELFED_ —</h1>
+<div class="sub">MEMBER ACCESS</div>
+<div class="checkmark">✅</div>
+<h2>EMAIL CONFIRMED</h2>
+<p>Your account is verified and your 30-day free trial is now active.</p>
+<div class="countdown" id="countdown">Redirecting to dashboard in 5 seconds...</div>
+<a href="/dashboard.html" class="go-btn" id="goBtn">GO TO DASHBOARD</a>
+</div>
+<script>
+var seconds=5;
+var el=document.getElementById('countdown');
+var timer=setInterval(function(){
+seconds--;
+if(seconds<=0){clearInterval(timer);window.location.href='/dashboard.html';return;}
+el.textContent='Redirecting to dashboard in '+seconds+' seconds...';
+},1000);
+</script>
+</body>
+</html>
