@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://script.google.com https://docs.google.com https://script.googleusercontent.com; img-src 'self'; frame-src 'none';">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://script.google.com https://docs.google.com https://script.googleusercontent.com https://*.supabase.co; img-src 'self'; frame-src 'none';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BELFED ANALYTICS — LIVE TRADE TRACKER</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background-color:#f5f2eb;font-family:'Courier New',Courier,monospace;color:#000;padding:24px 20px;line-height:1.6;font-size:14px}
 .container{max-width:1400px;margin:0 auto}
-header{text-align:center;margin-bottom:40px;padding-bottom:18px;border-bottom:2px solid #000}
+header{text-align:center;margin-bottom:40px;padding-bottom:18px;border-bottom:2px solid #000;position:relative}
 h1{font-size:22px;font-weight:bold;letter-spacing:3px;margin-bottom:8px}
 .updated{font-size:12px;opacity:0.6}
 .section{margin-bottom:50px}
@@ -60,19 +62,48 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 .tab-btn{font-family:'Courier New',monospace;font-size:13px;font-weight:bold;letter-spacing:2px;padding:10px 24px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;color:#999;transition:color 0.2s,border-color 0.2s}
 .tab-btn:hover{color:#000}
 .tab-btn.active{color:#000;border-bottom-color:#000}
+#loginScreen{display:flex;justify-content:center;align-items:center;min-height:80vh}
+.login-box{background:#fff;border:2px solid #000;padding:40px;max-width:400px;width:100%;text-align:center}
+.login-box h2{font-size:18px;letter-spacing:3px;margin-bottom:8px}
+.login-box .login-sub{font-size:11px;opacity:0.5;margin-bottom:30px;letter-spacing:1px}
+.login-box input[type=email],.login-box input[type=password]{font-family:'Courier New',monospace;width:100%;padding:10px 14px;font-size:13px;border:1px solid #000;background:#f5f2eb;margin-bottom:14px;outline:none}
+.login-box input:focus{background:#fff}
+.login-box .login-btn{font-family:'Courier New',monospace;width:100%;padding:12px;font-size:13px;font-weight:bold;letter-spacing:2px;background:#000;color:#f5f2eb;border:none;cursor:pointer;margin-top:6px}
+.login-box .login-btn:hover{background:#222}
+.login-box .login-error{color:#c50000;font-size:12px;margin-top:12px;display:none}
+.login-box .login-msg{color:#1a7a1a;font-size:12px;margin-top:12px;display:none}
+.logout-btn{position:absolute;right:0;top:50%;transform:translateY(-50%);font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;padding:6px 16px;background:none;border:1px solid #000;cursor:pointer;color:#000}
+.logout-btn:hover{background:#000;color:#f5f2eb}
+.login-toggle{font-size:11px;margin-top:16px;opacity:0.6;cursor:pointer;letter-spacing:1px}
+.login-toggle:hover{opacity:1}
 </style>
 </head>
 <body>
-<div class="container">
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+<div class="login-box">
+<h2>— BELFED_ —</h2>
+<div class="login-sub">MEMBER ACCESS</div>
+<input type="email" id="loginEmail" placeholder="Email address">
+<input type="password" id="loginPassword" placeholder="Password" style="display:none">
+<button class="login-btn" id="loginBtn" onclick="handleLogin()">SEND MAGIC LINK</button>
+<div class="login-toggle" id="loginToggle" onclick="toggleLoginMode()">Use password instead</div>
+<div class="login-error" id="loginError"></div>
+<div class="login-msg" id="loginMsg"></div>
+</div>
+</div>
+<!-- DASHBOARD -->
+<div class="container" id="dashboardContainer" style="display:none">
 <header>
-<h1>&mdash; BELFED ANALYTICS / LIVE TRADE TRACKER &mdash;</h1>
+<h1>— BELFED ANALYTICS / LIVE TRADE TRACKER —</h1>
 <div class="updated">Updated: <span id="currentTime"></span></div>
+<button class="logout-btn" onclick="handleLogout()">LOGOUT</button>
 </header>
 <div class="tab-bar">
 <button class="tab-btn active" onclick="switchTab('equities')">EQUITIES</button>
 <button class="tab-btn" onclick="switchTab('crypto')">CRYPTO</button>
 </div>
-  <div id="loadingIndicator" class="loading">Loading trade data...</div>
+<div id="loadingIndicator" class="loading">Loading trade data...</div>
 <div id="errorBox" class="error-box" style="display:none"></div>
 <div id="mainContent" style="display:none">
 <!-- OPEN TRADES -->
@@ -86,7 +117,7 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 <th class="sortable" data-col="direction">Direction</th>
 <th class="sortable" data-col="entry">Entry $</th>
 <th class="sortable" data-col="current">Current $</th>
-<th class="sortable" data-col="pnl">P&amp;L %</th>
+<th class="sortable" data-col="pnl">P&L %</th>
 <th>Status</th>
 <th>Risk Level</th>
 <th class="sortable" data-col="stopDist">Stop Dist %</th>
@@ -97,7 +128,6 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 </div>
 <div class="price-note" id="priceNote"></div>
 </div>
-
 <!-- OPENED THIS WEEK -->
 <div class="section">
 <div class="section-title">OPENED THIS WEEK <span class="count-badge" id="openedWeekCount">0</span></div>
@@ -108,7 +138,7 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 <th class="sortable" data-col="direction">Direction</th>
 <th class="sortable" data-col="entry">Entry $</th>
 <th class="sortable" data-col="current">Current $</th>
-<th class="sortable" data-col="pnl">P&amp;L %</th>
+<th class="sortable" data-col="pnl">P&L %</th>
 <th>Status</th>
 <th>Risk Level</th>
 <th class="sortable" data-col="stopDist">Stop Dist %</th>
@@ -144,30 +174,97 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 <div class="stat-box"><div class="stat-label">TOTAL TRADES</div><div class="stat-value" id="wTotal">0</div></div>
 <div class="stat-box"><div class="stat-label">WINNERS</div><div class="stat-value positive" id="wWinners">0</div></div>
 <div class="stat-box"><div class="stat-label">LOSERS</div><div class="stat-value negative" id="wLosers">0</div></div>
-<div class="stat-box"><div class="stat-label">WIN RATE</div><div class="stat-value" id="wWinRate">&mdash;</div></div>
-<div class="stat-box"><div class="stat-label">AVG R</div><div class="stat-value" id="wAvgR">&mdash;</div></div>
-<div class="stat-box"><div class="stat-label">BEST TRADE</div><div class="stat-value positive" id="wBest">&mdash;</div></div>
-<div class="stat-box"><div class="stat-label">WORST TRADE</div><div class="stat-value negative" id="wWorst">&mdash;</div></div>
+<div class="stat-box"><div class="stat-label">WIN RATE</div><div class="stat-value" id="wWinRate">—</div></div>
+<div class="stat-box"><div class="stat-label">AVG R</div><div class="stat-value" id="wAvgR">—</div></div>
+<div class="stat-box"><div class="stat-label">BEST TRADE</div><div class="stat-value positive" id="wBest">—</div></div>
+<div class="stat-box"><div class="stat-label">WORST TRADE</div><div class="stat-value negative" id="wWorst">—</div></div>
 </div>
 </div>
 <!-- YTD SCORECARD -->
 <div class="section">
 <div class="section-title">YTD SCORECARD</div>
 <div class="ytd-grid">
-<div class="ytd-box"><div class="ytd-label">TOTAL R</div><div class="ytd-value" id="ytdR">&mdash;</div></div>
-<div class="ytd-box"><div class="ytd-label">WIN RATE</div><div class="ytd-value" id="ytdWR">&mdash;</div></div>
-<div class="ytd-box"><div class="ytd-label">CLOSED TRADES</div><div class="ytd-value" id="ytdTotal">&mdash;</div></div>
+<div class="ytd-box"><div class="ytd-label">TOTAL R</div><div class="ytd-value" id="ytdR">—</div></div>
+<div class="ytd-box"><div class="ytd-label">WIN RATE</div><div class="ytd-value" id="ytdWR">—</div></div>
+<div class="ytd-box"><div class="ytd-label">CLOSED TRADES</div><div class="ytd-value" id="ytdTotal">—</div></div>
 </div>
 </div>
 <!-- ALERTS -->
 <div class="section">
-<div class="section-title">&#9888; ALERTS</div>
-<div class="alert-box" id="alertsBox"><div class="no-data">No significant moves detected (&gt;5%)</div></div>
+<div class="section-title">⚠ ALERTS</div>
+<div class="alert-box" id="alertsBox">
+<div class="no-data">No significant moves detected (>5%)</div>
+</div>
 </div>
 </div><!-- mainContent -->
 <footer>Educational purposes only. belfed.com</footer>
 </div><!-- container -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+var SUPABASE_URL='https://obujqvqqmyfcfflhqvud.supabase.co';
+var SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9idWpxdnFxbXlmY2ZmbGhxdnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDgxNjYsImV4cCI6MjA4OTkyNDE2Nn0.syl4YBLbf8aBitxyK3gCL51pPYxWjEW99mMTXJaQQ8w';
+var supaClient=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+var useMagicLink=true;
+function toggleLoginMode(){
+useMagicLink=!useMagicLink;
+var pw=document.getElementById('loginPassword');
+var btn=document.getElementById('loginBtn');
+var tog=document.getElementById('loginToggle');
+if(useMagicLink){pw.style.display='none';btn.textContent='SEND MAGIC LINK';tog.textContent='Use password instead';}
+else{pw.style.display='block';btn.textContent='SIGN IN';tog.textContent='Use magic link instead';}
+}
+async function handleLogin(){
+var email=document.getElementById('loginEmail').value.trim();
+var errEl=document.getElementById('loginError');
+var msgEl=document.getElementById('loginMsg');
+errEl.style.display='none';msgEl.style.display='none';
+if(!email){errEl.textContent='Please enter your email';errEl.style.display='block';return;}
+var btn=document.getElementById('loginBtn');
+btn.disabled=true;btn.textContent='PLEASE WAIT...';
+try{
+if(useMagicLink){
+var res=await supaClient.auth.signInWithOtp({email:email,options:{emailRedirectTo:window.location.origin+'/dashboard.html'}});
+if(res.error)throw res.error;
+msgEl.textContent='Check your inbox for the login link!';msgEl.style.display='block';
+btn.textContent='LINK SENT';}
+else{
+var pw=document.getElementById('loginPassword').value;
+if(!pw){errEl.textContent='Please enter your password';errEl.style.display='block';btn.disabled=false;btn.textContent='SIGN IN';return;}
+var res=await supaClient.auth.signInWithPassword({email:email,password:pw});
+if(res.error)throw res.error;
+showDashboard();}
+}catch(err){
+errEl.textContent=err.message||'Login failed';errEl.style.display='block';
+btn.disabled=false;btn.textContent=useMagicLink?'SEND MAGIC LINK':'SIGN IN';}
+}
+async function handleLogout(){
+await supaClient.auth.signOut();
+document.getElementById('loginScreen').style.display='flex';
+document.getElementById('dashboardContainer').style.display='none';
+}
+function showDashboard(){
+document.getElementById('loginScreen').style.display='none';
+document.getElementById('dashboardContainer').style.display='block';
+init();
+}
+async function checkAuth(){
+var hash=window.location.hash;
+if(hash&&hash.includes('access_token')){
+var params=new URLSearchParams(hash.substring(1));
+var accessToken=params.get('access_token');
+var refreshToken=params.get('refresh_token');
+if(accessToken&&refreshToken){
+await supaClient.auth.setSession({access_token:accessToken,refresh_token:refreshToken});
+window.location.hash='';}
+}
+var sess=await supaClient.auth.getSession();
+if(sess.data.session){showDashboard();}
+else{document.getElementById('loginScreen').style.display='flex';}
+}
+supaClient.auth.onAuthStateChange(function(event,session){
+if(event==='SIGNED_IN'&&session){showDashboard();}
+if(event==='SIGNED_OUT'){document.getElementById('loginScreen').style.display='flex';document.getElementById('dashboardContainer').style.display='none';}
+});
 var SHEET_ID='1bBpKZP74HEVrLZJlazz7gY7jbuBj9R5rPBcV2KklwDo';
 var GID='0';
 var CRYPTO_GID='1219794768';
@@ -176,7 +273,6 @@ var CSVURL='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:
 var YAHOO_PROXY='https://script.google.com/macros/s/AKfycbyXYFW0kFYR4aa9mCvX_wew6he08YtaLMjUjEyBUoGi-SSHqhddhVwl1RXDmpKQIZnv/exec';
 var allTrades=[];
 var livePrices={};
-
 function mskTime(){return new Date().toLocaleString('en-GB',{timeZone:'Europe/Moscow',year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})+' MSK';}
 function parseNum(v){if(v===null||v===undefined||v==='')return NaN;var s=String(v).trim().replace(/ /g,'').replace(/,/g,'.');return parseFloat(s);}
 function parseDate(s){if(!s||!s.trim())return null;var p=s.trim().split('.');if(p.length===3){var d=parseInt(p[0],10),m=parseInt(p[1],10)-1,y=parseInt(p[2],10);if(y<100)y+=2000;var dt=new Date(y,m,d);return isNaN(dt.getTime())?null:dt;}return null;}
@@ -190,94 +286,86 @@ function cls(v){if(isNaN(v)||v===0)return 'neutral';return v>0?'positive':'negat
 function stopCls(v){if(isNaN(v))return '';if(v<=2)return 'stop-danger';if(v<=5)return 'stop-warn';return 'stop-safe';}
 function statusLabel(pnl){if(isNaN(pnl)||pnl===0)return '\u2300 Breakeven';return pnl>0?'\uD83D\uDFE2 Profit':'\uD83D\uDD34 Underwater';}
 function tvLink(url){if(!url||!url.startsWith('http'))return '\u2014';return '<a class="tv-link" href="'+url+'" target="_blank" rel="noopener">\u2197 View</a>';}
-
 function parseCSV(text){var rows=[],row=[],field='',inQ=false;for(var i=0;i<text.length;i++){var c=text[i],nx=text[i+1];if(inQ){if(c==='"'&&nx==='"'){field+='"';i++;}else if(c==='"'){inQ=false;}else{field+=c;}}else{if(c==='"'){inQ=true;}else if(c===','){row.push(field);field='';}else if(c==='\n'){row.push(field);rows.push(row);row=[];field='';if(nx==='\r')i++;}else if(c==='\r'){row.push(field);rows.push(row);row=[];field='';if(nx==='\n')i++;}else{field+=c;}}}if(field||row.length){row.push(field);rows.push(row);}return rows;}
-
 function buildTrades(rows){
-  var headerIdx=-1;
-  for(var i=0;i<rows.length;i++){var r=rows[i];if(r.some(function(c){return c.trim()==='Ticker';})&&r.some(function(c){return c.trim()==='Direction';})){headerIdx=i;break;}}
-  if(headerIdx<0)throw new Error('Header row not found');
-  var trades=[];
-  for(var i=headerIdx+1;i<rows.length;i++){var r=rows[i];var ticker=(r[1]||'').trim();if(!ticker)continue;var status=(r[3]||'').trim();if(!status)continue;
-    trades.push({ticker:ticker,dir:(r[2]||'').trim(),status:status.toLowerCase(),entryDate:(r[4]||'').trim(),exitDate:(r[5]||'').trim(),entry:parseNum(r[6]),riskLevel:parseNum(r[7]),exit:parseNum(r[8]),result:parseNum(r[9]),tvUrl:(r[10]||'').trim(),livePrice:NaN});}
-  return trades;
+var headerIdx=-1;
+for(var i=0;i<rows.length;i++){var r=rows[i];if(r.some(function(c){return c.trim()==='Ticker';})&&r.some(function(c){return c.trim()==='Direction';})){headerIdx=i;break;}}
+if(headerIdx<0)throw new Error('Header row not found');
+var trades=[];
+for(var i=headerIdx+1;i<rows.length;i++){var r=rows[i];var ticker=(r[1]||'').trim();if(!ticker)continue;var status=(r[3]||'').trim();if(!status)continue;
+trades.push({ticker:ticker,dir:(r[2]||'').trim(),status:status.toLowerCase(),entryDate:(r[4]||'').trim(),exitDate:(r[5]||'').trim(),entry:parseNum(r[6]),riskLevel:parseNum(r[7]),exit:parseNum(r[8]),result:parseNum(r[9]),tvUrl:(r[10]||'').trim(),livePrice:NaN});}
+return trades;
 }
-
 async function fetchLivePrices(trades){
-    var openTrades=trades.filter(function(t){return t.status==='open';});
-    var uniqueTickers=[...new Set(openTrades.map(function(t){return t.ticker;}))];
-    var note=document.getElementById('priceNote');
-    if(!YAHOO_PROXY){note.textContent='Yahoo proxy not configured';return;}
-    note.textContent='Fetching live prices via Yahoo Finance...';
-    try{
-        var url=YAHOO_PROXY+'?symbols='+encodeURIComponent(uniqueTickers.join(','));
-        var res=await fetch(url);
-        if(!res.ok)throw new Error('HTTP '+res.status);
-        var text=await res.text();
-        var finalUrl=res.url||url;
-        if(text.startsWith('<!DOCTYPE')||text.startsWith('<html')){
-            var redir=await fetch(finalUrl);
-            text=await redir.text();
-        }
-        var data=JSON.parse(text);
-        var fetched=0;
-        Object.keys(data).forEach(function(sym){
-            if(data[sym]&&data[sym].price>0){livePrices[sym]=data[sym].price;fetched++;}
-        });
-        openTrades.forEach(function(t){if(livePrices[t.ticker])t.livePrice=livePrices[t.ticker];});
-        note.textContent=fetched>0?'Live prices via Yahoo Finance ('+fetched+'/'+uniqueTickers.length+' tickers) \u2022 Updates on page reload':'Could not fetch live prices';
-    }catch(err){
-        console.error('Yahoo proxy error:',err);
-        note.textContent='Error fetching prices: '+err.message;
-    }
-    renderOpenTrades(allTrades);
-    renderOpenedThisWeek(allTrades);
-    renderAlerts(allTrades);
-  }
-
+var openTrades=trades.filter(function(t){return t.status==='open';});
+var uniqueTickers=[...new Set(openTrades.map(function(t){return t.ticker;}))];
+var note=document.getElementById('priceNote');
+if(!YAHOO_PROXY){note.textContent='Yahoo proxy not configured';return;}
+note.textContent='Fetching live prices via Yahoo Finance...';
+try{
+var url=YAHOO_PROXY+'?symbols='+encodeURIComponent(uniqueTickers.join(','));
+var res=await fetch(url);
+if(!res.ok)throw new Error('HTTP '+res.status);
+var text=await res.text();
+var finalUrl=res.url||url;
+if(text.startsWith('<!DOCTYPE')||text.startsWith('<html')){
+var redir=await fetch(finalUrl);
+text=await redir.text();
+}
+var data=JSON.parse(text);
+var fetched=0;
+Object.keys(data).forEach(function(sym){
+if(data[sym]&&data[sym].price>0){livePrices[sym]=data[sym].price;fetched++;}
+});
+openTrades.forEach(function(t){if(livePrices[t.ticker])t.livePrice=livePrices[t.ticker];});
+note.textContent=fetched>0?'Live prices via Yahoo Finance ('+fetched+'/'+uniqueTickers.length+' tickers) \u2022 Updates on page reload':'Could not fetch live prices';
+}catch(err){
+console.error('Yahoo proxy error:',err);
+note.textContent='Error fetching prices: '+err.message;
+}
+renderOpenTrades(allTrades);
+renderOpenedThisWeek(allTrades);
+renderAlerts(allTrades);
+}
 function getCurrentPrice(t){
-  if(!isNaN(t.livePrice)&&t.livePrice>0)return t.livePrice;
-  if(!isNaN(t.exit)&&t.exit>0)return t.exit;
-  return NaN;
+if(!isNaN(t.livePrice)&&t.livePrice>0)return t.livePrice;
+if(!isNaN(t.exit)&&t.exit>0)return t.exit;
+return NaN;
 }
-
 function emptyRow(cols,msg){return '<tr><td colspan="'+cols+'" class="no-data">'+msg+'</td></tr>';}
-
 function renderOpenRows(rows){
-  if(!rows.length)return emptyRow(9,'No open trades');
-  return rows.map(function(t){
-    var current=getCurrentPrice(t);
-    var pnl=calcPnL(t.entry,current,t.dir);
-    var stopDist=calcStopDist(current,t.riskLevel,t.dir);
-    var dirCls=t.dir.toLowerCase().includes('short')?'dir-short':'dir-long';
-    var priceCell=isNaN(current)?'<span class="price-loading">loading...</span>':fmtPrice(current);
-    var stopDistFmt=isNaN(stopDist)?'\u2014':stopDist.toFixed(1)+'%';
-    return '<tr><td class="ticker-cell">'+t.ticker+'</td>'+
-      '<td class="'+dirCls+'">'+t.dir+'</td>'+
-      '<td>'+fmtPrice(t.entry)+'</td>'+
-      '<td>'+priceCell+'</td>'+
-      '<td class="'+cls(pnl)+'">'+fmtPnL(pnl)+'</td>'+
-      '<td class="'+cls(pnl)+'">'+statusLabel(pnl)+'</td>'+
-      '<td>'+(isNaN(t.riskLevel)?'\u2014':fmtPrice(t.riskLevel))+'</td>'+
-      '<td class="'+stopCls(stopDist)+'">'+stopDistFmt+'</td>'+
-      '<td>'+tvLink(t.tvUrl)+'</td></tr>';
-  }).join('');
+if(!rows.length)return emptyRow(9,'No open trades');
+return rows.map(function(t){
+var current=getCurrentPrice(t);
+var pnl=calcPnL(t.entry,current,t.dir);
+var stopDist=calcStopDist(current,t.riskLevel,t.dir);
+var dirCls=t.dir.toLowerCase().includes('short')?'dir-short':'dir-long';
+var priceCell=isNaN(current)?'<span class="price-loading">loading...</span>':fmtPrice(current);
+var stopDistFmt=isNaN(stopDist)?'\u2014':stopDist.toFixed(1)+'%';
+return '<tr><td class="ticker-cell">'+t.ticker+'</td>'+
+'<td class="'+dirCls+'">'+t.dir+'</td>'+
+'<td>'+fmtPrice(t.entry)+'</td>'+
+'<td>'+priceCell+'</td>'+
+'<td class="'+cls(pnl)+'">'+fmtPnL(pnl)+'</td>'+
+'<td class="'+cls(pnl)+'">'+statusLabel(pnl)+'</td>'+
+'<td>'+(isNaN(t.riskLevel)?'\u2014':fmtPrice(t.riskLevel))+'</td>'+
+'<td class="'+stopCls(stopDist)+'">'+stopDistFmt+'</td>'+
+'<td>'+tvLink(t.tvUrl)+'</td></tr>';
+}).join('');
 }
-
 function renderClosedWeekRows(rows){
-  if(!rows.length)return emptyRow(7,'No closed trades this week');
-  return rows.map(function(t){
-    var dirCls=t.dir.toLowerCase().includes('short')?'dir-short':'dir-long';
-    return '<tr><td class="ticker-cell">'+t.ticker+'</td>'+
-      '<td class="'+dirCls+'">'+t.dir+'</td>'+
-      '<td>'+fmtPrice(t.entry)+'</td>'+
-      '<td>'+fmtPrice(t.exit)+'</td>'+
-      '<td>'+t.exitDate+'</td>'+
-      '<td class="'+cls(t.result)+'">'+fmtR(t.result)+'</td>'+
-      '<td>'+tvLink(t.tvUrl)+'</td></tr>';
-  }).join('');
+if(!rows.length)return emptyRow(7,'No closed trades this week');
+return rows.map(function(t){
+var dirCls=t.dir.toLowerCase().includes('short')?'dir-short':'dir-long';
+return '<tr><td class="ticker-cell">'+t.ticker+'</td>'+
+'<td class="'+dirCls+'">'+t.dir+'</td>'+
+'<td>'+fmtPrice(t.entry)+'</td>'+
+'<td>'+fmtPrice(t.exit)+'</td>'+
+'<td>'+t.exitDate+'</td>'+
+'<td class="'+cls(t.result)+'">'+fmtR(t.result)+'</td>'+
+'<td>'+tvLink(t.tvUrl)+'</td></tr>';
+}).join('');
 }
-
 function renderOpenedWeekRows(rows){
 if(!rows.length)return emptyRow(10,'No new trades opened this week');
 return rows.map(function(t){
@@ -299,123 +387,114 @@ return '<tr><td class="ticker-cell">'+t.ticker+'</td>'+
 '<td>'+tvLink(t.tvUrl)+'</td></tr>';
 }).join('');
 }
-
 function renderOpenTrades(trades){
-  var open=trades.filter(function(t){return t.status==='open';});
-  document.getElementById('openCount').textContent=open.length;
-  document.getElementById('openBody').innerHTML=renderOpenRows(open);
+var open=trades.filter(function(t){return t.status==='open';});
+document.getElementById('openCount').textContent=open.length;
+document.getElementById('openBody').innerHTML=renderOpenRows(open);
 }
-
 function renderClosedWeek(trades){
-  var cw=trades.filter(function(t){return t.status==='closed'&&isLastNDays(t.exitDate,7);});
-  document.getElementById('closedWeekCount').textContent=cw.length;
-  document.getElementById('closedWeekBody').innerHTML=renderClosedWeekRows(cw);
+var cw=trades.filter(function(t){return t.status==='closed'&&isLastNDays(t.exitDate,7);});
+document.getElementById('closedWeekCount').textContent=cw.length;
+document.getElementById('closedWeekBody').innerHTML=renderClosedWeekRows(cw);
 }
-
 function renderOpenedThisWeek(trades){
 var ow=trades.filter(function(t){return t.status==='open'&&isLastNDays(t.entryDate,7);});
 document.getElementById('openedWeekCount').textContent=ow.length;
 document.getElementById('openedWeekBody').innerHTML=renderOpenedWeekRows(ow);
 }
-
 function renderWeeklyStats(trades){
-  var cw=trades.filter(function(t){return t.status==='closed'&&isLastNDays(t.exitDate,7);});
-  var total=cw.length;
-  var winners=cw.filter(function(t){return t.result>0;}).length;
-  var losers=cw.filter(function(t){return t.result<0;}).length;
-  var wr=total?(winners/total*100).toFixed(1):'\u2014';
-  var valid=cw.filter(function(t){return !isNaN(t.result);});
-  var avgR=valid.length?valid.reduce(function(s,t){return s+t.result;},0)/valid.length:NaN;
-  var best=null,worst=null;
-  cw.forEach(function(t){if(!isNaN(t.result)){if(!best||t.result>best.result)best=t;if(!worst||t.result<worst.result)worst=t;}});
-  document.getElementById('wTotal').textContent=total;
-  document.getElementById('wWinners').textContent=winners;
-  document.getElementById('wLosers').textContent=losers;
-  document.getElementById('wWinRate').textContent=wr==='\u2014'?wr:wr+'%';
-  var avgEl=document.getElementById('wAvgR');
-  avgEl.textContent=fmtR(avgR);avgEl.className='stat-value '+cls(avgR);
-  document.getElementById('wBest').textContent=best?best.ticker+' '+fmtR(best.result):'\u2014';
-  document.getElementById('wWorst').textContent=worst?worst.ticker+' '+fmtR(worst.result):'\u2014';
+var cw=trades.filter(function(t){return t.status==='closed'&&isLastNDays(t.exitDate,7);});
+var total=cw.length;
+var winners=cw.filter(function(t){return t.result>0;}).length;
+var losers=cw.filter(function(t){return t.result<0;}).length;
+var wr=total?(winners/total*100).toFixed(1):'\u2014';
+var valid=cw.filter(function(t){return !isNaN(t.result);});
+var avgR=valid.length?valid.reduce(function(s,t){return s+t.result;},0)/valid.length:NaN;
+var best=null,worst=null;
+cw.forEach(function(t){if(!isNaN(t.result)){if(!best||t.result>best.result)best=t;if(!worst||t.result<worst.result)worst=t;}});
+document.getElementById('wTotal').textContent=total;
+document.getElementById('wWinners').textContent=winners;
+document.getElementById('wLosers').textContent=losers;
+document.getElementById('wWinRate').textContent=wr==='\u2014'?wr:wr+'%';
+var avgEl=document.getElementById('wAvgR');
+avgEl.textContent=fmtR(avgR);avgEl.className='stat-value '+cls(avgR);
+document.getElementById('wBest').textContent=best?best.ticker+' '+fmtR(best.result):'\u2014';
+document.getElementById('wWorst').textContent=worst?worst.ticker+' '+fmtR(worst.result):'\u2014';
 }
-
 function renderYTD(trades){
-  var closed=trades.filter(function(t){return t.status==='closed';});
-  var total=closed.length;
-  var valid=closed.filter(function(t){return !isNaN(t.result);});
-  var totalR=valid.reduce(function(s,t){return s+t.result;},0);
-  var winners=valid.filter(function(t){return t.result>0;}).length;
-  var wr=valid.length?(winners/valid.length*100).toFixed(1):'\u2014';
-  var rEl=document.getElementById('ytdR');
-  rEl.textContent=fmtR(totalR);rEl.className='ytd-value '+cls(totalR);
-  document.getElementById('ytdWR').textContent=wr==='\u2014'?wr:wr+'%';
-  document.getElementById('ytdTotal').textContent=total;
+var closed=trades.filter(function(t){return t.status==='closed';});
+var total=closed.length;
+var valid=closed.filter(function(t){return !isNaN(t.result);});
+var totalR=valid.reduce(function(s,t){return s+t.result;},0);
+var winners=valid.filter(function(t){return t.result>0;}).length;
+var wr=valid.length?(winners/valid.length*100).toFixed(1):'\u2014';
+var rEl=document.getElementById('ytdR');
+rEl.textContent=fmtR(totalR);rEl.className='ytd-value '+cls(totalR);
+document.getElementById('ytdWR').textContent=wr==='\u2014'?wr:wr+'%';
+document.getElementById('ytdTotal').textContent=total;
 }
-
 function renderAlerts(trades){
-  var open=trades.filter(function(t){return t.status==='open';});
-  var box=document.getElementById('alertsBox');
-  var items=[];
-  open.forEach(function(t){
-    var current=getCurrentPrice(t);
-    var pnl=calcPnL(t.entry,current,t.dir);
-    if(!isNaN(pnl)&&Math.abs(pnl)>5){
-      var lbl=pnl>0?'strong profit':'underwater';
-      items.push('<div class="alert-item"><strong>'+t.ticker+'</strong> &mdash; P&amp;L <span class="'+cls(pnl)+'">'+fmtPnL(pnl)+'</span> ('+lbl+')</div>');
-    }
-    var stopDist=calcStopDist(current,t.riskLevel,t.dir);
-    if(!isNaN(stopDist)&&stopDist<=2){
-      items.push('<div class="alert-item"><strong>'+t.ticker+'</strong> &mdash; <span class="stop-danger">Stop distance only '+stopDist.toFixed(1)+'%</span></div>');
-    }
-  });
-  box.innerHTML=items.length?items.join(''):'<div class="no-data">No significant moves detected (&gt;5%)</div>';
+var open=trades.filter(function(t){return t.status==='open';});
+var box=document.getElementById('alertsBox');
+var items=[];
+open.forEach(function(t){
+var current=getCurrentPrice(t);
+var pnl=calcPnL(t.entry,current,t.dir);
+if(!isNaN(pnl)&&Math.abs(pnl)>5){
+var lbl=pnl>0?'strong profit':'underwater';
+items.push('<div class="alert-item"><strong>'+t.ticker+'</strong> \u2014 P&L <span class="'+cls(pnl)+'">'+fmtPnL(pnl)+'</span> ('+lbl+')</div>');
 }
-
+var stopDist=calcStopDist(current,t.riskLevel,t.dir);
+if(!isNaN(stopDist)&&stopDist<=2){
+items.push('<div class="alert-item"><strong>'+t.ticker+'</strong> \u2014 <span class="stop-danger">Stop distance only '+stopDist.toFixed(1)+'%</span></div>');
+}
+});
+box.innerHTML=items.length?items.join(''):'<div class="no-data">No significant moves detected (>5%)</div>';
+}
 function setupSort(tableId,getDataFn){
-  var table=document.getElementById(tableId);if(!table)return;
-  var sortCol=null,asc=true;
-  table.querySelectorAll('th.sortable').forEach(function(th){
-    th.addEventListener('click',function(){
-      var col=th.dataset.col;
-      if(sortCol===col){asc=!asc;}else{sortCol=col;asc=true;}
-      table.querySelectorAll('th').forEach(function(h){h.classList.remove('sort-asc','sort-desc');});
-      th.classList.add(asc?'sort-asc':'sort-desc');
-      var rows=getDataFn().slice().sort(function(a,b){
-        var av,bv;
-        switch(col){
-          case 'ticker':av=a.ticker;bv=b.ticker;break;
-          case 'direction':av=a.dir;bv=b.dir;break;
-          case 'entry':av=a.entry;bv=b.entry;break;
-          case 'current':av=getCurrentPrice(a);bv=getCurrentPrice(b);break;
-          case 'exit':av=a.exit;bv=b.exit;break;
-          case 'exitDate':av=parseDate(a.exitDate)||0;bv=parseDate(b.exitDate)||0;break;
-          case 'entryDate':av=parseDate(a.entryDate)||0;bv=parseDate(b.entryDate)||0;break;
-          case 'pnl':av=calcPnL(a.entry,getCurrentPrice(a),a.dir);bv=calcPnL(b.entry,getCurrentPrice(b),b.dir);break;
-          case 'result':av=a.result;bv=b.result;break;
-          case 'stopDist':av=calcStopDist(getCurrentPrice(a),a.riskLevel,a.dir);bv=calcStopDist(getCurrentPrice(b),b.riskLevel,b.dir);break;
-          default:return 0;
-        }
-        if(typeof av==='string')return asc?av.localeCompare(bv):bv.localeCompare(av);
-        av=isNaN(av)?-Infinity:av;bv=isNaN(bv)?-Infinity:bv;
-        return asc?av-bv:bv-av;
-      });
-      var tbody=table.querySelector('tbody');
-      if(tableId==='openTable'){tbody.innerHTML=renderOpenRows(rows);}
+var table=document.getElementById(tableId);if(!table)return;
+var sortCol=null,asc=true;
+table.querySelectorAll('th.sortable').forEach(function(th){
+th.addEventListener('click',function(){
+var col=th.dataset.col;
+if(sortCol===col){asc=!asc;}else{sortCol=col;asc=true;}
+table.querySelectorAll('th').forEach(function(h){h.classList.remove('sort-asc','sort-desc');});
+th.classList.add(asc?'sort-asc':'sort-desc');
+var rows=getDataFn().slice().sort(function(a,b){
+var av,bv;
+switch(col){
+case 'ticker':av=a.ticker;bv=b.ticker;break;
+case 'direction':av=a.dir;bv=b.dir;break;
+case 'entry':av=a.entry;bv=b.entry;break;
+case 'current':av=getCurrentPrice(a);bv=getCurrentPrice(b);break;
+case 'exit':av=a.exit;bv=b.exit;break;
+case 'exitDate':av=parseDate(a.exitDate)||0;bv=parseDate(b.exitDate)||0;break;
+case 'entryDate':av=parseDate(a.entryDate)||0;bv=parseDate(b.entryDate)||0;break;
+case 'pnl':av=calcPnL(a.entry,getCurrentPrice(a),a.dir);bv=calcPnL(b.entry,getCurrentPrice(b),b.dir);break;
+case 'result':av=a.result;bv=b.result;break;
+case 'stopDist':av=calcStopDist(getCurrentPrice(a),a.riskLevel,a.dir);bv=calcStopDist(getCurrentPrice(b),b.riskLevel,b.dir);break;
+default:return 0;
+}
+if(typeof av==='string')return asc?av.localeCompare(bv):bv.localeCompare(av);
+av=isNaN(av)?-Infinity:av;bv=isNaN(bv)?-Infinity:bv;
+return asc?av-bv:bv-av;
+});
+var tbody=table.querySelector('tbody');
+if(tableId==='openTable'){tbody.innerHTML=renderOpenRows(rows);}
 else if(tableId==='openedWeekTable'){tbody.innerHTML=renderOpenedWeekRows(rows);}
 else{tbody.innerHTML=renderClosedWeekRows(rows);}
-    });
-  });
+});
+});
 }
-
 function setupSearch(){
-  document.getElementById('searchTicker').addEventListener('input',function(e){
-    var q=e.target.value.trim().toLowerCase();
-    var open=allTrades.filter(function(t){return t.status==='open';});
-    var filtered=q?open.filter(function(t){return t.ticker.toLowerCase().includes(q);}):open;
-    document.getElementById('openCount').textContent=filtered.length;
-    document.getElementById('openBody').innerHTML=renderOpenRows(filtered);
-  });
+document.getElementById('searchTicker').addEventListener('input',function(e){
+var q=e.target.value.trim().toLowerCase();
+var open=allTrades.filter(function(t){return t.status==='open';});
+var filtered=q?open.filter(function(t){return t.ticker.toLowerCase().includes(q);}):open;
+document.getElementById('openCount').textContent=filtered.length;
+document.getElementById('openBody').innerHTML=renderOpenRows(filtered);
+});
 }
-
 async function switchTab(tab){
 if(tab===currentTab)return;
 currentTab=tab;
@@ -448,37 +527,36 @@ box.textContent='Error loading data: '+err.message+'. Please refresh.';
 box.style.display='block';
 }
 }
-
 async function init(){
-  document.getElementById('currentTime').textContent=mskTime();
-  try{
-    var res=await fetch(CSVURL);
-    if(!res.ok)throw new Error('HTTP '+res.status);
-    var text=await res.text();
-    var rows=parseCSV(text);
-    allTrades=buildTrades(rows);
-    document.getElementById('loadingIndicator').style.display='none';
-    document.getElementById('mainContent').style.display='block';
-    renderOpenTrades(allTrades);
-    renderOpenedThisWeek(allTrades);
-    renderClosedWeek(allTrades);
-    renderWeeklyStats(allTrades);
-    renderYTD(allTrades);
-    renderAlerts(allTrades);
-    setupSort('openTable',function(){return allTrades.filter(function(t){return t.status==='open';});});
-    setupSort('closedWeekTable',function(){return allTrades.filter(function(t){return t.status==='closed'&&isLastNDays(t.exitDate,7);});});
-    setupSort('openedWeekTable',function(){return allTrades.filter(function(t){return t.status==='open'&&isLastNDays(t.entryDate,7);});});
-    setupSearch();
-    await fetchLivePrices(allTrades);
-  }catch(err){
-    document.getElementById('loadingIndicator').style.display='none';
-    var box=document.getElementById('errorBox');
-    box.textContent='Error loading data: '+err.message+'. Please refresh.';
-    box.style.display='block';
-    console.error(err);
-  }
+document.getElementById('currentTime').textContent=mskTime();
+try{
+var res=await fetch(CSVURL);
+if(!res.ok)throw new Error('HTTP '+res.status);
+var text=await res.text();
+var rows=parseCSV(text);
+allTrades=buildTrades(rows);
+document.getElementById('loadingIndicator').style.display='none';
+document.getElementById('mainContent').style.display='block';
+renderOpenTrades(allTrades);
+renderOpenedThisWeek(allTrades);
+renderClosedWeek(allTrades);
+renderWeeklyStats(allTrades);
+renderYTD(allTrades);
+renderAlerts(allTrades);
+setupSort('openTable',function(){return allTrades.filter(function(t){return t.status==='open';});});
+setupSort('closedWeekTable',function(){return allTrades.filter(function(t){return t.status==='closed'&&isLastNDays(t.exitDate,7);});});
+setupSort('openedWeekTable',function(){return allTrades.filter(function(t){return t.status==='open'&&isLastNDays(t.entryDate,7);});});
+setupSearch();
+await fetchLivePrices(allTrades);
+}catch(err){
+document.getElementById('loadingIndicator').style.display='none';
+var box=document.getElementById('errorBox');
+box.textContent='Error loading data: '+err.message+'. Please refresh.';
+box.style.display='block';
+console.error(err);
 }
-init();
+}
+checkAuth();
 </script>
 </body>
 </html>
