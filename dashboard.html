@@ -107,6 +107,12 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 <input type="email" id="siEmail" placeholder="Email address">
 <input type="password" id="siPassword" placeholder="Password">
 <button class="login-btn" onclick="handleSignIn()">SIGN IN</button>
+  <a href="#" id="forgotPasswordLink" style="display:block;margin-top:10px;font-size:11px;color:#999;letter-spacing:1px;text-decoration:none" onclick="document.getElementById('forgotPasswordBlock').style.display='block';this.style.display='none';return false;">Forgot password?</a>
+<div id="forgotPasswordBlock" style="display:none;margin-top:10px">
+<input type="email" id="resetEmail" placeholder="Enter your email">
+<button class="login-btn" onclick="handleForgotPassword()">SEND RESET LINK</button>
+<div id="resetStatus" style="font-size:11px;margin-top:8px;display:none"></div>
+</div>
 </div>
 <div id="signupForm" style="display:none">
 <input type="email" id="suEmail" placeholder="Email address">
@@ -256,6 +262,9 @@ document.getElementById('signinForm').style.display=tab==='signin'?'block':'none
 document.getElementById('signupForm').style.display=tab==='signup'?'block':'none';
 document.getElementById('loginError').style.display='none';
 document.getElementById('loginMsg').style.display='none';
+  document.getElementById('forgotPasswordBlock').style.display='none';
+document.getElementById('forgotPasswordLink').style.display='block';
+document.getElementById('resetStatus').style.display='none';
 }
 async function handleSignIn(){
 var email=document.getElementById('siEmail').value.trim();
@@ -267,6 +276,18 @@ try{
 var res=await supaClient.auth.signInWithPassword({email:email,password:pw});
 if(res.error)throw res.error;
 }catch(err){errEl.textContent=err.message||'Login failed';errEl.style.display='block';}
+}
+  async function handleForgotPassword(){
+var email=document.getElementById('resetEmail').value.trim();
+var statusEl=document.getElementById('resetStatus');
+statusEl.style.display='block';
+if(!email){statusEl.textContent='Please enter your email';statusEl.style.color='#c50000';return;}
+statusEl.textContent='Sending reset link...';statusEl.style.color='#999';
+try{
+var res=await supaClient.auth.resetPasswordForEmail(email,{redirectTo:'https://belfed.com/reset-password.html'});
+if(res.error)throw res.error;
+statusEl.textContent='Reset link sent! Check your email.';statusEl.style.color='#1a7a1a';
+}catch(err){statusEl.textContent=err.message||'Error sending reset link';statusEl.style.color='#c50000';}
 }
 async function handleSignUp(){
 var email=document.getElementById('suEmail').value.trim();
