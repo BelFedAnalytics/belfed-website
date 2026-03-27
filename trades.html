@@ -209,6 +209,7 @@ footer{padding:32px 48px;border-top:1px solid #111;display:flex;justify-content:
       var result=(r[9]||'').trim();
       var tvLink=(r[10]||'').trim();
       if(!ticker)return;
+            if(status.toLowerCase()!=='closed')return;
 
       var rVal=parseFloat(result.replace(',','.'));
       var isClosed=status.toLowerCase()==='closed';
