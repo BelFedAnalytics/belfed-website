@@ -17,6 +17,7 @@
       --border: #d0d0ca;
       --font: 'Courier Prime', 'Courier New', monospace;
     }
+    html { scroll-behavior: smooth; }
     body {
       font-family: var(--font);
       background: var(--white);
@@ -72,7 +73,6 @@
       border-top: 1px solid var(--border); padding: 24px 40px;
       display: flex; justify-content: space-between; align-items: center;
       font-size: 12px; color: var(--gray); flex-wrap: wrap; gap: 12px;
-              .legal-content p > strong:only-child { font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; display: block; margin-top: 24px; margin-bottom: 4px; }
     }
     footer a { color: var(--gray); text-decoration: none; }
     footer a:hover { color: var(--black); }
@@ -95,8 +95,8 @@
       <li><a href="/#about">About</a></li>
       <li><a href="/#subscribe">Subscribe</a></li>
     </ul>
-            <a href="/dashboard.html" class="nav-cta">Member Login</a>
-nav>
+    <a href="/dashboard.html" class="nav-cta">Member Login</a>
+  </nav>
 
   <main>
     <div class="legal-content">
@@ -145,38 +145,19 @@ nav>
         <li>No representation is being made that any account will or is likely to achieve profits or losses similar to those shown.</li>
       </ul>
 
-                    <h2>6. How to Read Our Performance Reports</h2>
-<p>Before diving into our track record, here is exactly what gets counted and why — so you can evaluate results on a fair basis.</p>
-
-        <p><strong>What counts as a set-up</strong></p>
-        <p>Only publicly shared ideas with all of the following are included in the performance table: a clear directional bias (Long or Short), a defined invalidation / stop-loss level, and at least one target level.</p>
-        <p>Not included: macro overviews or sector reviews with no specific trade direction; ideas presenting multiple alternative scenarios with no primary bias; educational breakdowns without explicit entry, stop, and target parameters. If it was not a clear, directional, actionable set-up — it is not in the stats.</p>
-
-        <p><strong>How risk is measured — the R-multiple</strong></p>
-        <p>All results are expressed in units of R, the ratio of outcome to initial risk. Example: Entry $100.00, Stop-Loss $95.00 (Risk = $5.00 = 1R), Target $115.00 (Reward = $15.00 = 3R). If the target is hit: +3.00R. If the stop is hit: −1.00R. If closed halfway: +1.50R. A losing trade always costs exactly −1R when the stop is hit cleanly; a winning trade returns a multiple of that same unit. This makes results comparable across all set-ups regardless of price level.</p>
-
-        <p><strong>What is 1R in dollars?</strong></p>
-        <p>1R is a universal unit — it is not a fixed dollar amount. It represents whatever you define as your risk per trade. For example, if your risk per trade is 1% of a $10,000 account, then 1R = $100. If it is 1% of a $100,000 account, then 1R = $1,000. A result of +3.08R means you made 3.08× your chosen risk amount. A result of −1.00R means you lost exactly your chosen risk amount. The R-system lets every subscriber — regardless of account size — apply results proportionally to their own portfolio.</p>
-
-        <p><strong>How stop-loss risk is handled</strong></p>
-        <p>When a stop-loss level is hit, the trade is recorded as −1.00R. This assumes the position was sized so that hitting the stop equals losing exactly one unit of risk. Slippage, gaps, or partial fills may cause slight deviations in live trading — this is noted where relevant.</p>
-
-        <p><strong>TradingView publishing policy</strong></p>
-        <p>All set-ups are published publicly on TradingView before the trade is active. TradingView does not allow ideas to be edited or deleted more than 15 minutes after publication. This means every set-up is permanently on record exactly as it was shared — entry, stop, target, and reasoning. No retroactive changes. No hindsight adjustments. What you see is what was published.</p>
-
-      <h2>7. Third-Party Content</h2>
+      <h2>6. Third-Party Content</h2>
       <p>BelFed Analytics may reference or link to third-party websites, tools, brokers, or services. Such references do not constitute endorsement or recommendation. We are not responsible for the content, accuracy, or practices of any third-party platforms. Use of third-party services is at your own risk.</p>
 
-      <h2>8. No Professional Relationship</h2>
+      <h2>7. No Professional Relationship</h2>
       <p>Use of BelFed Analytics services does not create a fiduciary, advisory, or professional relationship between you and BelFed Analytics. We are not a registered investment advisor, broker-dealer, or financial planner. Our services are not tailored to your individual circumstances.</p>
 
-      <h2>9. Subscription and Refund Policy</h2>
+      <h2>8. Subscription and Refund Policy</h2>
       <p>Paid subscriptions to BelFed Analytics services are subject to the terms outlined at the time of purchase. Due to the nature of digital information services, <strong>all sales are final</strong> unless otherwise stated. Subscription fees are non-refundable once the service period has commenced.</p>
 
-      <h2>10. Intellectual Property</h2>
+      <h2>9. Intellectual Property</h2>
       <p>All content, research, signals, analysis, branding, and materials produced by BelFed Analytics are protected by copyright and intellectual property laws. Unauthorized reproduction, redistribution, or resale of our content is strictly prohibited and may result in immediate termination of your subscription without refund.</p>
 
-      <h2>11. Limitation of Liability</h2>
+      <h2>10. Limitation of Liability</h2>
       <p>To the maximum extent permitted by applicable law, BelFed Analytics and its owners, officers, employees, and affiliates shall not be liable for any direct, indirect, incidental, special, consequential, or punitive damages arising from:</p>
       <ul>
         <li>Your use of or reliance on our services or content</li>
@@ -186,13 +167,13 @@ nav>
         <li>Unauthorized access to or alteration of your data</li>
       </ul>
 
-      <h2>12. Regulatory Compliance</h2>
+      <h2>11. Regulatory Compliance</h2>
       <p>BelFed Analytics does not provide services in jurisdictions where such services would be prohibited by local law or regulation. It is your sole responsibility to ensure that your use of our services complies with all applicable laws and regulations in your country or region of residence. By accessing our services, you represent that doing so is legal in your jurisdiction.</p>
 
-      <h2>13. Changes to This Disclaimer</h2>
+      <h2>12. Changes to This Disclaimer</h2>
       <p>BelFed Analytics reserves the right to modify this disclaimer at any time without prior notice. Continued use of our services after any changes constitutes acceptance of the updated terms. We recommend reviewing this page periodically.</p>
 
-      <h2>14. Contact</h2>
+      <h2>13. Contact</h2>
       <p>If you have any questions about this disclaimer, please contact us at <strong>contact@belfed.com</strong>.</p>
 
     </div>
