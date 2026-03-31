@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://obujqvqqmyfcfflhqvud.supabase.co; img-src 'self' data:;">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock Analysis — BelFed Analytics</title>
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --black: #0a0a0a; --white: #f5f5f0; --gray: #888; --border: #d0d0ca; --green: #1a6b3a; --red: #8b1a1a; --font: 'Courier Prime', 'Courier New', monospace; }
+body { font-family: var(--font); background: var(--white); color: var(--black); font-size: 15px; line-height: 1.6; }
+nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: var(--white); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; height: 56px; }
+.nav-logo { font-size: 17px; font-weight: 700; letter-spacing: 0.05em; text-decoration: none; color: var(--black); }
+.nav-links { display: flex; gap: 32px; list-style: none; }
+.nav-links a { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; color: var(--black); transition: opacity 0.2s; }
+.nav-links a:hover { opacity: 0.5; }
+.back-link { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; color: var(--black); border: 1px solid var(--black); padding: 8px 16px; transition: background 0.2s, color 0.2s; }
+.back-link:hover { background: var(--black); color: var(--white); }
+main { padding-top: 56px; }
+.hero { padding: 80px 40px 40px; max-width: 900px; }
+.hero .tag { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); margin-bottom: 20px; }
+.hero h1 { font-size: clamp(28px, 5vw, 48px); font-weight: 700; line-height: 1.1; margin-bottom: 16px; }
+.hero p { font-size: 15px; color: #555; max-width: 560px; }
+.content { padding: 40px; max-width: 1100px; }
+.analysis-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; margin-bottom: 40px; }
+.analysis-card { background: var(--white); border: 1px solid var(--border); padding: 28px; }
+.analysis-card .card-tag { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); margin-bottom: 12px; }
+.analysis-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+.analysis-card p { font-size: 13px; color: #555; line-height: 1.6; }
+.analysis-card .date { font-size: 11px; color: var(--gray); margin-top: 12px; }
+.coming-soon { text-align: center; padding: 80px 40px; border: 1px dashed var(--border); margin: 40px 0; }
+.coming-soon h2 { font-size: 18px; letter-spacing: 0.1em; margin-bottom: 12px; }
+.coming-soon p { font-size: 13px; color: var(--gray); }
+#loginScreen { display: none; justify-content: center; align-items: center; min-height: 80vh; padding-top: 56px; }
+.login-box { background: var(--white); border: 1px solid var(--border); padding: 48px; max-width: 420px; width: 100%; text-align: center; }
+.login-box h2 { font-size: 18px; letter-spacing: 0.1em; margin-bottom: 8px; }
+.login-box p { font-size: 13px; color: var(--gray); margin-bottom: 20px; }
+.login-box .login-btn { font-family: var(--font); display: inline-block; padding: 12px 28px; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; background: var(--black); color: var(--white); border: 1px solid var(--black); cursor: pointer; text-decoration: none; transition: background 0.2s, color 0.2s; }
+.login-box .login-btn:hover { background: transparent; color: var(--black); }
+footer { border-top: 1px solid var(--border); padding: 24px 40px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--gray); flex-wrap: wrap; gap: 12px; }
+footer a { color: var(--gray); text-decoration: none; }
+footer a:hover { color: var(--black); }
+#pageContent { display: none; }
+@media(max-width:700px) { .hero { padding: 60px 20px 30px; } .content { padding: 20px; } nav { padding: 0 20px; } footer { padding: 20px; } .analysis-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<nav>
+<a href="/" class="nav-logo">BELFED_</a>
+<ul class="nav-links">
+<li><a href="/members.html">&larr; Members</a></li>
+</ul>
+</nav>
+<main>
+<!-- LOGIN REQUIRED -->
+<div id="loginScreen">
+<div class="login-box">
+<h2>Members Only</h2>
+<p>Sign in to access stock analysis and research.</p>
+<a href="/members.html" class="login-btn">Sign In</a>
+</div>
+</div>
+<!-- PAGE CONTENT -->
+<div id="pageContent">
+<section class="hero">
+<div class="tag">// Market Analytics &bull; Stock Analysis</div>
+<h1>Stock Analysis</h1>
+<p>Detailed equity research, technical breakdowns, sector analysis, and trade setup ideas. Updated regularly with actionable insights.</p>
+</section>
+<section class="content">
+<div class="coming-soon">
+<h2>Analysis Reports Coming Soon</h2>
+<p>Detailed stock analysis reports and research will be published here.<br>Check back soon for the latest equity breakdowns and trade ideas.</p>
+</div>
+</section>
+</div>
+</main>
+<footer>
+<span>&copy; 2025&ndash;2026 BelFed Analytics. All rights reserved.</span>
+<span><a href="/disclaimer.html">Disclaimer</a> &mdash; Not financial advice.</span>
+</footer>
+<script>
+var SUPABASE_URL='https://obujqvqqmyfcfflhqvud.supabase.co';
+var SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9idWpxdnFxbXlmY2ZmbGhxdnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDgxNjYsImV4cCI6MjA4OTkyNDE2Nn0.syl4YBLbf8aBitxyK3gCL51pPYxWjEW99mMTXJaQQ8w';
+var supaClient=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+async function checkAccess(){
+var sess=await supaClient.auth.getSession();
+if(!sess.data.session){document.getElementById('loginScreen').style.display='flex';return;}
+var uid=sess.data.session.user.id;
+var res=await supaClient.from('profiles').select('*').eq('id',uid).single();
+if(res.error||!res.data){document.getElementById('loginScreen').style.display='flex';return;}
+var st=res.data.subscription_status;
+if(st==='admin'||st==='active'){document.getElementById('pageContent').style.display='block';return;}
+if(st==='trial'){
+var te=new Date(res.data.trial_end);
+if(new Date()>te){document.getElementById('loginScreen').style.display='flex';return;}
+document.getElementById('pageContent').style.display='block';return;}
+document.getElementById('loginScreen').style.display='flex';
+}
+checkAccess();
+</script>
+</body>
+</html>
