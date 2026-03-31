@@ -57,7 +57,6 @@
     }
     .nav-cta:hover { background: var(--black); color: var(--white); }
     main { padding-top: 56px; }
-    /* Members Area Styles */
     .members-hero {
       padding: 80px 40px 40px;
       max-width: 900px;
@@ -88,6 +87,7 @@
       text-decoration: none;
       color: var(--black);
       display: block;
+      cursor: pointer;
     }
     .member-card:hover { border-color: var(--black); }
     .member-card .card-label {
@@ -128,7 +128,6 @@
     .status-badge.trial {
       border-color: #b8860b; color: #b8860b;
     }
-    /* Login Screen */
     #loginScreen {
       display: flex; justify-content: center; align-items: center;
       min-height: 80vh; padding-top: 56px;
@@ -158,12 +157,8 @@
       color: var(--white); border: 1px solid var(--black);
       cursor: pointer; margin-top: 6px; transition: background 0.2s, color 0.2s;
     }
-    .login-box .login-btn:hover {
-      background: transparent; color: var(--black);
-    }
-    .login-box .login-btn:disabled {
-      background: var(--gray); border-color: var(--gray); cursor: not-allowed;
-    }
+    .login-box .login-btn:hover { background: transparent; color: var(--black); }
+    .login-box .login-btn:disabled { background: var(--gray); border-color: var(--gray); cursor: not-allowed; }
     .login-error { color: var(--red); font-size: 12px; margin-top: 12px; display: none; }
     .login-msg { color: var(--green); font-size: 12px; margin-top: 12px; display: none; }
     .auth-tabs { display: flex; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
@@ -196,7 +191,6 @@
   </style>
 </head>
 <body>
-  <!-- NAV -->
   <nav>
     <a href="/" class="nav-logo">BELFED_</a>
     <ul class="nav-links">
@@ -207,7 +201,6 @@
     <button class="nav-cta" id="navAuthBtn" onclick="handleLogout()">Logout</button>
   </nav>
 
-  <!-- LOGIN SCREEN -->
   <div id="loginScreen">
     <div class="login-box">
       <h2>Members Area</h2>
@@ -241,7 +234,6 @@
     </div>
   </div>
 
-  <!-- MEMBERS CONTENT (shown after auth) -->
   <div id="membersContent">
     <main>
       <div class="members-hero">
@@ -258,35 +250,35 @@
           <div class="card-arrow">&rarr; Open Dashboard</div>
         </a>
 
-        <a href="/trades.html" class="member-card">
-          <div class="card-label">// Track Record</div>
-          <h3>Trade History</h3>
-          <p>Full archive of all closed trades with entry/exit prices, R-multiples, and performance charts.</p>
-          <div class="card-arrow">&rarr; View Trades</div>
-        </a>
-
         <a href="/equities-trades.html" class="member-card">
-          <div class="card-label">// Equities</div>
-          <h3>Equities Analysis</h3>
+          <div class="card-label">// Market Analytics</div>
+          <h3>Stock Analysis</h3>
           <p>Detailed equity trade setups, technical analysis breakdowns, and sector research.</p>
-          <div class="card-arrow">&rarr; View Equities</div>
+          <div class="card-arrow">&rarr; Open Stock Analysis</div>
         </a>
 
-        <a href="/products.html" class="member-card">
-          <div class="card-label">// Services</div>
-          <h3>Products &amp; Plans</h3>
-          <p>Explore subscription tiers, Telegram signals, and premium research access.</p>
-          <div class="card-arrow">&rarr; View Products</div>
-        </a>
+        <div class="member-card" onclick="alert('Trading Set-ups and Results section coming soon.')">
+          <div class="card-label">// Set-ups</div>
+          <h3>Trading set-ups and results</h3>
+          <p>Review active ideas, completed trades, and performance summaries in one place.</p>
+          <div class="card-arrow">&rarr; Open Trading Set-ups</div>
+        </div>
+
+        <div class="member-card" onclick="alert('Settings section coming soon.')">
+          <div class="card-label">// Account</div>
+          <h3>Settings</h3>
+          <p>Manage your membership settings, email, password, and Telegram access details.</p>
+          <div class="card-arrow">&rarr; Open Settings</div>
+        </div>
       </div>
 
       <!-- Account Info -->
       <div class="account-section">
         <h2>// Account</h2>
-        <div class="account-info"><span>Email:</span> <span id="acctEmail">—</span></div>
-        <div class="account-info"><span>Status:</span> <span id="acctStatus" class="status-badge">—</span></div>
-        <div class="account-info"><span>Member since:</span> <span id="acctSince">—</span></div>
-        <div class="account-info" id="acctTrialRow" style="display:none"><span>Trial ends:</span> <span id="acctTrialEnd">—</span></div>
+        <div class="account-info"><span>Email:</span> <span id="acctEmail">&mdash;</span></div>
+        <div class="account-info"><span>Status:</span> <span id="acctStatus" class="status-badge">&mdash;</span></div>
+        <div class="account-info"><span>Member since:</span> <span id="acctSince">&mdash;</span></div>
+        <div class="account-info" id="acctTrialRow" style="display:none"><span>Trial ends:</span> <span id="acctTrialEnd">&mdash;</span></div>
         <div class="account-info" id="acctTelegramRow"><span>Telegram:</span> <span id="acctTelegram">Not linked</span></div>
       </div>
     </main>
@@ -392,7 +384,6 @@
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('membersContent').style.display = 'block';
       document.getElementById('navAuthBtn').style.display = 'block';
-      // Populate account info
       if (session && session.user) {
         document.getElementById('acctEmail').textContent = session.user.email;
         var created = new Date(session.user.created_at);
