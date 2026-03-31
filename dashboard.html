@@ -324,14 +324,14 @@ var res=await supaClient.from('profiles').select('*').eq('id',uid).single();
 if(res.error||!res.data){document.getElementById('loginScreen').style.display='flex';return;}
 currentProfile=res.data;
 var status=currentProfile.subscription_status;
-if(status==='admin'||status==='active'){showDashboard();return;}
+if(status==='admin'||status==='active'){window.location.href='/members.html';return;}
 if(status==='trial'){
 var trialEnd=new Date(currentProfile.trial_end);
 if(new Date()>trialEnd){
 await supaClient.from('profiles').update({subscription_status:'expired'}).eq('id',uid);
 currentProfile.subscription_status='expired';
 showExpired();return;}
-showDashboard();return;}
+window.location.href='/members.html';return;}
 showExpired();
 }
 function showExpired(){
