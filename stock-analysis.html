@@ -69,7 +69,7 @@ async function load() {
   const { data, error } = await sb
     .from('stock_analysis')
     .select('*')
-    .order('created_at', { ascending: false });
+    .order('published_at', { ascending: false });
 
   const el = document.getElementById('cards');
   const ld = document.getElementById('loading');
@@ -83,7 +83,7 @@ async function load() {
   el.innerHTML = data.map(r => {
     const dir = (r.direction || 'NEUTRAL').toUpperCase();
     const status = (r.status || 'active').toUpperCase();
-    const date = new Date(r.created_at).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
+    const date = new Date(r.published_at).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
     return `<div class="card">
       <div class="card-head">
         <div class="card-ticker">${r.ticker || ''}</div>
@@ -93,7 +93,7 @@ async function load() {
       <h3>${r.title || ''}</h3>
       <p>${r.summary || ''}</p>
       <div class="card-meta">
-        <div>Entry: <span>${r.entry || '—'}</span></div>
+        <div>Entry: <span>${r.entry_zone || '—'}</span></div>
         <div>Target: <span>${r.target || '—'}</span></div>
         <div>Stop: <span>${r.stop_loss || '—'}</span></div>
         <div>Timeframe: <span>${r.timeframe || '—'}</span></div>
