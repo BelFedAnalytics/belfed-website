@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin – Post Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--black:#0a0a0a;--white:#f5f5f0;--gray:#888;--border:#d0d0ca;--green:#1a6b3a;--red:#8b1a1a;--font:'Courier Prime','Courier New',monospace}
+body{font-family:var(--font);background:var(--white);color:var(--black);font-size:15px;line-height:1.6;padding:40px}
+h1{font-size:28px;margin-bottom:8px}
+.subtitle{color:var(--gray);font-size:13px;margin-bottom:32px}
+.login-form,.post-form{max-width:600px}
+label{display:block;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--gray);margin-bottom:4px;margin-top:16px}
+input,select,textarea{width:100%;font-family:var(--font);font-size:14px;padding:10px 12px;border:1px solid var(--border);background:var(--white);color:var(--black)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--black)}
+textarea{min-height:100px;resize:vertical}
+button{font-family:var(--font);font-size:12px;letter-spacing:0.1em;text-transform:uppercase;padding:12px 24px;border:1px solid var(--black);background:var(--black);color:var(--white);cursor:pointer;margin-top:20px;transition:opacity 0.2s}
+button:hover{opacity:0.8}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.msg{margin-top:16px;padding:12px;font-size:13px}
+.msg.ok{background:#e8f5e9;color:var(--green);border:1px solid var(--green)}
+.msg.err{background:#fde;color:var(--red);border:1px solid var(--red)}
+#post-section{display:none}
+.back{font-size:13px;color:var(--gray);text-decoration:none;display:inline-block;margin-bottom:20px}
+.back:hover{color:var(--black)}
+</style>
+</head>
+<body>
+<a href="/stock-analysis.html" class="back">← Back to Analysis</a>
+<h1>Post Stock Analysis</h1>
+<p class="subtitle">Admin only — sign in to publish new analysis</p>
+
+<div id="login-section" class="login-form">
+  <label>Email</label>
+  <input type="email" id="email" placeholder="admin@belfed.com">
+  <label>Password</label>
+  <input type="password" id="password" placeholder="Password">
+  <button onclick="login()">Sign In</button>
+  <div id="login-msg"></div>
+</div>
+
+<div id="post-section" class="post-form">
+  <p style="color:var(--green);font-size:12px;margin-bottom:16px">✓ Signed in — ready to publish</p>
+  <div class="row">
+    <div><label>Ticker</label><input id="ticker" placeholder="AAPL"></div>
+    <div><label>Direction</label>
+      <select id="direction">
+        <option value="LONG">LONG</option>
+        <option value="SHORT">SHORT</option>
+        <option value="NEUTRAL">NEUTRAL</option>
+      </select>
+    </div>
+  </div>
+  <label>Title</label>
+  <input id="title" placeholder="Apple – Breakout Above Resistance">
+  <label>Summary</label>
+  <textarea id="summary" placeholder="Brief analysis summary..."></textarea>
+  <div class="row">
+    <div><label>Entry Zone</label><input id="entry_zone" placeholder="$192-195"></div>
+    <div><label>Target</label><input id="target" placeholder="$210"></div>
+  </div>
+  <div class="row">
+    <div><label>Stop Loss</label><input id="stop_loss" placeholder="$185"></div>
+    <div><label>Timeframe</label><input id="timeframe" placeholder="Swing (1-3 weeks)"></div>
+  </div>
+  <div class="row">
+    <div><label>Status</label>
+      <select id="status">
+        <option value="active">Active</option>
+        <option value="idea">Idea</option>
+        <option value="closed">Closed</option>
+      </select>
+    </div>
+    <div><label>Sector</label><input id="sector" placeholder="Technology"></div>
+  </div>
+  <button onclick="publish()">Publish Analysis</button>
+  <div id="post-msg"></div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://obujqvqqmyfcfflhqvud.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9idWpxdnFxbXlmY2ZmbGhxdnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDgxNjYsImV4cCI6MjA4OTkyNDE2Nn0.syl4YBLbf8aBitxyK3gCL51pPYxWjEW99mMTXJaQQ8w';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+async function login() {
+  const email = document.getElementById('email').value;
+  const pass = document.getElementById('password').value;
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if (error) {
+    document.getElementById('login-msg').innerHTML = '<div class="msg err">' + error.message + '</div>';
+    return;
+  }
+  document.getElementById('login-section').style.display = 'none';
+  document.getElementById('post-section').style.display = 'block';
+}
+
+async function publish() {
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) { alert('Not signed in'); return; }
+
+  const row = {
+    ticker: document.getElementById('ticker').value.toUpperCase(),
+    direction: document.getElementById('direction').value,
+    title: document.getElementById('title').value,
+    summary: document.getElementById('summary').value,
+    entry_zone: document.getElementById('entry_zone').value,
+    target: document.getElementById('target').value,
+    stop_loss: document.getElementById('stop_loss').value,
+    timeframe: document.getElementById('timeframe').value,
+    status: document.getElementById('status').value,
+    sector: document.getElementById('sector').value,
+    published_at: new Date().toISOString(),
+    created_by: user.id
+  };
+
+  const { error } = await sb.from('stock_analysis').insert([row]);
+  const el = document.getElementById('post-msg');
+  if (error) {
+    el.innerHTML = '<div class="msg err">Error: ' + error.message + '</div>';
+  } else {
+    el.innerHTML = '<div class="msg ok">Published! ' + row.ticker + ' analysis is now live.</div>';
+    ['ticker','title','summary','entry_zone','target','stop_loss','timeframe','sector'].forEach(id => document.getElementById(id).value = '');
+  }
+}
+</script>
+</body>
+</html>
