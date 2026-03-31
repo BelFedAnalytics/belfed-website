@@ -19,6 +19,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--black)}
 textarea{min-height:100px;resize:vertical}
 button{font-family:var(--font);font-size:12px;letter-spacing:0.1em;text-transform:uppercase;padding:12px 24px;border:1px solid var(--black);background:var(--black);color:var(--white);cursor:pointer;margin-top:20px;transition:opacity 0.2s}
 button:hover{opacity:0.8}
+button:disabled{opacity:0.4;cursor:not-allowed}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .msg{margin-top:16px;padding:12px;font-size:13px}
 .msg.ok{background:#e8f5e9;color:var(--green);border:1px solid var(--green)}
@@ -26,6 +27,15 @@ button:hover{opacity:0.8}
 #post-section{display:none}
 .back{font-size:13px;color:var(--gray);text-decoration:none;display:inline-block;margin-bottom:20px}
 .back:hover{color:var(--black)}
+.upload-area{border:2px dashed var(--border);padding:24px;text-align:center;cursor:pointer;transition:border-color 0.2s;margin-top:4px}
+.upload-area:hover{border-color:var(--black)}
+.upload-area.dragover{border-color:var(--green);background:#f0f8f0}
+.upload-area img{max-width:100%;max-height:200px;margin-top:12px;border:1px solid var(--border)}
+.upload-area .placeholder{color:var(--gray);font-size:12px;letter-spacing:0.1em;text-transform:uppercase}
+.upload-area input[type="file"]{display:none}
+.upload-progress{font-size:11px;color:var(--gray);margin-top:8px;text-transform:uppercase;letter-spacing:0.1em}
+.remove-img{font-size:11px;color:var(--red);cursor:pointer;margin-top:8px;text-transform:uppercase;letter-spacing:0.1em;background:none;border:none;padding:0;font-family:var(--font)}
+.remove-img:hover{opacity:0.7}
 </style>
 </head>
 <body>
@@ -58,6 +68,15 @@ button:hover{opacity:0.8}
   <input id="title" placeholder="Apple – Breakout Above Resistance">
   <label>Summary</label>
   <textarea id="summary" placeholder="Brief analysis summary..."></textarea>
+
+  <label>Chart Image</label>
+  <div class="upload-area" id="upload-area" onclick="document.getElementById('chart-file').click()">
+    <input type="file" id="chart-file" accept="image/*" onchange="handleFileSelect(event)">
+    <div class="placeholder" id="upload-placeholder">Click or drag & drop chart image here<br>(PNG, JPG, WebP — max 5MB)</div>
+    <div id="upload-preview"></div>
+  </div>
+  <div class="upload-progress" id="upload-progress"></div>
+
   <div class="row">
     <div><label>Entry Zone</label><input id="entry_zone" placeholder="$192-195"></div>
     <div><label>Target</label><input id="target" placeholder="$210"></div>
@@ -76,7 +95,7 @@ button:hover{opacity:0.8}
     </div>
     <div><label>Sector</label><input id="sector" placeholder="Technology"></div>
   </div>
-  <button onclick="publish()">Publish Analysis</button>
+  <button id="publish-btn" onclick="publish()">Publish Analysis</button>
   <div id="post-msg"></div>
 </div>
 
@@ -84,6 +103,50 @@ button:hover{opacity:0.8}
 const SUPABASE_URL = 'https://obujqvqqmyfcfflhqvud.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9idWpxdnFxbXlmY2ZmbGhxdnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDgxNjYsImV4cCI6MjA4OTkyNDE2Nn0.syl4YBLbf8aBitxyK3gCL51pPYxWjEW99mMTXJaQQ8w';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+let selectedFile = null;
+
+// Drag and drop
+const uploadArea = document.getElementById('upload-area');
+uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+uploadArea.addEventListener('dragleave', () => { uploadArea.classList.remove('dragover'); });
+uploadArea.addEventListener('drop', (e) => {
+  e.preventDefault();
+  uploadArea.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) { setPreview(file); }
+});
+
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) setPreview(file);
+}
+
+function setPreview(file) {
+  if (file.size > 5 * 1024 * 1024) {
+    document.getElementById('upload-progress').innerHTML = '<span style="color:var(--red)">File too large (max 5MB)</span>';
+    return;
+  }
+  selectedFile = file;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    document.getElementById('upload-placeholder').style.display = 'none';
+    document.getElementById('upload-preview').innerHTML = 
+      '<img src="' + e.target.result + '" alt="Chart preview">' +
+      '<br><button type="button" class="remove-img" onclick="removeImage(event)">✕ Remove image</button>';
+  };
+  reader.readAsDataURL(file);
+  document.getElementById('upload-progress').textContent = 'Image selected: ' + file.name;
+}
+
+function removeImage(e) {
+  e.stopPropagation();
+  selectedFile = null;
+  document.getElementById('chart-file').value = '';
+  document.getElementById('upload-placeholder').style.display = 'block';
+  document.getElementById('upload-preview').innerHTML = '';
+  document.getElementById('upload-progress').textContent = '';
+}
 
 async function login() {
   const email = document.getElementById('email').value;
@@ -97,33 +160,66 @@ async function login() {
   document.getElementById('post-section').style.display = 'block';
 }
 
+async function uploadChart(ticker) {
+  if (!selectedFile) return null;
+  const ext = selectedFile.name.split('.').pop().toLowerCase();
+  const fileName = ticker.toLowerCase() + '-' + Date.now() + '.' + ext;
+  const { data, error } = await sb.storage.from('charts').upload(fileName, selectedFile, {
+    cacheControl: '3600',
+    upsert: false
+  });
+  if (error) throw new Error('Upload failed: ' + error.message);
+  const { data: urlData } = sb.storage.from('charts').getPublicUrl(fileName);
+  return urlData.publicUrl;
+}
+
 async function publish() {
+  const btn = document.getElementById('publish-btn');
+  const el = document.getElementById('post-msg');
   const { data: { user } } = await sb.auth.getUser();
   if (!user) { alert('Not signed in'); return; }
 
-  const row = {
-    ticker: document.getElementById('ticker').value.toUpperCase(),
-    direction: document.getElementById('direction').value,
-    title: document.getElementById('title').value,
-    summary: document.getElementById('summary').value,
-    entry_zone: document.getElementById('entry_zone').value,
-    target: document.getElementById('target').value,
-    stop_loss: document.getElementById('stop_loss').value,
-    timeframe: document.getElementById('timeframe').value,
-    status: document.getElementById('status').value,
-    sector: document.getElementById('sector').value,
-    published_at: new Date().toISOString(),
-    created_by: user.id
-  };
+  const ticker = document.getElementById('ticker').value.toUpperCase();
+  if (!ticker) { el.innerHTML = '<div class="msg err">Ticker is required</div>'; return; }
 
-  const { error } = await sb.from('stock_analysis').insert([row]);
-  const el = document.getElementById('post-msg');
-  if (error) {
-    el.innerHTML = '<div class="msg err">Error: ' + error.message + '</div>';
-  } else {
+  btn.disabled = true;
+  btn.textContent = 'Publishing...';
+
+  try {
+    let imageUrl = null;
+    if (selectedFile) {
+      document.getElementById('upload-progress').textContent = 'Uploading chart image...';
+      imageUrl = await uploadChart(ticker);
+      document.getElementById('upload-progress').textContent = 'Image uploaded ✓';
+    }
+
+    const row = {
+      ticker: ticker,
+      direction: document.getElementById('direction').value,
+      title: document.getElementById('title').value,
+      summary: document.getElementById('summary').value,
+      entry_zone: document.getElementById('entry_zone').value,
+      target: document.getElementById('target').value,
+      stop_loss: document.getElementById('stop_loss').value,
+      timeframe: document.getElementById('timeframe').value,
+      status: document.getElementById('status').value,
+      sector: document.getElementById('sector').value,
+      image_url: imageUrl,
+      published_at: new Date().toISOString(),
+      created_by: user.id
+    };
+
+    const { error } = await sb.from('stock_analysis').insert([row]);
+    if (error) throw new Error(error.message);
+
     el.innerHTML = '<div class="msg ok">Published! ' + row.ticker + ' analysis is now live.</div>';
     ['ticker','title','summary','entry_zone','target','stop_loss','timeframe','sector'].forEach(id => document.getElementById(id).value = '');
+    removeImage(new Event('click'));
+  } catch (err) {
+    el.innerHTML = '<div class="msg err">Error: ' + err.message + '</div>';
   }
+  btn.disabled = false;
+  btn.textContent = 'Publish Analysis';
 }
 </script>
 </body>

@@ -33,10 +33,15 @@ main{padding-top:56px}
 .card-status{font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--gray);margin-bottom:8px}
 .card h3{font-size:15px;font-weight:700;margin-bottom:8px}
 .card p{font-size:13px;color:#555;line-height:1.6;margin-bottom:12px}
+.card-chart{width:100%;margin-bottom:12px;border:1px solid var(--border);cursor:pointer;transition:opacity 0.2s}
+.card-chart:hover{opacity:0.9}
 .card-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;color:var(--gray)}
 .card-meta span{color:var(--black);font-weight:700}
 .card-date{font-size:10px;color:var(--gray);margin-top:12px;padding-top:8px;border-top:1px solid var(--border)}
 .loading{text-align:center;padding:60px 40px;color:var(--gray);font-size:13px;letter-spacing:0.1em;text-transform:uppercase}
+.lightbox{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:1000;cursor:pointer;align-items:center;justify-content:center}
+.lightbox.active{display:flex}
+.lightbox img{max-width:90vw;max-height:90vh;border:2px solid var(--white)}
 </style>
 </head>
 <body>
@@ -60,10 +65,20 @@ main{padding-top:56px}
     </div>
   </section>
 </main>
+
+<div class="lightbox" id="lightbox" onclick="this.classList.remove('active')">
+  <img id="lightbox-img" src="" alt="Chart">
+</div>
+
 <script>
 const SUPABASE_URL = 'https://obujqvqqmyfcfflhqvud.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9idWpxdnFxbXlmY2ZmbGhxdnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDgxNjYsImV4cCI6MjA4OTkyNDE2Nn0.syl4YBLbf8aBitxyK3gCL51pPYxWjEW99mMTXJaQQ8w';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('active');
+}
 
 async function load() {
   const { data, error } = await sb
@@ -84,25 +99,28 @@ async function load() {
     const dir = (r.direction || 'NEUTRAL').toUpperCase();
     const status = (r.status || 'active').toUpperCase();
     const date = new Date(r.published_at).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
-    return `<div class="card">
-      <div class="card-head">
-        <div class="card-ticker">${r.ticker || ''}</div>
-        <div class="card-dir ${dir}">${dir}</div>
-      </div>
-      <div class="card-status">${status}</div>
-      <h3>${r.title || ''}</h3>
-      <p>${r.summary || ''}</p>
-      <div class="card-meta">
-        <div>Entry: <span>${r.entry_zone || '—'}</span></div>
-        <div>Target: <span>${r.target || '—'}</span></div>
-        <div>Stop: <span>${r.stop_loss || '—'}</span></div>
-        <div>Timeframe: <span>${r.timeframe || '—'}</span></div>
-      </div>
-      <div class="card-date">Published ${date}</div>
-    </div>`;
+    const chartHtml = r.image_url
+      ? '<img class="card-chart" src="' + r.image_url + '" alt="' + (r.ticker || '') + ' chart" onclick="openLightbox(this.src)" loading="lazy">'
+      : '';
+    return '<div class="card">' +
+      '<div class="card-head">' +
+        '<div class="card-ticker">' + (r.ticker || '') + '</div>' +
+        '<div class="card-dir ' + dir + '">' + dir + '</div>' +
+      '</div>' +
+      '<div class="card-status">' + status + '</div>' +
+      '<h3>' + (r.title || '') + '</h3>' +
+      '<p>' + (r.summary || '') + '</p>' +
+      chartHtml +
+      '<div class="card-meta">' +
+        '<div>Entry: <span>' + (r.entry_zone || '—') + '</span></div>' +
+        '<div>Target: <span>' + (r.target || '—') + '</span></div>' +
+        '<div>Stop: <span>' + (r.stop_loss || '—') + '</span></div>' +
+        '<div>Timeframe: <span>' + (r.timeframe || '—') + '</span></div>' +
+      '</div>' +
+      '<div class="card-date">Published ' + date + '</div>' +
+    '</div>';
   }).join('');
 }
-
 load();
 </script>
 </body>
