@@ -39,6 +39,10 @@ main{padding-top:56px}
 .card-meta span{color:var(--black);font-weight:700}
 .card-date{font-size:10px;color:var(--gray);margin-top:12px;padding-top:8px;border-top:1px solid var(--border)}
 .loading{text-align:center;padding:60px 40px;color:var(--gray);font-size:13px;letter-spacing:0.1em;text-transform:uppercase}
+.search-bar{max-width:400px;margin-bottom:24px}
+.search-bar input{width:100%;font-family:var(--font);font-size:14px;padding:10px 12px;border:1px solid var(--border);background:var(--white);color:var(--black);letter-spacing:0.05em}
+.search-bar input:focus{outline:none;border-color:var(--black)}
+.search-bar input::placeholder{color:var(--gray);text-transform:uppercase;font-size:11px;letter-spacing:0.12em}
 .lightbox{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:1000;cursor:pointer;align-items:center;justify-content:center}
 .lightbox.active{display:flex}
 .lightbox img{max-width:90vw;max-height:90vh;border:2px solid var(--white)}
@@ -57,9 +61,12 @@ main{padding-top:56px}
   <section class="hero">
     <div class="tag">Members Only</div>
     <h1>Stock Analysis</h1>
-    <p>Live trade ideas and market analysis from BelFed Analytics. Updated regularly with entry, target, and stop levels.</p>
+    <p>Asset analysis from BelFed Analytics. Updated regularly with entry, target, and stop levels.</p>
   </section>
-  <section class="content">
+    <section class="content">
+    <div class="search-bar">
+      <input type="text" id="search" placeholder="Search ticker..." oninput="filterCards()">
+    </div>
     <div class="cards" id="cards">
       <div class="loading" id="loading">Loading analysis...</div>
     </div>
@@ -120,6 +127,15 @@ async function load() {
       '<div class="card-date">Published ' + date + '</div>' +
     '</div>';
   }).join('');
+}
+
+function filterCards() {
+  const q = document.getElementById('search').value.toUpperCase().trim();
+  const cards = document.querySelectorAll('.card');
+  cards.forEach(card => {
+    const ticker = card.querySelector('.card-ticker').textContent.toUpperCase();
+    card.style.display = ticker.includes(q) ? '' : 'none';
+  });
 }
 load();
 </script>
