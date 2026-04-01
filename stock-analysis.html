@@ -35,6 +35,8 @@ main{padding-top:56px}
 .card p{font-size:13px;color:#555;line-height:1.6;margin-bottom:12px}
 .card-chart{width:100%;margin-bottom:12px;border:1px solid var(--border);cursor:pointer;transition:opacity 0.2s}
 .card-chart:hover{opacity:0.9}
+.card-chart-link{display:inline-block;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--black);text-decoration:none;padding:8px 0;margin-bottom:12px;border-bottom:1px solid var(--border);transition:opacity 0.2s}
+.card-chart-link:hover{opacity:0.5}
 .card-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;color:var(--gray)}
 .card-meta span{color:var(--black);font-weight:700}
 .card-date{font-size:10px;color:var(--gray);margin-top:12px;padding-top:8px;border-top:1px solid var(--border)}
@@ -118,6 +120,7 @@ async function load() {
       '<h3>' + (r.title || '') + '</h3>' +
       '<p>' + (r.summary || '') + '</p>' +
       chartHtml +
+            (r.analysis_url ? '<a class="card-chart-link" href="' + r.analysis_url + '" target="_blank">↗ View Chart on TradingView</a>' : '') +
       '<div class="card-meta">' +
         '<div>Entry: <span>' + (r.entry_zone || '—') + '</span></div>' +
         '<div>Target: <span>' + (r.target || '—') + '</span></div>' +

@@ -77,6 +77,9 @@ button:disabled{opacity:0.4;cursor:not-allowed}
   </div>
   <div class="upload-progress" id="upload-progress"></div>
 
+    <label>Chart Link (TradingView)</label>
+  <input id="chart_link" placeholder="https://www.tradingview.com/x/...">
+
   <div class="row">
     <div><label>Entry Zone</label><input id="entry_zone" placeholder="$192-195"></div>
     <div><label>Target</label><input id="target" placeholder="$210"></div>
@@ -205,14 +208,15 @@ async function publish() {
       status: document.getElementById('status').value,
       sector: document.getElementById('sector').value,
       image_url: imageUrl,
-      published_at: new Date().toISOString()
+            analysis_url: document.getElementById('chart_link').value,
+      published_at: new Date().toISOString(),
     };
 
     const { error } = await sb.from('stock_analysis').insert([row]);
     if (error) throw new Error(error.message);
 
     el.innerHTML = '<div class="msg ok">Published! ' + row.ticker + ' analysis is now live.</div>';
-    ['ticker','title','summary','entry_zone','target','stop_loss','timeframe','sector'].forEach(id => document.getElementById(id).value = '');
+    ['ticker','title','summary','entry_zone','target','stop_loss','timeframe','sector'],'chart_link'.forEach(id => document.getElementById(id).value = '');
     removeImage(new Event('click'));
   } catch (err) {
     el.innerHTML = '<div class="msg err">Error: ' + err.message + '</div>';
