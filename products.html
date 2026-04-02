@@ -129,9 +129,9 @@ main {
 }
 
 .cs-launch {
-  background: var(--light-gray);
-  border: 1px solid var(--border);
-  padding: 32px;
+  background: none;
+  border: none;
+  padding: 48px 32px;
   margin-bottom: 36px;
 }
 .cs-launch-label {
@@ -141,8 +141,8 @@ main {
   color: var(--gray);
   margin-bottom: 8px;
 }
-.cs-launch-date {
-  font-size: 32px;
+.cs-launch a:hover { opacity: 0.5; } .cs-launch-date {
+  font-size: 24px; display: block; margin-top: 16px;
   font-weight: 700;
   color: var(--black);
   letter-spacing: -0.01em;
@@ -267,7 +267,7 @@ footer a:hover {
   .coming-soon { padding: 60px 20px; }
   .cs-title { font-size: 36px; }
   .cs-launch { padding: 24px; }
-  .cs-launch-date { font-size: 24px; }
+  .cs-launch a:hover { opacity: 0.5; } .cs-launch-date { font-size: 24px; }
   footer {
     flex-direction: column;
     gap: 12px;
@@ -296,11 +296,11 @@ div>
     
     <h1 class="cs-title">Premium Trading Intelligence</h1>
     
-    <p class="cs-subtitle">Our flagship products are currently in development — explore for free the early stage of our beta service in our private Telegram group @BelfedBot.</p>
+    <p class="cs-subtitle">Our flagship products are currently in development — join the open beta for free.</p>
     
     <div class="cs-launch">
-      <div class="cs-launch-label">OPEN BETA</div>
-      <div class="cs-launch-date">Explore for Free the Early Stage of Our Beta Service in Private Telegram Group <a href="https://t.me/BelfedBot" target="_blank" style="color: var(--black); text-decoration: underline;">@BelfedBot</a></div>
+      <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22L11 13L2 9L22 2Z"/></svg>
+      <div class="cs-launch-date"><a href="https://t.me/BelfedBot" target="_blank" style="color: var(--black); text-decoration: underline;">@BelfedBot</a></div>
     </div>
     
     <div class="cs-description">
