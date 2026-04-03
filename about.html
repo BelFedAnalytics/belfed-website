@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About - BelFed Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --black: #0a0a0a;
+      --white: #f5f5f0;
+      --gray: #888;
+      --light-gray: #e8e8e3;
+      --border: #d0d0ca;
+      --green: #1a6b3a;
+      --red: #8b1a1a;
+      --font: 'Courier Prime', 'Courier New', monospace;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font);
+      background: var(--white);
+      color: var(--black);
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    /* NAV */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 40px;
+      height: 56px;
+    }
+    .nav-logo {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-decoration: none;
+      color: var(--black);
+    }
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      list-style: none;
+    }
+    .nav-links a {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-decoration: none;
+      color: var(--black);
+      transition: opacity 0.2s;
+    }
+    .nav-links a:hover { opacity: 0.5; }
+    .nav-cta {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-decoration: none;
+      color: var(--white);
+      background: var(--black);
+      padding: 10px 20px;
+      border: 1px solid var(--black);
+      transition: background 0.2s, color 0.2s;
+    }
+    .nav-cta:hover {
+      background: transparent;
+      color: var(--black);
+    }
+    /* MAIN */
+    main {
+      padding-top: 56px;
+    }
+    /* ABOUT */
+    .about-section {
+      padding: 80px 40px 60px;
+      max-width: 700px;
+    }
+    .about-tag {
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--gray);
+      margin-bottom: 32px;
+    }
+    .about-section h1 {
+      font-size: clamp(28px, 4vw, 48px);
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.01em;
+      margin-bottom: 40px;
+    }
+    .about-section p {
+      font-size: 15px;
+      line-height: 1.7;
+      color: #333;
+      margin-bottom: 24px;
+    }
+    .about-signature {
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      max-width: 260px;
+    }
+    .about-signature .name {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .about-signature .title {
+      font-size: 13px;
+      color: var(--gray);
+    }
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 24px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--gray);
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 80px;
+    }
+    footer a {
+      color: var(--gray);
+      text-decoration: none;
+    }
+    footer a:hover { color: var(--black); }
+    .footer-links {
+      display: flex;
+      gap: 20px;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/" class="nav-logo">BELFED_</a>
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/trades.html">Trades</a></li>
+      <li><a href="/products.html">Products</a></li>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/#subscribe">Subscribe</a></li>
+    </ul>
+    <a href="/members.html" class="nav-cta">Member Login</a>
+  </nav>
+
+  <main>
+    <section class="about-section">
+      <div class="about-tag">// About BelFed Analytics</div>
+      <h1>A disciplined framework for finding edge &mdash; and capturing it.</h1>
+
+      <p>BelFed Analytics is a research-driven trading intelligence service for those seeking consistent edge and balanced risk-reward opportunities across global financial markets.</p>
+
+      <p>We are a new service built around one core purpose: delivering in-house market analysis and research &mdash; alongside curated insights from top-tier industry firms &mdash; for those who seek clarity on where global financial markets currently stand and where the best opportunities lie.</p>
+
+      <p>Our process combines macro research with technical analysis to identify high-probability setups across global markets. We study the broader economic backdrop, monitor cross-asset signals, and use price action to refine timing and execution.</p>
+
+      <p>We also believe successful trading requires more than strong research. Discipline, psychology, and risk management are essential to long-term performance, which is why our work is grounded in both deep analytical thinking and practical decision-making.</p>
+
+      <p>Our mission is simple: to deliver clear research, actionable trade ideas, and a disciplined framework for finding edge &mdash; and capturing it.</p>
+
+      <div class="about-signature">
+        <div class="name">Artem Fedorov</div>
+        <div class="title">Managing Partner &amp; Chief Investment Officer</div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>&copy; 2026 BELFED ANALYTICS. ALL RIGHTS RESERVED.</span>
+  </footer>
+</body>
+</html>
