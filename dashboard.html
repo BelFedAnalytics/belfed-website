@@ -250,145 +250,46 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 <footer>Educational purposes only. belfed.com</footer>
 </div><!-- container -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="belfed-auth.js"></script>
 <script>
-var SUPABASE_URL='https://obujqvqqmyfcfflhqvud.supabase.co';
-var SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9idWpxdnFxbXlmY2ZmbGhxdnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDgxNjYsImV4cCI6MjA4OTkyNDE2Nn0.syl4YBLbf8aBitxyK3gCL51pPYxWjEW99mMTXJaQQ8w';
-var supaClient=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-var currentProfile=null;
-function showAuthTab(tab){
-document.querySelectorAll('.auth-tab').forEach(function(b){b.classList.remove('active');});
-event.target.classList.add('active');
-document.getElementById('signinForm').style.display=tab==='signin'?'block':'none';
-document.getElementById('signupForm').style.display=tab==='signup'?'block':'none';
-document.getElementById('loginError').style.display='none';
-document.getElementById('loginMsg').style.display='none';
-  document.getElementById('forgotPasswordBlock').style.display='none';
-document.getElementById('forgotPasswordLink').style.display='block';
-document.getElementById('resetStatus').style.display='none';
+// --- Dashboard page callbacks ---
+function onAuthReady(profile, session, entitlement) {
+  if (entitlement.access) { showDashboard(); }
+  else { showExpired(); }
 }
-async function handleSignIn(){
-var email=document.getElementById('siEmail').value.trim();
-var pw=document.getElementById('siPassword').value;
-var errEl=document.getElementById('loginError');
-errEl.style.display='none';
-if(!email||!pw){errEl.textContent='Please enter email and password';errEl.style.display='block';return;}
-try{
-var res=await supaClient.auth.signInWithPassword({email:email,password:pw});
-if(res.error)throw res.error;
-}catch(err){errEl.textContent=err.message||'Login failed';errEl.style.display='block';}
+function onAuthSignedOut() {
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('dashboardContainer').style.display='none';
+  document.getElementById('expiredScreen').style.display='none';
 }
-  async function handleForgotPassword(){
-var email=document.getElementById('resetEmail').value.trim();
-var statusEl=document.getElementById('resetStatus');
-statusEl.style.display='block';
-if(!email){statusEl.textContent='Please enter your email';statusEl.style.color='#c50000';return;}
-statusEl.textContent='Sending reset link...';statusEl.style.color='#999';
-try{
-var res=await supaClient.auth.resetPasswordForEmail(email,{redirectTo:'https://belfed.com/reset-password.html'});
-if(res.error)throw res.error;
-statusEl.textContent='Reset link sent! Check your email.';statusEl.style.color='#1a7a1a';
-}catch(err){statusEl.textContent=err.message||'Error sending reset link';statusEl.style.color='#c50000';}
+function showExpired() {
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('dashboardContainer').style.display='none';
+  document.getElementById('expiredScreen').style.display='flex';
 }
-async function handleSignUp(){
-var email=document.getElementById('suEmail').value.trim();
-var pw=document.getElementById('suPassword').value;
-var pw2=document.getElementById('suPassword2').value;
-var errEl=document.getElementById('loginError');
-var msgEl=document.getElementById('loginMsg');
-errEl.style.display='none';msgEl.style.display='none';
-if(!email||!pw||!pw2){errEl.textContent='Please fill in all fields';errEl.style.display='block';return;}
-if(pw!==pw2){errEl.textContent='Passwords do not match';errEl.style.display='block';return;}
-if(pw.length<6){errEl.textContent='Password must be at least 6 characters';errEl.style.display='block';return;}
-try{
-var res=await supaClient.auth.signUp({email:email,password:pw});
-if(res.error)throw res.error;
-if(res.data.user&&!res.data.session){
-msgEl.textContent='Check your email to confirm your account, then sign in.';msgEl.style.display='block';
-}else if(res.data.session){
-await checkProfile();
+function showDashboard() {
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('expiredScreen').style.display='none';
+  document.getElementById('dashboardContainer').style.display='block';
+  loadTelegramId(); init();
 }
-}catch(err){errEl.textContent=err.message||'Sign up failed';errEl.style.display='block';}
+async function loadTelegramId() {
+  if (!currentProfile) return;
+  var input=document.getElementById('tgInput');
+  var saved=document.getElementById('tgSaved');
+  var status=document.getElementById('tgStatus');
+  if (currentProfile.telegram_id) { input.value=currentProfile.telegram_id; saved.style.display='inline'; status.textContent=''; }
+  else { status.textContent='Not linked yet'; }
 }
-async function handleLogout(){
-await supaClient.auth.signOut();
-currentProfile=null;
-document.getElementById('loginScreen').style.display='flex';
-document.getElementById('dashboardContainer').style.display='none';
-document.getElementById('expiredScreen').style.display='none';
+async function saveTelegramId() {
+  var input=document.getElementById('tgInput');
+  var val=input.value.trim(); if (!val) return;
+  var sess=await supaClient.auth.getSession(); if (!sess.data.session) return;
+  var res=await supaClient.from('profiles').update({telegram_id:val}).eq('id',sess.data.session.user.id);
+  var saved=document.getElementById('tgSaved'); var st=document.getElementById('tgStatus');
+  if (!res.error) { saved.style.display='inline'; st.textContent=''; currentProfile.telegram_id=val; }
+  else { st.textContent='Error saving'; }
 }
-async function checkProfile(){
-var sess=await supaClient.auth.getSession();
-if(!sess.data.session){document.getElementById('loginScreen').style.display='flex';return;}
-var uid=sess.data.session.user.id;
-var res=await supaClient.from('profiles').select('*').eq('id',uid).single();
-if(res.error||!res.data){document.getElementById('loginScreen').style.display='flex';return;}
-currentProfile=res.data;
-var status=currentProfile.subscription_status;
-if(status==='admin'||status==='active'){showDashboard();return;}
-if(status==='trial'){
-var trialEnd=new Date(currentProfile.trial_end);
-if(new Date()>trialEnd){
-await supaClient.from('profiles').update({subscription_status:'expired'}).eq('id',uid);
-currentProfile.subscription_status='expired';
-showExpired();return;}
-showDashboard();return;}
-showExpired();
-}
-function showExpired(){
-document.getElementById('loginScreen').style.display='none';
-document.getElementById('dashboardContainer').style.display='none';
-document.getElementById('expiredScreen').style.display='flex';
-}
-function showDashboard(){
-document.getElementById('loginScreen').style.display='none';
-document.getElementById('expiredScreen').style.display='none';
-document.getElementById('dashboardContainer').style.display='block';
-loadTelegramId();
-init();
-}
-async function loadTelegramId(){
-if(!currentProfile)return;
-var input=document.getElementById('tgInput');
-var saved=document.getElementById('tgSaved');
-var status=document.getElementById('tgStatus');
-if(currentProfile.telegram_id){
-input.value=currentProfile.telegram_id;
-saved.style.display='inline';
-status.textContent='';
-}else{status.textContent='Not linked yet';}
-}
-async function saveTelegramId(){
-var input=document.getElementById('tgInput');
-var val=input.value.trim();
-if(!val)return;
-var sess=await supaClient.auth.getSession();
-if(!sess.data.session)return;
-var res=await supaClient.from('profiles').update({telegram_id:val}).eq('id',sess.data.session.user.id);
-var saved=document.getElementById('tgSaved');
-var st=document.getElementById('tgStatus');
-if(!res.error){saved.style.display='inline';st.textContent='';currentProfile.telegram_id=val;}
-else{st.textContent='Error saving';}
-}
-async function checkAuth(){
-var hash=window.location.hash;
-if(hash&&hash.includes('access_token')){
-var params=new URLSearchParams(hash.substring(1));
-var at=params.get('access_token');
-var rt=params.get('refresh_token');
-if(at&&rt){await supaClient.auth.setSession({access_token:at,refresh_token:rt});window.location.hash='';}
-}
-var sess=await supaClient.auth.getSession();
-if(sess.data.session){await checkProfile();}
-else{document.getElementById('loginScreen').style.display='flex';}
-}
-supaClient.auth.onAuthStateChange(function(event,session){
-if(event==='SIGNED_IN'&&session){checkProfile();}
-if(event==='SIGNED_OUT'){
-document.getElementById('loginScreen').style.display='flex';
-document.getElementById('dashboardContainer').style.display='none';
-document.getElementById('expiredScreen').style.display='none';
-}
-});
 var SHEET_ID='1bBpKZP74HEVrLZJlazz7gY7jbuBj9R5rPBcV2KklwDo';
 var GID='0';
 var CRYPTO_GID='1219794768';
@@ -558,7 +459,6 @@ errBox.style.display='block';
 }
 }
 document.getElementById('searchTicker').addEventListener('input',function(){renderOpenTrades(allTrades);});
-checkAuth();
 </script>
 </body>
 </html>
