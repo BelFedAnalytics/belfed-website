@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://script.google.com https://docs.google.com; img-src 'self'; frame-src 'none';">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Belfed Analytics — belfed.ru</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --black: #0a0a0a;
+            --white: #f5f5f0;
+            --gray: #888;
+            --light-gray: #e8e8e3;
+            --border: #d0d0ca;
+            --green: #1a6b3a;
+            --red: #8b1a1a;
+            --font: 'Courier Prime', 'Courier New', monospace;
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: var(--font);
+            background: var(--white);
+            color: var(--black);
+            font-size: 15px;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 40px; height: 56px;
+        }
+        .nav-logo { font-size: 17px; font-weight: 700; letter-spacing: 0.05em; text-decoration: none; color: var(--black); }
+        .nav-links { display: flex; gap: 32px; list-style: none; }
+        .nav-links a { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; color: var(--black); transition: opacity 0.2s; }
+        .nav-links a:hover { opacity: 0.5; }
+        .nav-cta { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; color: var(--white); background: var(--black); padding: 10px 20px; border: 1px solid var(--black); transition: background 0.2s, color 0.2s; }
+        .nav-cta:hover { background: transparent; color: var(--black); }
+        main { padding-top: 56px; }
+        .hero { padding: 80px 40px 60px; max-width: 900px; }
+        .hero-tag { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); margin-bottom: 32px; }
+        .hero-tag span { margin: 0 8px; }
+        .hero h1 { font-size: clamp(36px, 6vw, 72px); font-weight: 700; line-height: 1.1; letter-spacing: -0.01em; margin-bottom: 28px; }
+        .hero-desc { font-size: 16px; line-height: 1.7; max-width: 620px; color: #333; margin-bottom: 36px; }
+        .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; }
+        .hero-sub { font-size: 13px; color: var(--gray); margin-top: 20px; max-width: 560px; }
+        .btn-primary { font-family: var(--font); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; color: var(--white); background: var(--black); padding: 14px 28px; border: 1px solid var(--black); cursor: pointer; transition: background 0.2s, color 0.2s; }
+        .btn-primary:hover { background: transparent; color: var(--black); }
+        .btn-secondary { font-family: var(--font); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; color: var(--black); background: transparent; padding: 14px 28px; border: 1px solid var(--border); cursor: pointer; transition: border-color 0.2s; }
+        .btn-secondary:hover { border-color: var(--black); }
+        /* STATS */
+        .stats-bar { border-top: 1px solid var(--border); padding: 40px; display: flex; gap: 60px; }
+        .stat-item .stat-value { font-size: 36px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+        .stat-item .stat-label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); margin-top: 6px; }
+        .stats-columns { border-top: 1px solid var(--border); display: flex; padding: 0; }
+        .stats-column { flex: 1; padding: 40px; }
+        .stats-column:first-child { border-right: 1px solid var(--border); }
+        .stats-column-header { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); margin-bottom: 24px; }
+        .stats-column-items { display: flex; gap: 48px; }
+        /* ABOUT */
+        .about-section { border-top: 1px solid var(--border); padding: 60px 40px; max-width: 800px; }
+        .about-section h2 { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); margin-bottom: 20px; }
+        .about-section p { font-size: 15px; color: #333; line-height: 1.7; margin-bottom: 16px; }
+        /* SERVICES */
+        .services-section { border-top: 1px solid var(--border); padding: 60px 40px; }
+        .services-section h2 { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); margin-bottom: 28px; }
+        .services-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; max-width: 800px; }
+        .service-item { font-size: 14px; color: #333; line-height: 1.7; padding-left: 16px; border-left: 2px solid var(--border); }
+        /* SUBSCRIBE */
+        .subscribe-section { border-top: 1px solid var(--border); padding: 60px 40px; max-width: 600px; }
+        .subscribe-section h2 { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); margin-bottom: 16px; }
+        .subscribe-section p { font-size: 14px; color: #333; margin-bottom: 24px; line-height: 1.6; }
+        .subscribe-form { display: flex; gap: 12px; }
+        .subscribe-form input[type="email"] { font-family: var(--font); font-size: 13px; padding: 12px 16px; border: 1px solid var(--border); background: var(--white); color: var(--black); flex: 1; outline: none; }
+        .subscribe-form input[type="email"]:focus { border-color: var(--black); }
+        .subscribe-form button { font-family: var(--font); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--white); background: var(--black); padding: 12px 24px; border: 1px solid var(--black); cursor: pointer; transition: background 0.2s, color 0.2s; }
+        .subscribe-form button:hover { background: transparent; color: var(--black); }
+        .subscribe-msg { font-size: 13px; margin-top: 12px; display: none; }
+        .subscribe-msg.success { color: var(--green); display: block; }
+        .subscribe-msg.error { color: var(--red); display: block; }
+        /* DISCLAIMER */
+        .disclaimer-line { border-top: 1px solid var(--border); padding: 20px 40px; font-size: 12px; color: var(--gray); line-height: 1.7; max-width: 800px; }
+        /* FOOTER */
+        footer { border-top: 1px solid var(--border); padding: 24px 40px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--gray); flex-wrap: wrap; gap: 12px; }
+        footer a { color: var(--gray); text-decoration: none; }
+        footer a:hover { color: var(--black); }
+        .footer-links { display: flex; gap: 20px; }
+        /* LANG SWITCHER */
+        .lang-switch { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; color: var(--gray); border: 1px solid var(--border); padding: 6px 12px; transition: all 0.2s; margin-left: 16px; }
+        .lang-switch:hover { color: var(--black); border-color: var(--black); }
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            nav { padding: 0 20px; }
+            .nav-links { display: none; }
+            .hero { padding: 60px 20px 40px; }
+            .stats-bar { padding: 20px; gap: 32px; flex-wrap: wrap; }
+            .stats-columns { flex-direction: column; }
+            .stats-column:first-child { border-right: none; border-bottom: 1px solid var(--border); }
+            .about-section, .services-section, .subscribe-section { padding: 40px 20px; }
+            .services-grid { grid-template-columns: 1fr; }
+            footer { padding: 20px; flex-direction: column; text-align: center; }
+            .disclaimer-line { padding: 16px 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">BELFED_</a>
+    <ul class="nav-links">
+        <li><a href="/">Главная</a></li>
+        <li><a href="/about.html">О нас</a></li>
+        <li><a href="/results.html">Результаты</a></li>
+        <li><a href="/disclaimer.html">Ограничение ответственности</a></li>
+        <li><a href="https://t.me/BelfedBot" target="_blank">Telegram</a></li>
+    </ul>
+    <div>
+        <a href="/members.html" class="nav-cta">Личный кабинет</a>
+        <a href="https://belfed.com" class="lang-switch">EN</a>
+    </div>
+</nav>
+
+<main>
+
+<section class="hero">
+    <p class="hero-tag">// BELFED ANALYTICS <span>&middot;</span> belfed.ru</p>
+    <h1>Институциональный взгляд на рынки для частных инвесторов и активных трейдеров.</h1>
+    <p class="hero-desc">Belfed Analytics — это торговые возможности, рыночные обзоры и эксклюзивная аналитика по глобальным финансовым рынкам для тех, кто принимает решения на основе структуры, риска и дисциплины.</p>
+    <div class="hero-actions">
+        <a href="/members.html" class="btn-primary">Личный кабинет</a>
+        <a href="/results.html" class="btn-secondary">Смотреть результаты</a>
+    </div>
+    <p class="hero-sub">Торговые возможности, открытые позиции, обзоры рынка и ключевые идеи — в одном пространстве.</p>
+</section>
+
+<section class="stats-columns">
+    <div class="stats-column">
+        <div class="stats-column-header">// 2025 Акции</div>
+        <div class="stats-column-items">
+            <div class="stat-item"><div class="stat-value">+85.96R</div><div class="stat-label">Результат</div></div>
+            <div class="stat-item"><div class="stat-value">47.89%</div><div class="stat-label">Процент побед</div></div>
+            <div class="stat-item"><div class="stat-value">71</div><div class="stat-label">Закрытых сделок</div></div>
+        </div>
+    </div>
+    <div class="stats-column">
+        <div class="stats-column-header">// 2025 Крипто</div>
+        <div class="stats-column-items">
+            <div class="stat-item"><div class="stat-value">+90.39R</div><div class="stat-label">Результат</div></div>
+            <div class="stat-item"><div class="stat-value">75%</div><div class="stat-label">Процент побед</div></div>
+            <div class="stat-item"><div class="stat-value">12</div><div class="stat-label">Закрытых сделок</div></div>
+        </div>
+    </div>
+</section>
+
+<div class="disclaimer-line">Методология расчёта результатов и раскрытие рисков представлены в <a href="/disclaimer.html">ограничении ответственности</a>.</div>
+
+<section class="about-section" id="about">
+    <h2>// О нас</h2>
+    <p>Мы помогаем всем участникам рынка — от крупных фондов до индивидуальных инвесторов и активных трейдеров — ориентироваться на финансовых рынках. Мы в Belfed фокусируемся на структуре тренда цены, управлении риском, макроконтексте и возникающих торговых возможностях, которые можно использовать для успешной работы на финансовых рынках.</p>
+    <p>Мы не предлагаем «быстрых идей» — мы выстраиваем взвешенную и сбалансированную систему принятия решений с точки зрения соотношения риска и выгоды.</p>
+</section>
+
+<section class="services-section" id="services">
+    <h2>// Что включает в себя сервис</h2>
+    <div class="services-grid">
+        <div class="service-item">Торговые возможности с чёткими уровнями входа, выхода и управления позицией.</div>
+        <div class="service-item">Рыночные обзоры и исследовательские материалы по ключевым активам и секторам экономики.</div>
+        <div class="service-item">Доступ к активным позициям и торговым возможностям в Личном кабинете.</div>
+        <div class="service-item">Возможность отправки запроса на анализ активов.</div>
+        <div class="service-item">Единое пространство для общения и обсуждения возможностей и ключевых тем рынка.</div>
+    </div>
+</section>
+
+<section class="subscribe-section" id="subscribe">
+    <h2>// Подписка</h2>
+    <p>Получайте ежемесячные обновления результатов и образцы наших исследований. Без спама, отписка в любой момент.</p>
+    <form class="subscribe-form" id="subscribeForm">
+        <input type="email" id="subscribeEmail" placeholder="ваш@email.com" required>
+        <button type="submit">Подписаться</button>
+    </form>
+    <div class="subscribe-msg" id="subscribeMsg"></div>
+</section>
+
+</main>
+
+<footer>
+    <span>&copy; 2025–2026 Belfed Analytics. Все права защищены.</span>
+    <div class="footer-links">
+        <a href="/disclaimer.html">Ограничение ответственности</a>
+        <a href="https://t.me/BelfedBot" target="_blank">Telegram</a>
+        <a href="https://belfed.com">EN</a>
+    </div>
+</footer>
+
+<div class="disclaimer-line">Материалы сайта не являются индивидуальной инвестиционной рекомендацией и предназначены исключительно для информационных и образовательных целей.</div>
+
+<script>
+const subscribeForm = document.getElementById('subscribeForm');
+const subscribeMsg = document.getElementById('subscribeMsg');
+if (subscribeForm) {
+    subscribeForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const email = document.getElementById('subscribeEmail').value;
+        const btn = subscribeForm.querySelector('button');
+        btn.textContent = 'Отправка...';
+        btn.disabled = true;
+        fetch('https://script.google.com/macros/s/AKfycbx1dJgo_Y0IkprVZKWYuQ0dw_MJM00JsPYx0h2iMZCcywqDUYLjtwIWJBHp87FfYKXp/exec', {
+            method: 'POST', mode: 'no-cors',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'email=' + encodeURIComponent(email)
+        }).then(function() {
+            subscribeMsg.className = 'subscribe-msg success';
+            subscribeMsg.textContent = 'Вы успешно подписались!';
+            subscribeForm.reset();
+            btn.textContent = 'Подписаться';
+            btn.disabled = false;
+        }).catch(function() {
+            subscribeMsg.className = 'subscribe-msg error';
+            subscribeMsg.textContent = 'Произошла ошибка. Попробуйте ещё раз.';
+            btn.textContent = 'Подписаться';
+            btn.disabled = false;
+        });
+    });
+}
+</script>
+
+</body>
+</html>
