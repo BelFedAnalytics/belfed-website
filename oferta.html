@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://script.google.com https://docs.google.com; img-src 'self'; frame-src 'none';">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BelFed Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com/">
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --black: #0a0a0a;
+      --white: #f5f5f0;
+      --gray: #888;
+      --light-gray: #e8e8e3;
+      --border: #d0d0ca;
+      --font: 'Courier Prime', 'Courier New', monospace;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font);
+      background: var(--white);
+      color: var(--black);
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 40px; height: 56px;
+    }
+    .nav-logo { font-size: 17px; font-weight: 700; letter-spacing: 0.05em; text-decoration: none; color: var(--black); }
+    .nav-links { display: flex; gap: 32px; list-style: none; }
+    .nav-links a { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; color: var(--black); transition: opacity 0.2s; }
+    .nav-links a:hover { opacity: 0.5; }
+    main { padding-top: 56px; }
+    .legal-content {
+      max-width: 720px;
+      padding: 60px 40px 80px;
+    }
+    .legal-tag { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); margin-bottom: 24px; }
+    .legal-content h1 { font-size: clamp(28px, 4vw, 40px); font-weight: 700; line-height: 1.2; margin-bottom: 12px; }
+    .legal-updated { font-size: 12px; color: var(--gray); margin-bottom: 40px; }
+    .legal-content h2 {
+      font-size: 16px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; margin-top: 40px; margin-bottom: 16px;
+      padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    }
+    .legal-content p { font-size: 14px; line-height: 1.8; color: #333; margin-bottom: 16px; }
+    .legal-content ul { font-size: 14px; line-height: 1.8; color: #333; margin-bottom: 16px; padding-left: 24px; }
+    .legal-content li { margin-bottom: 8px; }
+    .legal-content strong { color: var(--black); }
+    .legal-content table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 14px; }
+    .legal-content table td { padding: 10px 12px; border: 1px solid var(--border); color: #333; }
+    .legal-content table td:first-child { font-weight: 700; white-space: nowrap; width: 180px; }
+    .breadcrumb { font-size: 12px; color: var(--gray); margin-bottom: 32px; }
+    .breadcrumb a { color: var(--gray); text-decoration: none; }
+    .breadcrumb a:hover { color: var(--black); }
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--gray);
+    }
+    .footer-links { display: flex; justify-content: center; gap: 24px; margin-bottom: 16px; }
+    .footer-links a { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; color: var(--black); }
+    .footer-links a:hover { opacity: 0.5; }
+    .footer-legal { font-size: 11px; color: var(--gray); line-height: 1.6; max-width: 600px; margin: 0 auto; }
+    @media(max-width: 768px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      .legal-content { padding: 40px 20px 60px; }
+      footer { padding: 24px 20px; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="https://belfed.com/" class="nav-logo">BELFED ANALYTICS &middot; EST. 2025</a>
+  </nav>
+
+  <main>
+    <div class="legal-content">
+      <div class="breadcrumb"><a href="https://belfed.com/">Главная</a> → Оферта</div>
+
+      <div class="legal-tag">ПУБЛИЧНАЯ ОФЕРТА</div>
+      <h1>Договор-оферта на оказание информационно-аналитических услуг</h1>
+      <p class="legal-updated">Дата последнего обновления: 07 апреля 2026 г. Версия 1</p>
+
+      <h2>1. Общие положения</h2>
+      <p>1.1. <strong>Исполнитель</strong> — ИП Федоров Артем Игоревич, ИНН 781103296545, ОГРНИП 326784700016572 — предлагает неопределённому кругу лиц услуги информационно-аналитического характера, описанные в настоящей Оферте.</p>
+      <p>1.2. Оферта считается акцептованной с момента оплаты подписки в соответствии со ст. 437 ГК РФ.</p>
+      <p>1.3. Актуальная редакция Оферты размещена на сайте, доступном по адресу belfed.com. Продолжение использования сервиса означает согласие с её условиями.</p>
+      <p>1.4. Подписчик — физическое лицо, акцептовавшее настоящую Оферту, оплатившее подписку и получившее доступ к материалам.</p>
+
+      <h2>2. Предмет договора</h2>
+      <p>2.1. Исполнитель предоставляет Подписчику доступ к информационно-аналитическим материалам, анализу рынков и торговым идеям на условиях подписки.</p>
+      <p>2.2. Услуги включают, но не ограничиваются:</p>
+      <ul>
+        <li>Торговые идеи с уровнями входа, выхода и управления риском</li>
+        <li>Рыночные обзоры и аналитические материалы</li>
+        <li>Доступ к закрытому каналу и личному кабинету</li>
+        <li>Возможность запроса анализа активов</li>
+        <li>Общение и обсуждение рыночных тем</li>
+        <li>Учебные материалы</li>
+        <li>Обновления портфеля и статусы позиций</li>
+        <li>Обновления через Telegram</li>
+      </ul>
+      <p>2.3. Тарифы и условия подписки указаны на странице <a href="/pricing.html">Услуги и цены</a> сайта belfed.com.</p>
+
+      <h2>3. Ограничение ответственности</h2>
+      <p>3.1. <strong>Материалы носят исключительно информационный, аналитический и образовательный характер и не являются индивидуальной инвестиционной рекомендацией или побуждением к совершению сделок.</strong></p>
+      <p>3.2. Исполнитель не несёт ответственности за торговые решения, убытки или упущенную выгоду, связанные с использованием материалов, <strong>включая прямые и косвенные финансовые потери</strong>.</p>
+      <p>3.3. Подписчик принимает на себя все риски, связанные с принятием торговых решений. Исполнитель не управляет средствами Подписчика.</p>
+      <p>3.4. Прошлые результаты не гарантируют будущую доходность. Track Record, опубликованный на belfed.com, носит справочный характер.</p>
+      <p>3.5. Исполнитель не является инвестиционным советником, брокером или управляющим активами.</p>
+
+      <h2>4. Порядок предоставления доступа</h2>
+      <p>4.1. Доступ предоставляется через закрытый канал Telegram.</p>
+      <p>4.2. Подключение осуществляется через Telegram-бота @BelfedBot после оплаты.</p>
+      <p>4.3. Доступ предоставляется автоматически.</p>
+      <p>4.4. Срок подписки указывается в тарифе. Обновление происходит автоматически.</p>
+
+      <h2>5. Оплата</h2>
+      <p>5.1. Оплата производится через сайт belfed.com.</p>
+      <p>5.2. Принимаются: Visa, MasterCard, Kassa и другие способы, указанные на странице услуг.</p>
+      <p>5.3. Подписка продлевается автоматически каждые 30 дней. Отменить можно в любой момент, доступ сохранится до конца оплаченного периода.</p>
+      <p>5.4. Возвраты осуществляются в соответствии с политикой возврата. Подробности указаны на странице услуг.</p>
+
+      <h2>6. Возврат</h2>
+      <p>6.1. В связи с цифровым характером услуги, возврат после начала расчётного периода не производится. Ст. 32 ЗоЗПП.</p>
+      <p>6.2. В течение 24 часов после оплаты, если услуга фактически не была оказана — полный возврат.</p>
+      <p>6.3. Заявка на возврат: <a href="mailto:support@belfed.com">support@belfed.com</a> — рассмотрение в течение 10 рабочих дней.</p>
