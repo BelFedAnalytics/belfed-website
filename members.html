@@ -180,6 +180,11 @@
     footer a { color: var(--gray); text-decoration: none; }
     footer a:hover { color: var(--black); }
     .footer-links { display: flex; gap: 20px; }
+    .dev-notice { margin: 0 40px 32px; padding: 24px 32px; border: 1px solid var(--border); background: var(--white); max-width: 1060px; }
+        .dev-notice .notice-tag { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: #b8860b; margin-bottom: 10px; }
+        .dev-notice p { font-size: 14px; color: #555; line-height: 1.7; }
+        .dev-notice a { color: var(--black); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+        .dev-notice a:hover { opacity: 0.6; }
     #membersContent { display: none; }
     @media(max-width:700px) {
       .members-hero { padding: 60px 20px 30px; }
@@ -242,6 +247,10 @@
         <p>Access your trading dashboard, live signals, research, and account settings below.</p>
       </div>
 
+            <div class="dev-notice">
+                      <p class="notice-tag">// In Development</p>
+                      <p>The web version of the members area is under development. All service materials are published daily in our <a href="https://t.me/BelfedBot" target="_blank">Telegram channel &rarr;</a></p>
+                    </div>
       <div class="members-grid">
         <a href="/dashboard.html" class="member-card">
           <div class="card-label">// Live Tracker</div>
