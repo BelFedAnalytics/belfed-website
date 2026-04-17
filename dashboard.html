@@ -475,7 +475,7 @@ console.error('Init error:',err);
 document.getElementById('loadingIndicator').style.display='none';
 var errBox=document.getElementById('errorBox');
 errBox.textContent='Error loading trade data: '+err.message;
-errBox.style.display='block';
+if((window._initTries=(window._initTries||0)+1)<3){setTimeout(init,1500);}
 }
 }
 document.getElementById('searchTicker').addEventListener('input',function(){renderOpenTrades(allTrades);});
