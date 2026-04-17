@@ -40,7 +40,7 @@ td.ticker-cell{font-weight:bold}
 .price-loading{color:#999;font-style:italic;font-size:11px}
 .stop-safe{color:#1a7a1a}
 .stop-warn{color:#e6a800;font-weight:bold}
-.stop-danger{color:#c50000;font-weight:bold}
+.stop-danger{color:#c50000;font-weight:bold} .badge-act{display:inline-block;padding:2px 8px;font-size:10px;font-weight:bold;letter-spacing:1px;border:1px solid #000;background:#1a7a1a;color:#fff} .badge-wait{display:inline-block;padding:2px 8px;font-size:10px;font-weight:bold;letter-spacing:1px;border:1px solid #000;background:#f5f2eb;color:#000} .badge-chase{display:inline-block;padding:2px 8px;font-size:10px;font-weight:bold;letter-spacing:1px;border:1px solid #000;background:#999;color:#fff} .badge-risk{display:inline-block;padding:2px 8px;font-size:10px;font-weight:bold;letter-spacing:1px;border:1px solid #000;background:#c50000;color:#fff}
 .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:12px}
 .stat-box{background:#fff;border:1px solid #000;padding:18px 16px;text-align:center}
 .stat-label{font-size:10px;letter-spacing:1.5px;margin-bottom:8px;opacity:0.6}
@@ -354,7 +354,7 @@ renderOpenTrades(allTrades);renderOpenedThisWeek(allTrades);renderAlerts(allTrad
 }
 function getCurrentPrice(t){if(!isNaN(t.livePrice)&&t.livePrice>0)return t.livePrice;if(!isNaN(t.exit)&&t.exit>0)return t.exit;return NaN;}
 function emptyRow(cols,msg){return '<tr><td colspan="'+cols+'" class="no-data">'+msg+'</td></tr>';}
-function renderOpenRows(rows){
+function actionBadge(pnl,stopDist){if(isNaN(pnl)||isNaN(stopDist))return '<span class="badge-wait" title="Waiting for live price">WAIT</span>';if(stopDist<=0)return '<span class="badge-risk" title="Below stop-loss">RISK</span>';if(Math.abs(pnl)<=3 && stopDist>=3)return '<span class="badge-act" title="Within 3% of entry AND >=3% above stop">ACT</span>';if(pnl>3)return '<span class="badge-chase" title="Price extended >3% from entry - chasing">CHASE</span>';return '<span class="badge-wait" title="Watch - outside actionable zone">WAIT</span>';} function renderOpenRows(rows){
 if(!rows.length)return emptyRow(9,'No open trades');
 return rows.map(function(t){
 var current=getCurrentPrice(t);var pnl=calcPnL(t.entry,current,t.dir);
@@ -362,7 +362,7 @@ var stopDist=calcStopDist(current,t.riskLevel,t.dir);
 var dirCls=t.dir.toLowerCase().includes('short')?'dir-short':'dir-long';
 var priceCell=isNaN(current)?'<span class="price-loading">loading...</span>':fmtPrice(current);
 var stopDistFmt=isNaN(stopDist)?'\u2014':stopDist.toFixed(1)+'%';
-return '<tr><td class="ticker-cell">'+t.ticker+'</td><td class="'+dirCls+'">'+t.dir+'</td><td>'+fmtPrice(t.entry)+'</td><td>'+priceCell+'</td><td class="'+cls(pnl)+'">'+fmtPnL(pnl)+'</td><td class="'+cls(pnl)+'">'+statusLabel(pnl)+'</td><td>'+(isNaN(t.riskLevel)?'\u2014':fmtPrice(t.riskLevel))+'</td><td class="'+stopCls(stopDist)+'">'+stopDistFmt+'</td><td>'+tvLink(t.tvUrl)+'</td></tr>';
+return '<tr><td class="ticker-cell">'+t.ticker+'</td><td class="'+dirCls+'">'+t.dir+'</td><td>'+fmtPrice(t.entry)+'</td><td>'+priceCell+'</td><td class="'+cls(pnl)+'">'+fmtPnL(pnl)+'</td><td class="'+cls(pnl)+'">'+statusLabel(pnl)+' '+actionBadge(pnl,stopDist)+'</td><td>'+(isNaN(t.riskLevel)?'\u2014':fmtPrice(t.riskLevel))+'</td><td class="'+stopCls(stopDist)+'">'+stopDistFmt+'</td><td>'+tvLink(t.tvUrl)+'</td></tr>';
 }).join('');
 }
 function renderClosedWeekRows(rows){
@@ -380,7 +380,7 @@ var stopDist=calcStopDist(current,t.riskLevel,t.dir);
 var dirCls=t.dir.toLowerCase().includes('short')?'dir-short':'dir-long';
 var priceCell=isNaN(current)?'<span class="price-loading">loading...</span>':fmtPrice(current);
 var stopDistFmt=isNaN(stopDist)?'\u2014':stopDist.toFixed(1)+'%';
-return '<tr><td class="ticker-cell">'+t.ticker+'</td><td class="'+dirCls+'">'+t.dir+'</td><td>'+fmtPrice(t.entry)+'</td><td>'+priceCell+'</td><td class="'+cls(pnl)+'">'+fmtPnL(pnl)+'</td><td class="'+cls(pnl)+'">'+statusLabel(pnl)+'</td><td>'+(isNaN(t.riskLevel)?'\u2014':fmtPrice(t.riskLevel))+'</td><td class="'+stopCls(stopDist)+'">'+stopDistFmt+'</td><td>'+t.entryDate+'</td><td>'+tvLink(t.tvUrl)+'</td></tr>';
+return '<tr><td class="ticker-cell">'+t.ticker+'</td><td class="'+dirCls+'">'+t.dir+'</td><td>'+fmtPrice(t.entry)+'</td><td>'+priceCell+'</td><td class="'+cls(pnl)+'">'+fmtPnL(pnl)+'</td><td class="'+cls(pnl)+'">'+statusLabel(pnl)+' '+actionBadge(pnl,stopDist)+'</td><td>'+(isNaN(t.riskLevel)?'\u2014':fmtPrice(t.riskLevel))+'</td><td class="'+stopCls(stopDist)+'">'+stopDistFmt+'</td><td>'+t.entryDate+'</td><td>'+tvLink(t.tvUrl)+'</td></tr>';
 }).join('');
 }
 function renderOpenTrades(trades){
