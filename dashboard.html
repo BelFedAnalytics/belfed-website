@@ -383,7 +383,7 @@ var stopDistFmt=isNaN(stopDist)?'\u2014':stopDist.toFixed(1)+'%';
 return '<tr><td class="ticker-cell">'+t.ticker+'</td><td class="'+dirCls+'">'+t.dir+'</td><td>'+fmtPrice(t.entry)+'</td><td>'+priceCell+'</td><td class="'+cls(pnl)+'">'+fmtPnL(pnl)+'</td><td class="'+cls(pnl)+'">'+statusLabel(pnl)+' '+actionBadge(pnl,stopDist)+'</td><td>'+(isNaN(t.riskLevel)?'\u2014':fmtPrice(t.riskLevel))+'</td><td class="'+stopCls(stopDist)+'">'+stopDistFmt+'</td><td>'+t.entryDate+'</td><td>'+tvLink(t.tvUrl)+'</td></tr>';
 }).join('');
 }
-function renderOpenTrades(trades){
+function renderOpenTrades(trades){if(typeof injectGuideAndWatchlist==='function')injectGuideAndWatchlist();if(typeof renderActionable==='function')renderActionable(trades);
 var open=trades.filter(function(t){return t.status==='open';});
 var search=document.getElementById('searchTicker').value.toLowerCase();
 if(search)open=open.filter(function(t){return t.ticker.toLowerCase().includes(search);});
