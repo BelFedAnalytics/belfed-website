@@ -102,6 +102,7 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 <div class="auth-tabs">
 <button class="auth-tab active" onclick="showAuthTab('signin')">SIGN IN</button>
 <button class="auth-tab" onclick="showAuthTab('signup')">SIGN UP</button>
+  <button class="auth-tab" onclick="showAuthTab('magiclink')">MAGIC LINK</button>
 </div>
 <div id="signinForm">
 <input type="email" id="siEmail" placeholder="Email address">
@@ -120,6 +121,11 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 <input type="password" id="suPassword2" placeholder="Confirm password">
 <button class="login-btn" onclick="handleSignUp()">START FREE TRIAL</button>
 <div class="trial-note">30 days free access &bull; No credit card required</div>
+</div>
+  <div id="magiclinkForm" style="display:none">
+<input type="email" id="mlEmail" placeholder="Email address">
+<button class="login-btn" onclick="handleMagicLink()">SEND MAGIC LINK</button>
+<div class="trial-note">A sign-in link will be sent to your email. No password needed.</div>
 </div>
 <div class="login-error" id="loginError"></div>
 <div class="login-msg" id="loginMsg"></div>
