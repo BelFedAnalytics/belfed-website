@@ -258,12 +258,26 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="belfed-auth.js"></script>
 <script>
-// --- Dashboard page callbacks ---
+  // --- Shared access token (for Telegram group pinned link) ---
+  var ACCESS_TOKEN = 'Bfd2026Live';
+  var tokenAccess = false;
+  (function() {
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('access') === ACCESS_TOKEN) {
+      tokenAccess = true;
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('dashboardContainer').style.display = 'block';
+      init();
+    }
+  })();
+
+  // --- Dashboard page callbacks ---
 function onAuthReady(profile, session, entitlement) {
   if (entitlement.access) { showDashboard(); }
   else { showExpired(); }
 }
 function onAuthSignedOut() {
+      if (tokenAccess) return;
   document.getElementById('loginScreen').style.display='flex';
   document.getElementById('dashboardContainer').style.display='none';
   document.getElementById('expiredScreen').style.display='none';
