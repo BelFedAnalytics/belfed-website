@@ -301,4 +301,47 @@
     </footer>
   </div>
 
-  <script src="belfed-auth.js"></script> <script> // --- Members page callbacks --- function onAuthReady(profile, session, entitlement) {   document.getElementById('loginScreen').style.display = 'none';   document.getElementById('membersContent').style.display = 'block';   var navAuth = document.getElementById('navAuthBtn');   if (navAuth) navAuth.style.display = 'block';   if (session && session.user) {     document.getElementById('acctEmail').textContent = session.user.email;     var created = new Date(session.user.created_at);     document.getElementById('acctSince').textContent = created.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });   }   if (profile) {     var st = entitlement.status;     var badge = document.getElementById('acctStatus');     badge.textContent = st.toUpperCase();     badge.className = 'status-badge';     if (st === 'expired') badge.classList.add('expired');     if (st === 'trial') badge.classList.add('trial');     if (st === 'trial' && profile.trial_end) {       var row = document.getElementById('acctTrialRow');       if (row) row.style.display = 'block';       var te = new Date(profile.trial_end);       document.getElementById('acctTrialEnd').textContent = te.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });     }     if (profile.telegram_id) {       document.getElementById('acctTelegram').textContent = profile.telegram_id;     }   } } function onAuthSignedOut() {   document.getElementById('loginScreen').style.display = 'flex';   document.getElementById('membersContent').style.display = 'none'; } </script> </body> </html>
+    <script src="belfed-auth.js"></script>
+  <script>
+    // --- Members page callbacks ---
+    function onAuthReady(profile, session, entitlement) {
+      try {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('membersContent').style.display = 'block';
+        var navAuth = document.getElementById('navAuthBtn');
+        if (navAuth) navAuth.style.display = 'block';
+        if (session && session.user) {
+          document.getElementById('acctEmail').textContent = session.user.email;
+          var created = new Date(session.user.created_at);
+          document.getElementById('acctSince').textContent = created.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+        if (profile) {
+          var st = entitlement.status;
+          var badge = document.getElementById('acctStatus');
+          badge.textContent = st.toUpperCase();
+          badge.className = 'status-badge';
+          if (st === 'expired') badge.classList.add('expired');
+          if (st === 'trial') badge.classList.add('trial');
+          if (st === 'trial' && profile.trial_end) {
+            var row = document.getElementById('acctTrialRow');
+            if (row) row.style.display = 'block';
+            var te = new Date(profile.trial_end);
+            document.getElementById('acctTrialEnd').textContent = te.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
+          }
+          if (profile.telegram_id) {
+            document.getElementById('acctTelegram').textContent = profile.telegram_id;
+          }
+        }
+      } catch(e) {
+        console.error('onAuthReady error:', e);
+        var errEl = document.getElementById('loginError');
+        if (errEl) { errEl.textContent = 'Error: ' + e.message; errEl.style.display = 'block'; }
+      }
+    }
+    function onAuthSignedOut() {
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('membersContent').style.display = 'none';
+    }
+  </script>
+</body>
+</html>
