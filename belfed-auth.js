@@ -17,6 +17,7 @@ function showAuthTab(tab) {
   event.target.classList.add('active');
   document.getElementById('signinForm').style.display = tab === 'signin' ? 'block' : 'none';
   document.getElementById('signupForm').style.display = tab === 'signup' ? 'block' : 'none';
+      var mlForm = document.getElementById('magiclinkForm'); if (mlForm) mlForm.style.display = tab === 'magiclink' ? 'block' : 'none';
   document.getElementById('loginError').style.display = 'none';
   document.getElementById('loginMsg').style.display = 'none';
   var fpBlock = document.getElementById('forgotPasswordBlock');
@@ -37,6 +38,27 @@ async function handleSignIn() {
     var res = await supaClient.auth.signInWithPassword({ email: email, password: pw });
     if (res.error) throw res.error;
   } catch (err) { errEl.textContent = err.message || 'Login failed'; errEl.style.display = 'block'; }
+}
+
+async function handleMagicLink() {
+  var email = document.getElementById('mlEmail').value.trim();
+  var errEl = document.getElementById('loginError');
+  var msgEl = document.getElementById('loginMsg');
+  errEl.style.display = 'none';
+  msgEl.style.display = 'none';
+  if (!email) { errEl.textContent = 'Please enter your email'; errEl.style.display = 'block'; return; }
+  try {
+    var res = await supaClient.auth.signInWithOtp({
+      email: email,
+      options: { emailRedirectTo: window.location.origin + '/dashboard.html' }
+    });
+    if (res.error) throw res.error;
+    msgEl.textContent = 'Magic link sent! Check your email and click the link to sign in.';
+    msgEl.style.display = 'block';
+  } catch (err) {
+    errEl.textContent = err.message || 'Failed to send magic link';
+    errEl.style.display = 'block';
+  }
 }
 
 async function handleSignUp() {
