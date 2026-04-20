@@ -281,7 +281,7 @@
         </div>
       </div>
 
-      <!-- Account Info -->
+      <!-- Subscription --><div class="account-section" style="max-width:1060px;"><h2>// Подписка</h2><div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:16px;"><button data-plan="month" class="login-btn" style="width:auto;padding:14px 22px;">1 месяц — 2 990 ₽</button><button data-plan="quarter" class="login-btn" style="width:auto;padding:14px 22px;">3 месяца — 7 990 ₽</button><button data-plan="year" class="login-btn" style="width:auto;padding:14px 22px;">12 месяцев — 24 990 ₽</button></div><p id="payStatus" style="margin-top:12px;font-size:12px;color:var(--gray);"></p></div><!-- Account Info -->
       <div class="account-section">
         <h2>// Account</h2>
         <div class="account-info"><span>Email:</span> <span id="acctEmail">&mdash;</span></div>
@@ -301,7 +301,7 @@
     </footer>
   </div>
 
-    <script src="belfed-auth.js"></script>
+    <script src="belfed-auth.js"></script>   <script src="belfed-payments.js"></script>
   <script>
     // --- Members page callbacks ---
     function onAuthReady(profile, session, entitlement) {
