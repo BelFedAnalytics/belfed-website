@@ -48,7 +48,7 @@ td.ticker-cell{font-weight:bold}
 .ytd-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:12px}
 .ytd-box{background:#fff;border:2px solid #000;padding:28px 20px;text-align:center}
 .ytd-label{font-size:11px;letter-spacing:2px;margin-bottom:12px;opacity:0.6}
-.ytd-value{font-size:48px;font-weight:bold}
+.ytd-value{font-size:48px;font-weight:bold} .score-filter{display:flex;gap:6px;margin:0 0 12px 0;flex-wrap:wrap} .score-filter button{font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;padding:6px 12px;border:1px solid #000;background:#fff;color:#000;cursor:pointer;text-transform:uppercase} .score-filter button:hover{background:#f0ede4} .score-filter button.active{background:#000;color:#f5f2eb} .score-period-note{font-size:11px;opacity:.6;margin-top:10px;letter-spacing:1px}
 .alert-box{background:#fff;border:1px solid #000;padding:18px 20px;margin-top:12px}
 .alert-item{padding:7px 0;border-bottom:1px dashed #ccc;font-size:13px}
 .alert-item:last-child{border-bottom:none}
@@ -238,11 +238,11 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 </div>
 <!-- YTD SCORECARD -->
 <div class="section">
-<div class="section-title">YTD SCORECARD</div>
+<div class="section-title">SCORECARD</div><div class="score-filter" id="scoreFilter"><button data-period="all" class="active">ALL</button><button data-period="2026">2026</button><button data-period="2025">2025</button><button data-period="qtr">LAST QUARTER</button><button data-period="month">LAST MONTH</button></div>
 <div class="ytd-grid">
 <div class="ytd-box"><div class="ytd-label">TOTAL R</div><div class="ytd-value" id="ytdR">&mdash;</div></div>
 <div class="ytd-box"><div class="ytd-label">WIN RATE</div><div class="ytd-value" id="ytdWR">&mdash;</div></div>
-<div class="ytd-box"><div class="ytd-label">CLOSED TRADES</div><div class="ytd-value" id="ytdTotal">&mdash;</div></div>
+<div class="ytd-box"><div class="ytd-label">CLOSED TRADES</div><div class="ytd-value" id="ytdTotal">&mdash;</div></div></div><div class="score-period-note" id="scorePeriodNote">PERIOD: ALL-TIME</div><div style="display:none">
 </div>
 </div>
 <!-- ALERTS -->
@@ -418,14 +418,14 @@ document.getElementById('wBest').textContent=fmtR(best);
 document.getElementById('wWorst').textContent=fmtR(worst);
 }
 function renderYTDScorecard(trades){
-var closed=trades.filter(function(t){return t.status==='closed';});
+var _sp=(function(){try{return localStorage.getItem('bfd_score_period')||'all';}catch(e){return 'all';}})();window._bfdPeriod=_sp;window._bfdTrades=trades;function _pxd(s){if(!s)return null;var p=String(s).split('.');if(p.length!==3)return null;var d=parseInt(p[0],10),m=parseInt(p[1],10)-1,y=parseInt(p[2],10);return isNaN(d)||isNaN(m)||isNaN(y)?null:new Date(y,m,d);}function _fbp(arr,pp){if(pp==='all')return arr;var now=new Date();return arr.filter(function(t){var dt=_pxd(t.exitDate);if(!dt)return false;if(pp==='2025')return dt.getFullYear()===2025;if(pp==='2026')return dt.getFullYear()===2026;if(pp==='month')return dt>=new Date(now.getTime()-30*864e5);if(pp==='qtr')return dt>=new Date(now.getTime()-90*864e5);return true;});}var _allClosed=trades.filter(function(t){return t.status==='closed';});var closed=_fbp(_allClosed,_sp);
 var results=closed.map(function(t){return t.result;}).filter(function(v){return!isNaN(v);});
 var totalR=results.reduce(function(a,b){return a+b;},0);
 var winners=results.filter(function(v){return v>0;}).length;
 document.getElementById('ytdR').textContent=fmtR(totalR);
 document.getElementById('ytdR').className='ytd-value '+cls(totalR);
 document.getElementById('ytdWR').textContent=results.length>0?(winners/results.length*100).toFixed(0)+'%':'\u2014';
-document.getElementById('ytdTotal').textContent=closed.length;
+document.getElementById('ytdTotal').textContent=closed.length;var _lbl={all:'ALL-TIME','2025':'2025','2026':'2026',qtr:'LAST 90 DAYS',month:'LAST 30 DAYS'};var _n=document.getElementById('scorePeriodNote');if(_n)_n.textContent='PERIOD: '+(_lbl[_sp]||'ALL-TIME')+' \u00b7 '+closed.length+' TRADES';var _bs=document.querySelectorAll('#scoreFilter button');for(var _i=0;_i<_bs.length;_i++){_bs[_i].classList.toggle('active',_bs[_i].getAttribute('data-period')===_sp);}if(!window._bfdSFBound){window._bfdSFBound=true;var _w=document.getElementById('scoreFilter');if(_w){_w.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('button[data-period]'):null;if(!b)return;var np=b.getAttribute('data-period');try{localStorage.setItem('bfd_score_period',np);}catch(er){}if(window._bfdTrades)renderYTDScorecard(window._bfdTrades);});}}
 }
 function renderAlerts(trades){
 var open=trades.filter(function(t){return t.status==='open';});
