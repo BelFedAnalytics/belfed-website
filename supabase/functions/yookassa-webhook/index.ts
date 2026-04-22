@@ -1,9 +1,10 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const SUPABASE_URL     = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const MODE             = Deno.env.get("YOOKASSA_MODE") ?? "test";
+const SUPABASE_URL      = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE_KEY  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const MODE              = Deno.env.get("YOOKASSA_MODE") ?? "test";
+const IS_LIVE           = MODE === "live";
 
 // Verify against https://yookassa.ru/developers/using-api/webhooks#ip
 const YOOKASSA_CIDRS = [
@@ -37,6 +38,46 @@ function ipInCidr(ip: string, cidr: string): boolean {
 function ipAllowed(ip: string): boolean {
   if (!ip) return false;
   return YOOKASSA_CIDRS.some((c) => ipInCidr(ip, c));
+}
+
+// Upsert subscription record capturing saved payment method for recurring charges.
+async function upsertSubscription(opts: {
+  userId: string;
+  plan: string;
+  amountRub: number;
+  months: number;
+  paymentMethodId: string | null;
+  newExpiry: string;
+}) {
+  const { userId, plan, amountRub, months, paymentMethodId, newExpiry } = opts;
+
+  const { data: existing } = await admin
+    .from("subscriptions")
+    .select("id, payment_method_id, status")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const patch: Record<string, any> = {
+    user_id: userId,
+    plan_code: plan,
+    amount_rub: amountRub,
+    provider: "yookassa",
+    status: "active",
+    current_period_end: newExpiry,
+    next_billing_at: newExpiry,
+    cancel_at_period_end: false,
+    cancel_reason: null,
+    updated_at: new Date().toISOString(),
+  };
+  // Only overwrite payment_method_id if we have a new one (saved card).
+  if (paymentMethodId) patch.payment_method_id = paymentMethodId;
+
+  if (existing?.id) {
+    await admin.from("subscriptions").update(patch).eq("id", existing.id);
+  } else {
+    await admin.from("subscriptions").insert(patch);
+  }
+  void months; // kept for future per-plan logic
 }
 
 Deno.serve(async (req) => {
@@ -77,23 +118,46 @@ Deno.serve(async (req) => {
     if (eventType === "payment.succeeded" && obj.status === "succeeded" && obj.paid) {
       const userId = obj.metadata?.user_id as string | undefined;
       if (!userId) throw new Error("metadata.user_id missing");
-
       const amount = Number(obj.amount.value);
       const plan = String(obj.metadata?.plan ?? "month");
       const months = Number(obj.metadata?.period_months ?? 1);
+      const paidAt = obj.captured_at ?? new Date().toISOString();
 
-      const { error } = await admin.rpc("apply_successful_payment", {
+      // 1. Atomic DB write for payment + profile expiry (existing RPC).
+      const { error: rpcErr } = await admin.rpc("apply_successful_payment", {
         p_provider_payment_id: paymentId,
         p_user_id: userId,
         p_amount: amount,
         p_currency: obj.amount.currency,
         p_plan: plan,
         p_period_months: months,
-        p_paid_at: obj.captured_at ?? new Date().toISOString(),
+        p_paid_at: paidAt,
         p_raw: body,
-        p_is_test: MODE !== "live",
+        p_is_test: !IS_LIVE,
       });
-      if (error) throw error;
+      if (rpcErr) throw rpcErr;
+
+      // 2. Read the new expiry written by the RPC.
+      const { data: prof } = await admin
+        .from("profiles")
+        .select("subscription_expires_at")
+        .eq("id", userId)
+        .maybeSingle();
+      const newExpiry = prof?.subscription_expires_at ?? paidAt;
+
+      // 3. Upsert subscription row with saved payment method id (for recurring cron).
+      const paymentMethodId: string | null =
+        obj.payment_method?.saved && obj.payment_method?.id ? obj.payment_method.id : null;
+      await upsertSubscription({
+        userId, plan, amountRub: amount, months, paymentMethodId, newExpiry,
+      });
+
+      // 4. Mark the payment row as recurring if this was an auto-charge (not the initial).
+      const isInitial = obj.metadata?.initial === "1";
+      if (!isInitial) {
+        await admin.from("payments").update({ is_recurring: true })
+          .eq("provider", "yookassa").eq("provider_payment_id", paymentId);
+      }
     } else if (eventType === "payment.canceled") {
       await admin.from("payments").update({
         status: "canceled",
@@ -110,7 +174,8 @@ Deno.serve(async (req) => {
     }
 
     await admin.from("payment_events").update({
-      processed: true, processed_at: new Date().toISOString(),
+      processed: true,
+      processed_at: new Date().toISOString(),
     }).eq("provider", "yookassa").eq("provider_event_id", eventId);
 
     return new Response("ok", { status: 200 });
