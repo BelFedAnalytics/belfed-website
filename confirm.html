@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Email Confirmed — BelFed Analytics</title>
+<title>Email подтверждён — BelFed Analytics</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background-color:#f5f2eb;font-family:'Courier New',Courier,monospace;color:#000;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px}
@@ -21,20 +21,20 @@ body{background-color:#f5f2eb;font-family:'Courier New',Courier,monospace;color:
 <body>
 <div class="confirm-box">
 <h1>— BELFED_ —</h1>
-<div class="sub">MEMBER ACCESS</div>
+<div class="sub">ЛИЧНЫЙ КАБИНЕТ</div>
 <div class="checkmark">✅</div>
-<h2>EMAIL CONFIRMED</h2>
-<p>Your account is verified and your 30-day free trial is now active.</p>
-<div class="countdown" id="countdown">Redirecting to dashboard in 5 seconds...</div>
-<a href="/dashboard.html" class="go-btn" id="goBtn">GO TO DASHBOARD</a>
+<h2>EMAIL ПОДТВЕРЖДЁН</h2>
+<p>Аккаунт подтверждён. Активирован 14-дневный пробный период.</p>
+<div class="countdown" id="countdown">Переход в личный кабинет через 5 секунд…</div>
+<a href="/members.html" class="go-btn" id="goBtn">ПЕРЕЙТИ В КАБИНЕТ</a>
 </div>
 <script>
 var seconds=5;
 var el=document.getElementById('countdown');
 var timer=setInterval(function(){
 seconds--;
-if(seconds<=0){clearInterval(timer);window.location.href='/dashboard.html';return;}
-el.textContent='Redirecting to dashboard in '+seconds+' seconds...';
+if(seconds<=0){clearInterval(timer);window.location.href='/members.html';return;}
+el.textContent='Переход в личный кабинет через '+seconds+' секунд…';
 },1000);
 </script>
 </body>

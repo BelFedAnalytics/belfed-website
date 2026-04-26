@@ -50,7 +50,7 @@ async function handleMagicLink() {
   try {
     var res = await supaClient.auth.signInWithOtp({
       email: email,
-      options: { emailRedirectTo: window.location.origin + '/dashboard.html' }
+      options: { emailRedirectTo: window.location.origin + '/confirm.html' }
     });
     if (res.error) throw res.error;
     msgEl.textContent = 'Magic link sent! Check your email and click the link to sign in.';
@@ -72,7 +72,7 @@ async function handleSignUp() {
   if (pw !== pw2) { errEl.textContent = 'Passwords do not match'; errEl.style.display = 'block'; return; }
   if (pw.length < 6) { errEl.textContent = 'Password must be at least 6 characters'; errEl.style.display = 'block'; return; }
   try {
-    var res = await supaClient.auth.signUp({ email: email, password: pw });
+    var res = await supaClient.auth.signUp({ email: email, password: pw, options: { emailRedirectTo: window.location.origin + '/confirm.html' } });
     if (res.error) throw res.error;
     if (res.data.user && !res.data.session) {
       msgEl.textContent = 'Check your email to confirm your account, then sign in.';
@@ -90,7 +90,7 @@ async function handleForgotPassword() {
   if (!email) { statusEl.textContent = 'Please enter your email'; statusEl.style.color = 'var(--red, #c50000)'; return; }
   statusEl.textContent = 'Sending reset link...'; statusEl.style.color = 'var(--gray, #999)';
   try {
-    var res = await supaClient.auth.resetPasswordForEmail(email, { redirectTo: 'https://belfed.com/reset-password.html' });
+    var res = await supaClient.auth.resetPasswordForEmail(email, { redirectTo: 'https://belfed.ru/reset-password.html' });
     if (res.error) throw res.error;
     statusEl.textContent = 'Reset link sent! Check your email.'; statusEl.style.color = 'var(--green, #1a7a1a)';
   } catch (err) { statusEl.textContent = err.message || 'Error sending reset link'; statusEl.style.color = 'var(--red, #c50000)'; }
