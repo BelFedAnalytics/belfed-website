@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://script.google.com https://docs.google.com; img-src 'self'; frame-src 'none';">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Результаты — Акции | BelFed Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com/">
+<link href="./equities-trades_files/css2" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Courier Prime','Courier New',monospace;background:#fff;color:#111;font-size:14px;line-height:1.6}
+
+nav{display:flex;justify-content:space-between;align-items:center;padding:20px 48px;border-bottom:1px solid #111;position:sticky;top:0;background:#fff;z-index:100}
+.nav-logo{font-size:18px;font-weight:700;letter-spacing:2px;text-decoration:none;color:#111}
+.nav-links{display:flex;gap:32px;align-items:center}
+.nav-links a{text-decoration:none;color:#111;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;transition:opacity .2s;padding-bottom:2px;border-bottom:1px solid transparent}
+.nav-links a:hover{opacity:.45}
+.nav-links a.nav-active{border-bottom:1px solid #111;opacity:1}
+.nav-btn{border:1px solid #111;padding:8px 16px;font-family:inherit;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;background:#111;color:#fff;cursor:pointer;text-decoration:none;transition:all .2s;border-bottom:none!important}
+.nav-btn:hover{background:#fff;color:#111}
+.lang-switch{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;text-decoration:none;color:#888;border:1px solid #ddd;padding:5px 10px;margin-left:12px;transition:all .2s}
+.lang-switch:hover{color:#111;border-color:#111}
+.page-header{padding:56px 48px 40px;border-bottom:1px solid #e0e0e0}
+.page-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:12px}
+.page-title{font-size:36px;font-weight:700;margin-bottom:12px}
+.page-subtitle{font-size:14px;color:#555;max-width:660px}
+.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid #e0e0e0}
+.stat-item{padding:28px 48px;border-right:1px solid #e0e0e0}
+.stat-item:last-child{border-right:none}
+.stat-value{font-size:28px;font-weight:700;margin-bottom:4px}
+.stat-label{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#888}
+.tab-bar{display:flex;padding:0 48px;border-bottom:1px solid #e0e0e0}
+.tab-link{display:block;padding:18px 0;margin-right:36px;font-family:'Courier Prime','Courier New',monospace;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;text-decoration:none;border-bottom:2px solid transparent;color:#888;transition:all .2s}
+.tab-link.active{color:#111;border-bottom-color:#111;pointer-events:none}
+.tab-link:hover{color:#111}
+.table-wrap{padding:0 48px 48px;overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead th{padding:16px 14px;text-align:left;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#888;border-bottom:2px solid #111;white-space:nowrap}
+tbody tr{border-bottom:1px solid #f0f0f0;transition:background .15s}
+tbody tr:hover{background:#fafafa}
+tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
+.num{color:#ccc;font-size:11px}
+.ticker{font-weight:700;letter-spacing:1px;font-size:14px}
+.badge{display:inline-block;padding:3px 10px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;border:1px solid #111}
+.badge-long{background:transparent;color:#111}
+.badge-short{background:#111;color:#fff}
+.win{color:#1a7a1a;font-weight:700}
+.loss{color:#cc2222;font-weight:700}
+.tv-link{display:inline-flex;align-items:center;gap:5px;text-decoration:none;color:#888;font-size:10px;letter-spacing:1px;text-transform:uppercase;border:1px solid #ddd;padding:3px 8px;transition:all .2s;white-space:nowrap}
+.tv-link:hover{color:#111;border-color:#111;background:#f5f5f5}
+.tv-link svg{width:9px;height:9px;flex-shrink:0}
+.no-link{color:#ddd;font-size:11px}
+.summary-bar{display:flex;gap:48px;padding:20px 48px;border-top:2px solid #111;background:#fafafa;flex-wrap:wrap}
+.s-item{display:flex;flex-direction:column}
+.s-val{font-size:16px;font-weight:700}
+.s-val.pos{color:#1a7a1a}
+.s-lbl{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#888;margin-top:2px}
+.disclaimer{padding:20px 48px 32px;font-size:11px;color:#bbb;line-height:1.9;max-width:880px}
+footer{padding:32px 48px;border-top:1px solid #111;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#888;letter-spacing:1px}
+@media(max-width:768px){
+  nav{padding:16px 20px}.nav-links{display:none}
+  .page-header,.tab-bar,.table-wrap,.summary-bar,.disclaimer,footer{padding-left:20px;padding-right:20px}
+  .stats-bar{grid-template-columns:repeat(2,1fr)}
+  .stat-item{padding:20px}
+  .page-title{font-size:26px}
+  footer{flex-direction:column;gap:8px;text-align:center}
+}
+</style>
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">BELFED_</a>
+    <div class="nav-links">
+        <a href="/">Главная</a>
+        <a href="/about.html">О нас</a>
+        <a href="/ru/trades.html" class="nav-active">Результаты</a>
+        <a href="/disclaimer.html">Ограничение ответственности</a>
+        <a href="https://t.me/BelfedBot" target="_blank">Telegram</a>
+        <a href="/members.html" class="nav-btn">Личный кабинет</a>
+        <a href="https://belfed.com/equities-trades.html" class="lang-switch">EN</a>
+    </div>
+</nav>
+
+<div class="page-header">
+  <div class="page-label">// История сделок · Все закрытые позиции · Акции</div>
+  <h1 class="page-title">Акции</h1>
+  <p class="page-subtitle">Полная прозрачность по каждой закрытой позиции. Входы, выходы и соотношение риска и выгоды — открыто и без редактирования. Каждая сделка ссылается на оригинальный анализ, опубликованный в момент входа.</p>
+</div>
+
+<div class="stats-bar">
+  <div class="stat-item"><div class="stat-value">+90.71R</div><div class="stat-label">Общий результат</div></div>
+  <div class="stat-item"><div class="stat-value">46.43%</div><div class="stat-label">Процент побед</div></div>
+  <div class="stat-item"><div class="stat-value">84</div><div class="stat-label">Закрытых сделок</div></div>
+  <div class="stat-item"><div class="stat-value">3.63R</div><div class="stat-label">Средняя победа</div></div>
+</div>
+
+<div class="tab-bar">
+    <a href="/ru/trades.html" class="tab-link">Крипто</a>
+    <a href="/ru/equities.html" class="tab-link active">Акции</a>
+</div>
+
+<div class="table-wrap">
+<table>
+<thead><tr>
+  <th>#</th><th>Тикер</th><th>Направление</th>
+  <th>Дата входа</th><th>Дата выхода</th>
+  <th>Вход $</th><th>Выход $</th>
+  <th>Результат (R)</th><th>Анализ</th>
+</tr></thead>
+<tbody>
+<tr><td class="num">01</td><td><span class="ticker">META</span></td><td><span class="badge badge-short">Short</span></td><td>01.02.2025</td><td>03.04.2025</td><td>689.18</td><td>520.00</td><td><span class="win">+2.39R</span></td><td><a href="https://www.tradingview.com/chart/META/sQqnOtzv-META-trend-structure-is-approaching-important-resistance-zone/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">02</td><td><span class="ticker">PLTR</span></td><td><span class="badge badge-short">Short</span></td><td>16.04.2025</td><td>22.04.2025</td><td>94.73</td><td>100.00</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/PLTR/SZHazipa-PLTR-Testing-Key-Resistance/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">03</td><td><span class="ticker">CRWD</span></td><td><span class="badge badge-short">Short</span></td><td>16.04.2025</td><td>25.04.2025</td><td>392.80</td><td>425.00</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/CRWD/Qh4rb3iT-CRWD-in-main-resistance-for-one-more-leg-down/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">04</td><td><span class="ticker">UNH</span></td><td><span class="badge badge-short">Short</span></td><td>18.04.2025</td><td>15.05.2025</td><td>454.00</td><td>260.00</td><td><span class="win">+7.46R</span></td><td><a href="https://www.tradingview.com/symbols/NYSE-UNH/minds/?mind=pSEJdTTuQCSsA41owEeAWA" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">05</td><td><span class="ticker">IONQ</span></td><td><span class="badge badge-short">Short</span></td><td>23.04.2025</td><td>24.04.2025</td><td>26.80</td><td>32.00</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/IONQ/9CVXyOaC-IONQ-Price-at-Mid-Term-Resistance/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">06</td><td><span class="ticker">AMD</span></td><td><span class="badge badge-long">Long</span></td><td>25.04.2025</td><td>29.07.2025</td><td>94.72</td><td>177.58</td><td><span class="win">+7.55R</span></td><td><a href="https://www.tradingview.com/chart/AMD/HROqIX6e-AMD-Potential-Mid-Term-Reversal-from-Macro-Support/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">07</td><td><span class="ticker">FNMA</span></td><td><span class="badge badge-long">Long</span></td><td>05.05.2025</td><td>19.05.2025</td><td>6.43</td><td>12.00</td><td><span class="win">+3.48R</span></td><td><a href="https://www.tradingview.com/chart/FNMA/kD7Kfc72-FNMA-great-looking-consolidation/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">08</td><td><span class="ticker">SAP</span></td><td><span class="badge badge-long">Long</span></td><td>12.05.2025</td><td>08.09.2025</td><td>261.65</td><td>225.00</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/SAP/Mo28JcxD-SAP-Macro-Potential/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">09</td><td><span class="ticker">PLTR</span></td><td><span class="badge badge-long">Long</span></td><td>24.05.2025</td><td>05.11.2025</td><td>123.31</td><td>190.74</td><td><span class="win">+5.07R</span></td><td><a href="https://www.tradingview.com/chart/PLTR/GKLvZ4pk-PLTR-Potential-for-Further-Upside-in-H2-2025/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">10</td><td><span class="ticker">RBLX</span></td><td><span class="badge badge-short">Short</span></td><td>22.06.2025</td><td>11.07.2025</td><td>102.09</td><td>107.00</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/RBLX/WRY6hqRv-RBLX-Price-Nearing-Major-Resistance-Zone/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">11</td><td><span class="ticker">UNH</span></td><td><span class="badge badge-long">Long</span></td><td>13.07.2025</td><td>17.07.2025</td><td>304.10</td><td>282.00</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/UNH/XnDeRVXX-UNH-Macro-Outlook-Update/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">12</td><td><span class="ticker">MSTR</span></td><td><span class="badge badge-long">Long</span></td><td>19.07.2025</td><td>22.07.2025</td><td>423.22</td><td>421.00</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/MSTR/2Zp6lCd8-MSTR-On-the-Path-to-New-ATH/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">13</td><td><span class="ticker">UNH</span></td><td><span class="badge badge-long">Long</span></td><td>29.08.2025</td><td>12.09.2025</td><td>305.12</td><td>350.00</td><td><span class="win">+2.23R</span></td><td><a href="https://www.tradingview.com/chart/UNH/XnDeRVXX-UNH-Macro-Outlook-Update/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">14</td><td><span class="ticker">XAG</span></td><td><span class="badge badge-long">Long</span></td><td>15.09.2025</td><td>18.10.2025</td><td>30.72</td><td>52.91</td><td><span class="win">+4.70R</span></td><td><a href="https://www.tradingview.com/chart/XAGUSD/txR9l0PX-xagusd-makro/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">15</td><td><span class="ticker">RZLV</span></td><td><span class="badge badge-long">Long</span></td><td>02.10.2025</td><td>21.10.2025</td><td>5.85</td><td>4.36</td><td><span class="loss">-1.10R</span></td><td><a href="https://www.tradingview.com/chart/RZLV/Son7IRqc-RZLV-Constructive-Action-Within-Macro-Bullish-Trend/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">16</td><td><span class="ticker">SRPT</span></td><td><span class="badge badge-short">Short</span></td><td>15.10.2025</td><td>03.11.2025</td><td>22.09</td><td>15.24</td><td><span class="loss">-6.28R</span></td><td><a href="https://www.tradingview.com/chart/SRPT/tigJZOQt-SPRT-potential-start-of-new-swing-move/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">17</td><td><span class="ticker">DPRO</span></td><td><span class="badge badge-long">Long</span></td><td>16.10.2025</td><td>21.10.2025</td><td>9.81</td><td>7.85</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/DPRO/qjobimJE-DPRO-in-mid-term-support/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">18</td><td><span class="ticker">BTQ</span></td><td><span class="badge badge-long">Long</span></td><td>16.10.2025</td><td>21.10.2025</td><td>13.05</td><td>5.90</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/BTQ/zQTsElqb-BTQ-speculative-potential/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">19</td><td><span class="ticker">OKLO</span></td><td><span class="badge badge-short">Short</span></td><td>17.10.2025</td><td>30.12.2025</td><td>162.14</td><td>73.16</td><td><span class="win">+4.27R</span></td><td><span class="no-link">—</span></td></tr>
+<tr><td class="num">20</td><td><span class="ticker">LAES</span></td><td><span class="badge badge-long">Long</span></td><td>18.10.2025</td><td>22.10.2025</td><td>6.67</td><td>5.30</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/LAES/E379u4Xq-LAES-a-dubious-speculation/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">21</td><td><span class="ticker">INDI</span></td><td><span class="badge badge-long">Long</span></td><td>18.10.2025</td><td>31.10.2025</td><td>5.32</td><td>5.00</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/INDI/UpjFIEM3-INDI-swing-long-potential/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">22</td><td><span class="ticker">ESTA</span></td><td><span class="badge badge-long">Long</span></td><td>18.10.2025</td><td>11.11.2025</td><td>47.27</td><td>67.69</td><td><span class="win">+4.78R</span></td><td><a href="https://www.tradingview.com/chart/ESTA/8sjrTUPb-ESTA-interesting-mid-term-and-macro-potential/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">23</td><td><span class="ticker">BE</span></td><td><span class="badge badge-short">Short</span></td><td>18.10.2025</td><td>22.12.2025</td><td>123.24</td><td>87.92</td><td><span class="win">+1.43R</span></td><td><a href="https://www.tradingview.com/chart/BE/dzq2gSYo-BE-price-in-important-resistance-zone/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">24</td><td><span class="ticker">SDST</span></td><td><span class="badge badge-long">Long</span></td><td>19.10.2025</td><td>03.11.2025</td><td>5.31</td><td>3.90</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/SDST/sdh6dhgU-SDST-speculative-potential/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">25</td><td><span class="ticker">NXPI</span></td><td><span class="badge badge-long">Long</span></td><td>19.10.2025</td><td>06.11.2025</td><td>214.97</td><td>200.00</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/NXPI/43Xh8IGF-NXPI-on-trend-structure-potential/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">26</td><td><span class="ticker">KOPN</span></td><td><span class="badge badge-long">Long</span></td><td>19.10.2025</td><td>19.11.2025</td><td>3.64</td><td>2.25</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/KOPN/9huGpNpw-KOPN-trend-structure/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">27</td><td><span class="ticker">CLF</span></td><td><span class="badge badge-short">Short</span></td><td>20.10.2025</td><td>20.10.2025</td><td>13.22</td><td>15.62</td><td><span class="loss">-1.35R</span></td><td><a href="https://www.tradingview.com/chart/CLF/1GufDB7x-CLF-in-mid-term-resistance/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">28</td><td><span class="ticker">TMC</span></td><td><span class="badge badge-long">Long</span></td><td>20.10.2025</td><td>21.10.2025</td><td>8.19</td><td>7.75</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/TMC/22WRtlf4-TMC-potential-for-one-more-upside-leg-into-2021-ATH/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">29</td><td><span class="ticker">WDC</span></td><td><span class="badge badge-short">Short</span></td><td>20.10.2025</td><td>23.10.2025</td><td>121.52</td><td>132.00</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/WDC/2BAsvrtd-WDC-potential-topping-structure/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">30</td><td><span class="ticker">MU</span></td><td><span class="badge badge-short">Short</span></td><td>20.10.2025</td><td>23.10.2025</td><td>200.06</td><td>219.00</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/MU/JUYASFdh-MU-price-reached-key-mid-term-resistance/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">31</td><td><span class="ticker">REKR</span></td><td><span class="badge badge-short">Short</span></td><td>20.10.2025</td><td>11.11.2025</td><td>3.20</td><td>2.17</td><td><span class="win">+3.32R</span></td><td><a href="https://www.tradingview.com/chart/REKR/Z24s8MAY-REKR-price-reached-resistance-level-Watching-for-pullback/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">32</td><td><span class="ticker">U</span></td><td><span class="badge badge-long">Long</span></td><td>20.10.2025</td><td>—</td><td>35.24</td><td>39.75</td><td><span class="win">+1.39R</span></td><td><a href="https://www.tradingview.com/chart/U/ETeqQ5NN-U-trend-structure-key-support-and-resistance-levels/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">33</td><td><span class="ticker">ANET</span></td><td><span class="badge badge-short">Short</span></td><td>21.10.2025</td><td>22.10.2025</td><td>145.62</td><td>150.00</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/ANET/yxx1L1Bu-ANET-watching-for-more-downside-in-coming-weeks/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">34</td><td><span class="ticker">BULL</span></td><td><span class="badge badge-long">Long</span></td><td>21.10.2025</td><td>31.10.2025</td><td>11.48</td><td>10.31</td><td><span class="loss">-1.48R</span></td><td><a href="https://www.tradingview.com/chart/BULL/VgXBXdTK-BULL-on-the-verge-of-macro-support/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">35</td><td><span class="ticker">GSIT</span></td><td><span class="badge badge-long">Long</span></td><td>22.10.2025</td><td>10.11.2025</td><td>12.96</td><td>8.00</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/GSIT/2AzVyS45-GSIT-Strong-catalyst-and-trend-structure-potential/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">36</td><td><span class="ticker">HIVE</span></td><td><span class="badge badge-short">Short</span></td><td>22.10.2025</td><td>21.01.2026</td><td>5.54</td><td>3.20</td><td><span class="win">+3.08R</span></td><td><a href="https://www.tradingview.com/chart/HIVE/03Fou9mb-HIVE-on-mid-term-top-and-more-downside-potential/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">37</td><td><span class="ticker">VTYX</span></td><td><span class="badge badge-long">Long</span></td><td>23.10.2025</td><td>17.12.2026</td><td>7.46</td><td>8.33</td><td><span class="win">+0.42R</span></td><td><a href="https://www.tradingview.com/chart/VTYX/bZrCLVup-VTYX-Strong-Gap-Up-on-Catalyst-Watching-for-Delayed-Setup/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">38</td><td><span class="ticker">UUUU</span></td><td><span class="badge badge-short">Short</span></td><td>23.10.2025</td><td>19.12.2025</td><td>22.10</td><td>15.00</td><td><span class="win">+20.29R</span></td><td><a href="https://www.tradingview.com/chart/UUUU/FTdbzTS5-UUUU-expecting-more-downside/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">39</td><td><span class="ticker">CRML</span></td><td><span class="badge badge-long">Long</span></td><td>24.10.2025</td><td>24.10.2025</td><td>15.66</td><td>13.00</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/CRML/1p7K37Hc-CRML-dubious-speculation/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">40</td><td><span class="ticker">GOOGL</span></td><td><span class="badge badge-short">Short</span></td><td>24.10.2025</td><td>27.10.2025</td><td>253.08</td><td>270.00</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/GOOGL/PJ88rG8X-GOOGL-price-at-important-resistance-zone/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">41</td><td><span class="ticker">BMNR</span></td><td><span class="badge badge-long">Long</span></td><td>24.10.2025</td><td>29.10.2025</td><td>50.80</td><td>42.00</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/BMNR/R44hGmqc-BMNR-potential-start-of-a-new-swing-move/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">42</td><td><span class="ticker">NTLA</span></td><td><span class="badge badge-short">Short</span></td><td>27.10.2025</td><td>28.10.2025</td><td>25.60</td><td>14.51</td><td><span class="win">+2.52R</span></td><td><a href="https://www.tradingview.com/chart/NTLA/yIzUl0wt-NTLA-reached-key-resistance-zone/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">43</td><td><span class="ticker">AREC</span></td><td><span class="badge badge-long">Long</span></td><td>27.10.2025</td><td>19.11.2025</td><td>3.40</td><td>2.60</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/AREC/BTMSOUiM-AREC-potential-trend-structure/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">44</td><td><span class="ticker">PYPL</span></td><td><span class="badge badge-long">Long</span></td><td>28.10.2025</td><td>28.10.2025</td><td>70.25</td><td>79.58</td><td><span class="win">+1.78R</span></td><td><a href="https://www.tradingview.com/chart/PYPL/0VslDvd7-PYPL-potential-start-of-a-new-uptrend/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">45</td><td><span class="ticker">TSHA</span></td><td><span class="badge badge-long">Long</span></td><td>28.10.2025</td><td>31.10.2025</td><td>5.07</td><td>4.32</td><td><span class="loss">-1.60R</span></td><td><a href="https://www.tradingview.com/chart/TSHA/pZomzfIs-TSHA-substantial-upside-potential/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">46</td><td><span class="ticker">APLD</span></td><td><span class="badge badge-long">Long</span></td><td>28.10.2025</td><td>11.11.2025</td><td>35.88</td><td>26.00</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/APLD/zgc2Ok5U-APLD-might-be-starting-a-new-upswing/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">47</td><td><span class="ticker">BKKT</span></td><td><span class="badge badge-long">Long</span></td><td>29.10.2025</td><td>29.10.2025</td><td>27.20</td><td>24.50</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/BKKT/DeWzu3jc-BKKT-price-in-the-support-zone-to-decide-on-the-next-move/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">48</td><td><span class="ticker">MSTR</span></td><td><span class="badge badge-short">Short</span></td><td>30.10.2025</td><td>29.12.2025</td><td>254.57</td><td>158.50</td><td><span class="win">+4.28R</span></td><td><span class="no-link">—</span></td></tr>
+<tr><td class="num">49</td><td><span class="ticker">W</span></td><td><span class="badge badge-long">Long</span></td><td>02.11.2025</td><td>20.01.2026</td><td>103.51</td><td>106.13</td><td><span class="win">+0.28R</span></td><td><a href="https://www.tradingview.com/chart/W/EYqc5IHx-W-watching-for-upside-momentum-to-continue/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">50</td><td><span class="ticker">RGTI</span></td><td><span class="badge badge-short">Short</span></td><td>03.11.2025</td><td>21.11.2025</td><td>40.09</td><td>22.55</td><td><span class="win">+4.09R</span></td><td><a href="https://www.tradingview.com/chart/RGTI/hV0VQM1e-RGTI-Reaction-from-Macro-Resistance-and-Structural-Outlook/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">51</td><td><span class="ticker">COIN</span></td><td><span class="badge badge-short">Short</span></td><td>03.11.2025</td><td>12.01.2026</td><td>329.88</td><td>240.00</td><td><span class="win">+2.07R</span></td><td><span class="no-link">—</span></td></tr>
+<tr><td class="num">52</td><td><span class="ticker">FLNC</span></td><td><span class="badge badge-short">Short</span></td><td>04.11.2025</td><td>10.12.2025</td><td>20.16</td><td>22.00</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/FLNC/BrAAgcea-FLNC-double-top-potential/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">53</td><td><span class="ticker">TSLA</span></td><td><span class="badge badge-short">Short</span></td><td>06.11.2025</td><td>17.11.2025</td><td>453.78</td><td>384.83</td><td><span class="win">+3.40R</span></td><td><a href="https://www.tradingview.com/chart/TSLA/YoZsWq9o-TSLA-one-more-leg-down-potential/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">54</td><td><span class="ticker">APP</span></td><td><span class="badge badge-short">Short</span></td><td>06.11.2025</td><td>20.11.2025</td><td>624.39</td><td>520.26</td><td><span class="win">+1.38R</span></td><td><a href="https://www.tradingview.com/chart/APP/Ttkh9Zts-APP-at-risk-of-deeper-correction/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">55</td><td><span class="ticker">CRCL</span></td><td><span class="badge badge-short">Short</span></td><td>11.11.2025</td><td>18.11.2025</td><td>104.10</td><td>82.16</td><td><span class="win">+1.38R</span></td><td><a href="https://www.tradingview.com/chart/CRCL/eFxW6OLG-CRCL-watching-for-final-leg-down/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">56</td><td><span class="ticker">BLK</span></td><td><span class="badge badge-short">Short</span></td><td>11.11.2025</td><td>21.11.2025</td><td>1,082.63</td><td>1,006.04</td><td><span class="win">+10.39R</span></td><td><a href="https://www.tradingview.com/chart/BLK/6LLrPnW0-BLK-more-downside-potential/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">57</td><td><span class="ticker">CSIQ</span></td><td><span class="badge badge-short">Short</span></td><td>11.11.2025</td><td>07.12.2025</td><td>32.40</td><td>23.84</td><td><span class="win">+3.91R</span></td><td><a href="https://www.tradingview.com/chart/CSIQ/zEUxVShx-CSIQ-in-a-local-resistance-zone/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">58</td><td><span class="ticker">LYFT</span></td><td><span class="badge badge-short">Short</span></td><td>12.11.2025</td><td>21.11.2025</td><td>24.57</td><td>19.54</td><td><span class="win">+2.07R</span></td><td><a href="https://www.tradingview.com/chart/LYFT/6HW20ETX-LYFT-testing-important-resistance-zone/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">59</td><td><span class="ticker">MDB</span></td><td><span class="badge badge-short">Short</span></td><td>12.11.2025</td><td>02.12.2025</td><td>371.81</td><td>410.00</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/MDB/VfXBdONc-MDB-at-mid-term-resistance/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">60</td><td><span class="ticker">TSM</span></td><td><span class="badge badge-short">Short</span></td><td>18.11.2025</td><td>10.12.2025</td><td>282.01</td><td>310.74</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/TSM/0389JCvb-TSM-macro-top-being-in/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">61</td><td><span class="ticker">GDX</span></td><td><span class="badge badge-short">Short</span></td><td>20.11.2025</td><td>26.11.2025</td><td>76.39</td><td>79.97</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/GDX/mBJZxTET-GDX-two-alternative-scenarios-for-the-coming-weeks/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">62</td><td><span class="ticker">COPX</span></td><td><span class="badge badge-long">Long</span></td><td>24.11.2025</td><td>30.01.2025</td><td>60.05</td><td>84.17</td><td><span class="win">+4.78R</span></td><td><a href="https://www.tradingview.com/chart/COPX/b5Up4Bsl-COPX-watching-for-upside-momentum-to-continue/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">63</td><td><span class="ticker">PRAX</span></td><td><span class="badge badge-long">Long</span></td><td>28.11.2025</td><td>05.02.2026</td><td>196.46</td><td>306.00</td><td><span class="win">+2.21R</span></td><td><a href="https://www.tradingview.com/chart/PRAX/hOwJBImn-PRAX-good-looking-base-formation-and-trend-structure/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">64</td><td><span class="ticker">MU</span></td><td><span class="badge badge-short">Short</span></td><td>07.12.2025</td><td>08.12.2025</td><td>237.22</td><td>244.37</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/MU/eZHX4WKI-MU-one-more-leg-down-potential/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">65</td><td><span class="ticker">QS</span></td><td><span class="badge badge-short">Short</span></td><td>07.12.2025</td><td>05.02.2026</td><td>12.55</td><td>8.01</td><td><span class="win">+2.11R</span></td><td><a href="https://www.tradingview.com/chart/QS/gtqhgeD5-QS-watching-for-one-more-leg-down/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">66</td><td><span class="ticker">SNDK</span></td><td><span class="badge badge-short">Short</span></td><td>12.12.2025</td><td>02.01.2026</td><td>241.61</td><td>260.00</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/SNDK/3KSzqodf-SNDK-at-macro-resistance/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">67</td><td><span class="ticker">PL</span></td><td><span class="badge badge-long">Long</span></td><td>12.12.2025</td><td>—</td><td>17.47</td><td>24.34</td><td><span class="win">+2.78R</span></td><td><a href="https://www.tradingview.com/chart/PL/W7pOA9jb-PL-room-to-follow-through/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">68</td><td><span class="ticker">SLV</span></td><td><span class="badge badge-long">Long</span></td><td>16.12.2025</td><td>14.01.2026</td><td>58.11</td><td>76.88</td><td><span class="win">+2.72R</span></td><td><span class="no-link">—</span></td></tr>
+<tr><td class="num">69</td><td><span class="ticker">ZIM</span></td><td><span class="badge badge-long">Long</span></td><td>16.12.2025</td><td>05.02.2026</td><td>20.40</td><td>21.53</td><td><span class="win">+0.81R</span></td><td><a href="https://www.tradingview.com/chart/ZIM/3SsEi17p-ZIM-short-and-mid-term-upside-potential/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">70</td><td><span class="ticker">PLTR</span></td><td><span class="badge badge-short">Short</span></td><td>27.12.2025</td><td>05.02.2026</td><td>188.22</td><td>130.49</td><td><span class="win">+4.95R</span></td><td><span class="no-link">—</span></td></tr>
+<tr><td class="num">71</td><td><span class="ticker">SOFI</span></td><td><span class="badge badge-short">Short</span></td><td>29.12.2025</td><td>05.01.2026</td><td>26.70</td><td>29.20</td><td><span class="loss">-1.00R</span></td><td><span class="no-link">—</span></td></tr>
+<tr><td class="num">72</td><td><span class="ticker">LAR</span></td><td><span class="badge badge-long">Long</span></td><td>02.01.2026</td><td>26.01.2026</td><td>5.95</td><td>8.22</td><td><span class="win">+3.24R</span></td><td><span class="no-link">—</span></td></tr>
+<tr><td class="num">73</td><td><span class="ticker">TTD</span></td><td><span class="badge badge-long">Long</span></td><td>05.01.2026</td><td>09.01.2026</td><td>39.24</td><td>36.79</td><td><span class="loss">-1.00R</span></td><td><span class="no-link">—</span></td></tr>
+<tr><td class="num">74</td><td><span class="ticker">PONY</span></td><td><span class="badge badge-long">Long</span></td><td>09.01.2026</td><td>13.01.2026</td><td>17.29</td><td>15.75</td><td><span class="loss">-1.00R</span></td><td><span class="no-link">—</span></td></tr>
+<tr><td class="num">75</td><td><span class="ticker">BULL</span></td><td><span class="badge badge-long">Long</span></td><td>09.01.2026</td><td>21.01.2026</td><td>8.63</td><td>7.65</td><td><span class="loss">-1.00R</span></td><td><span class="no-link">—</span></td></tr>
+<tr><td class="num">76</td><td><span class="ticker">CRWV</span></td><td><span class="badge badge-long">Long</span></td><td>09.01.2026</td><td>02.02.2026</td><td>81.14</td><td>101.94</td><td><span class="win">+3.69R</span></td><td><span class="no-link">—</span></td></tr>
+<tr><td class="num">77</td><td><span class="ticker">BW</span></td><td><span class="badge badge-long">Long</span></td><td>12.01.2026</td><td>12.10.2026</td><td>7.95</td><td>13.10</td><td><span class="win">+2.29R</span></td><td><span class="no-link">—</span></td></tr>
+<tr><td class="num">78</td><td><span class="ticker">KULR</span></td><td><span class="badge badge-long">Long</span></td><td>13.01.2026</td><td>30.01.2026</td><td>3.54</td><td>3.54</td><td><span class="loss">0.00R</span></td><td><a href="https://www.tradingview.com/chart/KULR/b18VPI2Z-KULR-potential-speculative-swing-long-opportunity/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">79</td><td><span class="ticker">CIFR</span></td><td><span class="badge badge-short">Short</span></td><td>21.01.2026</td><td>06.02.2026</td><td>16.89</td><td>11.77</td><td><span class="win">+1.25R</span></td><td><a href="https://www.tradingview.com/chart/CIFR/jwPq75ZW-CIFR-has-reached-key-resistance-zone/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">80</td><td><span class="ticker">PGEN</span></td><td><span class="badge badge-long">Long</span></td><td>22.01.2026</td><td>20.02.2026</td><td>4.72</td><td>4.20</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/PGEN/suzhYLm1-PGEN-decent-upside-potential/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">81</td><td><span class="ticker">HYMC</span></td><td><span class="badge badge-short">Short</span></td><td>27.02.2026</td><td>03.02.2026</td><td>45.82</td><td>53.00</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/HYMC/ZKWTRdq9-HYMC-watching-for-a-new-leg-lower/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">82</td><td><span class="ticker">IGV</span></td><td><span class="badge badge-long">Long</span></td><td>25.02.2026</td><td>04.03.2026</td><td>78.41</td><td>84.12</td><td><span class="win">+1.29R</span></td><td><a href="https://www.tradingview.com/chart/IGV/71salNe2-IGV-bounce-soon/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">83</td><td><span class="ticker">LITE</span></td><td><span class="badge badge-short">Short</span></td><td>26.02.2026</td><td>02.03.2026</td><td>704.66</td><td>714.00</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/LITE/apYW5uVS-LITE-at-the-upper-resistance/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+<tr><td class="num">84</td><td><span class="ticker">XLE</span></td><td><span class="badge badge-short">Short</span></td><td>09.03.2026</td><td>—</td><td>56.10</td><td>58.00</td><td><span class="loss">-1.00R</span></td><td><a href="https://www.tradingview.com/chart/XLE/ImdmmVSu-XLE-potential-for-pullback-and-consolidation/" target="_blank" class="tv-link"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H4M9 1V6"></path></svg>TV</a></td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="summary-bar">
+  <div class="s-item"><div class="s-val pos">+90.71R</div><div class="s-lbl">Общий R</div></div>
+  <div class="s-item"><div class="s-val">39</div><div class="s-lbl">Победы</div></div>
+  <div class="s-item"><div class="s-val">45</div><div class="s-lbl">Поражения</div></div>
+  <div class="s-item"><div class="s-val">46.43%</div><div class="s-lbl">Процент побед</div></div>
+  <div class="s-item"><div class="s-val">+3.63R</div><div class="s-lbl">Ср. победа</div></div>
+  <div class="s-item"><div class="s-val">-1.13R</div><div class="s-lbl">Ср. поражение</div></div>
+</div>
+
+<div class="disclaimer">
+Впервые сталкиваетесь с R-мультипликаторами? <a href="/disclaimer.html" style="color:#888;text-decoration:underline;text-underline-offset:2px;">Как мы измеряем результаты</a> — краткое объяснение того, как читать эту таблицу. Прошлые результаты не гарантируют будущих. R-мультипликаторы рассчитываются относительно начального риска на сделку (1R = сумма риска). Эта страница обновляется вручную после закрытия каждой позиции. Никакие позиции не удаляются и не редактируются задным числом.
+</div>
+<footer>
+  <span>BELFED ANALYTICS</span>
+  <span>belfed.ru</span>
+</footer>
+
+
+<script>
+(function(){
+var css=document.createElement('style');
+css.textContent='.pht{display:flex;align-items:baseline;justify-content:space-between;gap:24px}.yf{display:flex;gap:8px;align-items:center}.yfb{font-family:inherit;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 14px;border:1px solid #ccc;background:transparent;color:#888;cursor:pointer;transition:all .2s}.yfb:hover{border-color:#111;color:#111}.yfb.on{background:#111;color:#fff;border-color:#111}';
+document.head.appendChild(css);
+var h1=document.querySelector('.page-title');
+var ph=h1.parentNode;
+var wrap=document.createElement('div');
+wrap.className='pht';
+var yf=document.createElement('div');
+yf.className='yf';
+['all','2026','2025'].forEach(function(y,i){
+var b=document.createElement('button');
+b.className='yfb'+(i===0?' on':'');
+b.setAttribute('data-y',y);
+b.textContent=y==='all'?'Total':y;
+yf.appendChild(b);
+});
+ph.insertBefore(wrap,h1);
+wrap.appendChild(h1);
+wrap.appendChild(yf);
+var rows=document.querySelectorAll('tbody tr'); window._eqGoFilter=go;var sb=document.querySelector('.summary-bar');
+var stb=document.querySelector('.stats-bar');
+function go(yr){
+var tR=0,w=0,l=0,wR=0,lR=0,n=0;
+document.querySelectorAll('tbody tr').forEach(function(r){
+var c=r.querySelectorAll('td');
+if(c.length<8)return;
+var d=c[3].textContent.trim().split('.');
+var ey=d.length===3?parseInt(d[2]):0;
+var ok=yr==='all'||ey===parseInt(yr);
+r.style.display=ok?'':'none';
+if(ok){
+n++;
+var rv=parseFloat(c[7].textContent.trim().replace('R','').replace(',',''))||0;
+tR+=rv;
+if(rv>0){w++;wR+=rv}else{l++;lR+=rv}
+c[0].textContent=String(n).padStart(2,'0');
+}
+});
+var wr=n>0?((w/n)*100).toFixed(2):'0.00';
+var aW=w>0?'+'+(wR/w).toFixed(2)+'R':'0R';
+var aL=l>0?(lR/l).toFixed(2)+'R':'0R';
+var ts=(tR>=0?'+':'')+tR.toFixed(2)+'R';
+var si=sb.querySelectorAll('.s-item');
+si[0].querySelector('.s-val').textContent=ts;
+si[0].querySelector('.s-val').className='s-val'+(tR>=0?' pos':'');
+si[1].querySelector('.s-val').textContent=w;
+si[2].querySelector('.s-val').textContent=l;
+si[3].querySelector('.s-val').textContent=wr+'%';
+si[4].querySelector('.s-val').textContent=aW;
+si[5].querySelector('.s-val').textContent=aL;
+if(stb){
+var st=stb.querySelectorAll('.stat-item');
+st[0].querySelector('.stat-value').textContent=ts;
+st[1].querySelector('.stat-value').textContent=wr+'%';
+st[2].querySelector('.stat-value').textContent=n;
+st[3].querySelector('.stat-value').textContent=aW;
+}
+}
+yf.addEventListener('click',function(e){
+if(!e.target.classList.contains('yfb'))return;
+yf.querySelectorAll('.yfb').forEach(function(b){b.classList.remove('on')});
+e.target.classList.add('on');
+go(e.target.getAttribute('data-y'));
+});
+})();
+</script>
+  <script>
+    (function(){
+var SHEET_ID='1bBpKZP74HEVrLZJlazz7gY7jbuBj9R5rPBcV2KklwDo';
+var GID='0';
+var csvUrl='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:csv&gid='+GID+'&single=true';
+function parseCSV(text){
+var lines=text.split(/\r?\n/);
+var results=[];
+for(var i=0;i<lines.length;i++){
+var cols=[];var cur='';var inQ=false;
+for(var c=0;c<lines[i].length;c++){
+var ch=lines[i][c];
+if(ch=='"'&&inQ&&lines[i][c+1]=='"'){cur+='"';c++;}
+else if(ch=='"'){inQ=!inQ;}
+else if(ch==','&&!inQ){cols.push(cur.trim());cur='';}
+else{cur+=ch;}}
+cols.push(cur.trim());results.push(cols);}
+return results;}
+function makeRClass(val){var n=parseFloat(String(val).replace(',','.'));if(isNaN(n))return'';return n>0?'win':'loss';}
+function formatR(val){var n=parseFloat(String(val).replace(',','.'));if(isNaN(n)||val===''||val===null)return'\u2014';return(n>0?'+':'')+n.toFixed(2)+'R';}
+      fetch(csvUrl).then(function(r){return r.text();}).then(function(text){
+var rows=parseCSV(text);
+var dataRows=[];
+for(var i=0;i<rows.length;i++){
+var r=rows[i];
+if(i<1)continue;
+if(!r[1]||r[1].trim()==''||r[1].trim().toLowerCase()==='ticker')continue;
+dataRows.push(r);}
+var tbody=document.querySelector('tbody');
+tbody.innerHTML='';
+var totalR=0,wins=0,losses=0,winSum=0,lossSum=0,closed=0;
+dataRows.forEach(function(r,idx){
+var ticker=(r[1]||'').trim();
+var dir=(r[2]||'').trim();
+var status=(r[3]||'').trim();
+var entryDate=(r[4]||'').trim();
+var exitDate=(r[5]||'').trim();
+var entryP=(r[6]||'').trim();
+var exitP=(r[8]||'').trim();
+var result=(r[9]||'').trim();
+var tvLink=(r[10]||'').trim();
+if(!ticker)return;
+var rVal=parseFloat(result.replace(',','.'));
+var isClosed=status.toLowerCase()==='closed';
+  if(!isClosed)return;
+if(isClosed&&!isNaN(rVal)){totalR+=rVal;closed++;if(rVal>0){wins++;winSum+=rVal;}else{losses++;lossSum+=rVal;}}
+var dirClass=dir.toLowerCase()==='long'?'badge-long':'badge-short';
+var rClass=makeRClass(result);
+var rDisplay=formatR(result);
+var analysisCell=tvLink&&tvLink.startsWith('http')?'<a class="tv-link" href="'+tvLink+'" target="_blank">TV <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H3M9 1V7"/></svg></a>':'<span class="no-link">\u2014</span>';
+var tr=document.createElement('tr');
+tr.innerHTML='<td class="num">'+(idx+1).toString().padStart(2,'0')+'</td><td><span class="ticker">'+ticker+'</span></td><td><span class="badge '+dirClass+'">'+dir+'</span></td><td>'+entryDate+'</td><td>'+(exitDate||'\u2014')+'</td><td>'+entryP+'</td><td>'+(exitP||'\u2014')+'</td><td class="'+rClass+'">'+rDisplay+'</td><td>'+analysisCell+'</td>';
+tbody.appendChild(tr);});
+        var avgWin=wins>0?(winSum/wins):0;
+var avgLoss=losses>0?(lossSum/losses):0;
+var winRate=closed>0?((wins/closed)*100):0;
+var sb=document.querySelector('.summary-bar');
+var stb=document.querySelector('.stats-bar');
+if(sb){
+var si=sb.querySelectorAll('.s-item');
+if(si[0])si[0].querySelector('.s-val').textContent=(totalR>0?'+':'')+totalR.toFixed(2)+'R';
+if(si[1])si[1].querySelector('.s-val').textContent=wins;
+if(si[2])si[2].querySelector('.s-val').textContent=losses;
+if(si[3])si[3].querySelector('.s-val').textContent=winRate.toFixed(1)+'%';
+if(si[4])si[4].querySelector('.s-val').textContent=(avgWin>0?'+':'')+avgWin.toFixed(2)+'R';
+if(si[5])si[5].querySelector('.s-val').textContent=avgLoss.toFixed(2)+'R';}
+if(stb){
+var st=stb.querySelectorAll('.stat-item');
+if(st[0])st[0].querySelector('.stat-value').textContent=(totalR>0?'+':'')+totalR.toFixed(2)+'R';
+if(st[1])st[1].querySelector('.stat-value').textContent=winRate.toFixed(1)+'%';
+if(st[2])st[2].querySelector('.stat-value').textContent=closed;
+if(st[3])st[3].querySelector('.stat-value').textContent=(avgWin>0?'+':'')+avgWin.toFixed(2)+'R';}
+        var activeBtn=document.querySelector('.yfb.on'); if(activeBtn&&window._eqGoFilter){window._eqGoFilter(activeBtn.getAttribute('data-y'));}
+}).catch(function(e){console.error('Failed to load trades:',e);});
+})();
+    </script>
+
+</body></html>

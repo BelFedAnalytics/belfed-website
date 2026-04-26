@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://script.google.com https://docs.google.com; img-src 'self'; frame-src 'none';">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="page-title">Результаты — Крипто | BelFed Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com/">
+<link href="./trades_files/css2" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Courier Prime','Courier New',monospace;background:#fff;color:#111;font-size:14px;line-height:1.6}
+
+nav{display:flex;justify-content:space-between;align-items:center;padding:20px 48px;border-bottom:1px solid #111;position:sticky;top:0;background:#fff;z-index:100}
+.nav-logo{font-size:18px;font-weight:700;letter-spacing:2px;text-decoration:none;color:#111}
+.nav-links{display:flex;gap:32px;align-items:center}
+.nav-links a{text-decoration:none;color:#111;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;transition:opacity .2s;padding-bottom:2px;border-bottom:1px solid transparent}
+.nav-links a:hover{opacity:.45}
+.nav-links a.nav-active{border-bottom:1px solid #111;opacity:1}
+.nav-btn{border:1px solid #111;padding:8px 16px;font-family:inherit;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;background:#111;color:#fff;cursor:pointer;text-decoration:none;transition:all .2s;border-bottom:none!important}
+.nav-btn:hover{background:#fff;color:#111}
+.lang-switch{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;text-decoration:none;color:#888;border:1px solid #ddd;padding:5px 10px;margin-left:12px;transition:all .2s}
+.lang-switch:hover{color:#111;border-color:#111}
+.page-header{padding:56px 48px 40px;border-bottom:1px solid #e0e0e0}
+.page-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:12px}
+.page-title{font-size:36px;font-weight:700;margin-bottom:12px}
+.page-subtitle{font-size:14px;color:#555;max-width:660px}
+.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid #e0e0e0}
+.stat-item{padding:28px 48px;border-right:1px solid #e0e0e0}
+.stat-item:last-child{border-right:none}
+.stat-value{font-size:28px;font-weight:700;margin-bottom:4px}
+.stat-label{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#888}
+.tab-bar{display:flex;padding:0 48px;border-bottom:1px solid #e0e0e0}
+.tab-link{display:block;padding:18px 0;margin-right:36px;font-family:'Courier Prime','Courier New',monospace;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;text-decoration:none;border-bottom:2px solid transparent;color:#888;transition:all .2s}
+.tab-link.active{color:#111;border-bottom-color:#111;pointer-events:none}
+.tab-link:hover{color:#111}
+.table-wrap{padding:0 48px 48px;overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead th{padding:16px 14px;text-align:left;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#888;border-bottom:2px solid #111;white-space:nowrap}
+tbody tr{border-bottom:1px solid #f0f0f0;transition:background .15s}
+tbody tr:hover{background:#fafafa}
+tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
+.num{color:#ccc;font-size:11px}
+.ticker{font-weight:700;letter-spacing:1px;font-size:14px}
+.badge{display:inline-block;padding:3px 10px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;border:1px solid #111}
+.badge-long{background:transparent;color:#111}
+.badge-short{background:#111;color:#fff}
+.win{color:#1a7a1a;font-weight:700}
+.loss{color:#cc2222;font-weight:700}
+.tv-link{display:inline-flex;align-items:center;gap:5px;text-decoration:none;color:#888;font-size:10px;letter-spacing:1px;text-transform:uppercase;border:1px solid #ddd;padding:3px 8px;transition:all .2s;white-space:nowrap}
+.tv-link:hover{color:#111;border-color:#111;background:#f5f5f5}
+.tv-link svg{width:9px;height:9px;flex-shrink:0}
+.no-link{color:#ddd;font-size:11px}
+.summary-bar{display:flex;gap:48px;padding:20px 48px;border-top:2px solid #111;background:#fafafa;flex-wrap:wrap}
+.s-item{display:flex;flex-direction:column}
+.s-val{font-size:16px;font-weight:700}
+.s-val.pos{color:#1a7a1a}
+.s-lbl{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#888;margin-top:2px}
+.disclaimer{padding:20px 48px 32px;font-size:11px;color:#bbb;line-height:1.9;max-width:880px}
+footer{padding:32px 48px;border-top:1px solid #111;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#888;letter-spacing:1px}
+@media(max-width:768px){
+  nav{padding:16px 20px}.nav-links{display:none}
+  .page-header,.tab-bar,.table-wrap,.summary-bar,.disclaimer,footer{padding-left:20px;padding-right:20px}
+  .stats-bar{grid-template-columns:repeat(2,1fr)}
+  .stat-item{padding:20px}
+  .page-title{font-size:26px}
+  footer{flex-direction:column;gap:8px;text-align:center}
+}
+</style>
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">BELFED_</a>
+    <div class="nav-links">
+        <a href="/">Главная</a>
+        <a href="/about.html">О нас</a>
+        <a href="/ru/trades.html" class="nav-active">Результаты</a>
+        <a href="/disclaimer.html">Ограничение ответственности</a>
+        <a href="https://t.me/BelfedBot" target="_blank">Telegram</a>
+        <a href="/members.html" class="nav-btn">Личный кабинет</a>
+        <a href="https://belfed.com/trades.html" class="lang-switch">EN</a>
+    </div>
+</nav>
+
+<div class="page-header">
+  <div class="page-label">// История сделок · Все закрытые позиции · Крипто</div>
+  <h1 class="page-title">Крипто</h1>
+  <p class="page-subtitle">Полная прозрачность по каждой закрытой позиции. Входы, выходы и соотношение риска и выгоды — открыто и без редактирования. Каждая сделка ссылается на оригинальный анализ, опубликованный в момент входа.</p>
+</div>
+
+<div class="stats-bar">
+      <div class="stat-item"><div class="stat-value" id="stat-total">—</div><div class="stat-label">Общий результат</div></div>
+    <div class="stat-item"><div class="stat-value" id="stat-winrate">—</div><div class="stat-label">Процент побед</div></div>
+    <div class="stat-item"><div class="stat-value" id="stat-closed">—</div><div class="stat-label">Закрытых сделок</div></div>
+    <div class="stat-item"><div class="stat-value" id="stat-avgwin">—</div><div class="stat-label">Средняя победа</div></div>
+</div>
+
+<div class="tab-bar">
+    <a href="/ru/trades.html" class="tab-link active">Крипто</a>
+    <a href="/ru/equities.html" class="tab-link">Акции</a>
+</div>
+
+<div class="table-wrap">
+<table>
+<thead><tr>
+  <th>#</th><th>Тикер</th><th>Направление</th>
+  <th>Дата входа</th><th>Дата выхода</th>
+  <th>Вход $</th><th>Выход $</th>
+  <th>Результат (R)</th><th>Анализ</th>
+</tr></thead>
+<tbody>
+<tr id="loading-row"><td colspan="9" style="text-align:center;padding:40px;color:#888;letter-spacing:1px;font-size:12px;">Загрузка сделок...</td></tr>
+</tbody>
+      </table>
+</div>
+
+<div class="summary-bar">
+      <div class="s-item"><div class="s-val pos" id="sum-total">—</div><div class="s-lbl">Общий R</div></div>
+    <div class="s-item"><div class="s-val" id="sum-wins">—</div><div class="s-lbl">Победы</div></div>
+    <div class="s-item"><div class="s-val" id="sum-losses">—</div><div class="s-lbl">Поражения</div></div>
+    <div class="s-item"><div class="s-val" id="sum-winrate">—</div><div class="s-lbl">Процент побед</div></div>
+    <div class="s-item"><div class="s-val pos" id="sum-avgwin">—</div><div class="s-lbl">Ср. победа</div></div>
+    <div class="s-item"><div class="s-val loss" id="sum-avgloss">—</div><div class="s-lbl">Ср. поражение</div></div>
+</div>
+
+<div class="disclaimer">
+Впервые сталкиваетесь с R-мультипликаторами? <a href="/disclaimer.html" style="color:#888;text-decoration:underline;text-underline-offset:2px;">Как мы измеряем результаты</a> — краткое объяснение того, как читать эту таблицу. Прошлые результаты не гарантируют будущих. R-мультипликаторы рассчитываются относительно начального риска на сделку (1R = сумма риска). Эта страница обновляется вручную после закрытия каждой позиции. Никакие позиции не удаляются и не редактируются задным числом.
+</div>
+<footer>
+  <span>BELFED ANALYTICS</span>
+  <span>belfed.ru</span>
+</footer>
+
+
+<script>
+(function(){
+  var SHEET_ID = '1bBpKZP74HEVrLZJlazz7gY7jbuBj9R5rPBcV2KklwDo';
+  var CRYPTO_GID = '1219794768';
+  var EQUITIES_GID = '0';
+  var isCrypto = window.location.pathname.includes('trades.html') && !window.location.pathname.includes('equities');
+  var gid = isCrypto ? CRYPTO_GID : EQUITIES_GID;
+  var csvUrl = 'https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:csv&gid='+gid+'&single=true';
+
+  // Page title switching
+  var titleEl = document.getElementById('page-title');
+  var equitiesLink = document.querySelector('a[href*="equities-trades"]');
+  var cryptoLink = document.querySelector('a[href*="trades.html"]');
+  if(equitiesLink){
+    equitiesLink.addEventListener('click',function(){
+      if(titleEl) titleEl.textContent='Результаты — Акции | BelFed Analytics';
+    });
+  }
+  if(!isCrypto && titleEl){
+    titleEl.textContent='Результаты — Акции | BelFed Analytics';
+    document.title='Результаты — Акции | BelFed Analytics';
+  }
+
+  function parseCSV(text){
+    var lines=text.split(/\r?\n/);
+    var results=[];
+    for(var i=0;i<lines.length;i++){
+      var cols=[]; var cur=''; var inQ=false;
+      for(var c=0;c<lines[i].length;c++){
+        var ch=lines[i][c];
+        if(ch=='"'&&inQ&&lines[i][c+1]=='"'){cur+='"';c++;}
+        else if(ch=='"'){inQ=!inQ;}
+        else if(ch==','&&!inQ){cols.push(cur.trim());cur='';}
+        else{cur+=ch;}
+      }
+      cols.push(cur.trim());
+      results.push(cols);
+    }
+    return results;
+  }
+
+  function makeRClass(val){
+    var n=parseFloat(String(val).replace(',','.'));
+    if(isNaN(n))return'';
+    return n>0?'win':'loss';
+  }
+  function formatR(val){
+    var n=parseFloat(String(val).replace(',','.'));
+    if(isNaN(n)||val===''||val===null)return'—';
+    return(n>0?'+':'')+n.toFixed(2)+'R';
+  }
+
+  fetch(csvUrl).then(function(r){return r.text();}).then(function(text){
+    var rows=parseCSV(text);
+    // Find header row (row with "Number" or "Ticker" in col B)
+    var dataRows=[];
+    for(var i=0;i<rows.length;i++){
+      var r=rows[i];
+      // Equities: cols A=Number,B=Ticker,C=Direction,D=Status,E=EntryDate,F=ExitDate,G=EntryPrice,H=RiskLevel,I=ExitPrice,J=Result,K=TVlink
+      // Crypto: similar structure - detect by checking if col B looks like a ticker
+      if(i<1)continue; // skip header rows
+      if(!r[1]||r[1].trim()==''||r[1].trim().toLowerCase()==='ticker')continue;
+      dataRows.push(r);
+    }
+
+    var tbody=document.querySelector('tbody');
+    tbody.innerHTML='';
+
+    var totalR=0,wins=0,losses=0,winSum=0,lossSum=0,closed=0;
+
+    dataRows.forEach(function(r,idx){
+      var ticker=(r[1]||'').trim();
+      var dir=(r[2]||'').trim();
+      var status=(r[3]||'').trim();
+      var entryDate=(r[4]||'').trim();
+      var exitDate=(r[5]||'').trim();
+      var entryP=(r[6]||'').trim();
+      var exitP=(r[8]||'').trim();
+      var result=(r[9]||'').trim();
+      var tvLink=(r[10]||'').trim();
+      if(!ticker)return;
+            if(status.toLowerCase()!=='closed')return;
+
+      var rVal=parseFloat(result.replace(',','.'));
+      var isClosed=status.toLowerCase()==='closed';
+      if(isClosed&&!isNaN(rVal)){
+        totalR+=rVal;closed++;
+        if(rVal>0){wins++;winSum+=rVal;}
+        else{losses++;lossSum+=rVal;}
+      }
+
+      var dirClass=dir.toLowerCase()==='long'?'badge-long':'badge-short';
+      var rClass=makeRClass(result);
+      var rDisplay=formatR(result);
+      var analysisCell=tvLink&&tvLink.startsWith('http')
+        ?'<a class="tv-link" href="'+tvLink+'" target="_blank">TV <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H3M9 1V7"/></svg></a>'
+        :'<span class="no-link">—</span>';
+
+      var tr=document.createElement('tr');
+      tr.innerHTML='<td class="num">'+(idx+1).toString().padStart(2,'0')+'</td>'
+        +'<td><span class="ticker">'+ticker+'</span></td>'
+        +'<td><span class="badge '+dirClass+'">'+dir+'</span></td>'
+        +'<td>'+entryDate+'</td>'
+        +'<td>'+(exitDate||'—')+'</td>'
+        +'<td>'+entryP+'</td>'
+        +'<td>'+(exitP||'—')+'</td>'
+        +'<td class="'+rClass+'">'+rDisplay+'</td>'
+        +'<td>'+analysisCell+'</td>';
+      tbody.appendChild(tr);
+    });
+
+    // Update stats-bar
+    var avgWin=wins>0?(winSum/wins):0;
+    var avgLoss=losses>0?(lossSum/losses):0;
+    var winRate=closed>0?((wins/closed)*100):0;
+    var s=document.getElementById('stat-total');
+    var sr=document.getElementById('stat-winrate');
+    var sc=document.getElementById('stat-closed');
+    var sa=document.getElementById('stat-avgwin');
+    if(s)s.textContent=(totalR>0?'+':'')+totalR.toFixed(2)+'R';
+    if(sr)sr.textContent=winRate.toFixed(1)+'%';
+    if(sc)sc.textContent=closed;
+    if(sa)sa.textContent=(avgWin>0?'+':'')+avgWin.toFixed(2)+'R';
+
+    // Update summary-bar
+    var st=document.getElementById('sum-total');
+    var sw=document.getElementById('sum-wins');
+    var sl=document.getElementById('sum-losses');
+    var swr=document.getElementById('sum-winrate');
+    var saw=document.getElementById('sum-avgwin');
+    var sal=document.getElementById('sum-avgloss');
+    if(st)st.textContent=(totalR>0?'+':'')+totalR.toFixed(2)+'R';
+    if(sw)sw.textContent=wins;
+    if(sl)sl.textContent=losses;
+    if(swr)swr.textContent=winRate.toFixed(1)+'%';
+    if(saw)saw.textContent=(avgWin>0?'+':'')+avgWin.toFixed(2)+'R';
+    if(sal)sal.textContent=avgLoss.toFixed(2)+'R';
+
+  }).catch(function(e){console.error('Failed to load trades:',e);});
+})();
+</script>
+
+  <script>
+(function(){
+var css=document.createElement('style');
+css.textContent='.pht{display:flex;align-items:baseline;justify-content:space-between;gap:24px}.yf{display:flex;gap:8px;align-items:center}.yfb{font-family:inherit;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 14px;border:1px solid #ccc;background:transparent;color:#888;cursor:pointer;transition:all .2s}.yfb:hover{border-color:#111;color:#111}.yfb.on{background:#111;color:#fff;border-color:#111}';
+document.head.appendChild(css);
+var h1=document.querySelector('.page-title');
+var ph=h1.parentNode;
+var wrap=document.createElement('div');
+wrap.className='pht';
+var yf=document.createElement('div');
+yf.className='yf';
+['all','2026','2025'].forEach(function(y,i){
+var b=document.createElement('button');
+b.className='yfb'+(i===0?' on':'');
+b.setAttribute('data-y',y);
+b.textContent=y==='all'?'Total':y;
+yf.appendChild(b);
+});
+ph.insertBefore(wrap,h1);
+wrap.appendChild(h1);
+wrap.appendChild(yf);
+function go(yr){
+var rows=document.querySelectorAll('tbody tr');
+var sb=document.querySelector('.summary-bar');
+var stb=document.querySelector('.stats-bar');
+var tR=0,w=0,l=0,wR=0,lR=0,n=0;
+rows.forEach(function(r){
+var c=r.querySelectorAll('td');
+if(c.length<8)return;
+var d=c[3].textContent.trim().split('.');
+var ey=d.length===3?parseInt(d[2]):0;
+var ok=yr==='all'||ey===parseInt(yr);
+r.style.display=ok?'':'none';
+if(ok){
+n++;
+var rv=parseFloat(c[7].textContent.trim().replace('R','').replace(',',''))||0;
+tR+=rv;
+if(rv>0){w++;wR+=rv}else{l++;lR+=rv}
+c[0].textContent=String(n).padStart(2,'0');
+}
+});
+var wr=n>0?((w/n)*100).toFixed(2):'0.00';
+var aW=w>0?'+'+(wR/w).toFixed(2)+'R':'0R';
+var aL=l>0?(lR/l).toFixed(2)+'R':'0R';
+var ts=(tR>=0?'+':'')+tR.toFixed(2)+'R';
+if(sb){
+var si=sb.querySelectorAll('.s-item');
+if(si[0])si[0].querySelector('.s-val').textContent=ts;
+if(si[1])si[1].querySelector('.s-val').textContent=w;
+if(si[2])si[2].querySelector('.s-val').textContent=l;
+if(si[3])si[3].querySelector('.s-val').textContent=wr+'%';
+if(si[4])si[4].querySelector('.s-val').textContent=aW;
+if(si[5])si[5].querySelector('.s-val').textContent=aL;
+}
+if(stb){
+var st=stb.querySelectorAll('.stat-item');
+if(st[0])st[0].querySelector('.stat-value').textContent=ts;
+if(st[1])st[1].querySelector('.stat-value').textContent=wr+'%';
+if(st[2])st[2].querySelector('.stat-value').textContent=n;
+if(st[3])st[3].querySelector('.stat-value').textContent=aW;
+}
+}
+yf.addEventListener('click',function(e){
+if(!e.target.classList.contains('yfb'))return;
+yf.querySelectorAll('.yfb').forEach(function(b){b.classList.remove('on')});
+e.target.classList.add('on');
+go(e.target.getAttribute('data-y'));
+});
+})();
+</script>
+</body></html>
