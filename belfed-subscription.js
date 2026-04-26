@@ -101,7 +101,7 @@
     // ====== ACTION BUTTONS ======
     html += '<div class="bf-actions">';
     if (!profile?.telegram_id) {
-      html += '<div class="bf-row bf-muted" style="margin-bottom:10px">Привяжите Telegram, чтобы получить доступ в закрытый канал с торговыми идеями, сигналами и обзорами рынка в @BelfedBot.</div>';
+      html += '<div class="bf-row bf-muted" style="margin-bottom:10px">Привяжите Telegram, чтобы получить доступ в закрытый канал с торговыми возможностями, аналитикой и обзорами рынка в @BelfedBot.</div>';
       html += '<button id="bfLinkTg" class="login-btn">🔗 Привязать Telegram</button>';
     }
     if (!isPaid) {
