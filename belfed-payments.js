@@ -11,6 +11,10 @@
   function getSupabaseClient() {
     if (window.belfedSupabase) return window.belfedSupabase;
     if (window.supabaseClient) return window.supabaseClient;
+    if (window.supaClient) return window.supaClient;
+    // belfed-auth.js declares `var supaClient` at module scope; in browsers
+    // top-level `var` becomes a property of `window`, but be defensive.
+    try { if (typeof supaClient !== 'undefined' && supaClient) return supaClient; } catch (_) {}
     return null;
   }
 

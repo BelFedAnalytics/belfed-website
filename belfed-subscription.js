@@ -83,7 +83,7 @@
     html += '<div class="bf-card">';
     if (isPaid) {
       html += `<div class="bf-status bf-status--ok">✅ ПОДПИСКА АКТИВНА</div>`;
-      html += `<div class="bf-row">План: monthly · ${PRICE_RUB} ₽ / мес</div>`;
+      html += `<div class="bf-row">План: месячный · ${PRICE_RUB} ₽ / мес</div>`;
       html += `<div class="bf-row">Действует до: <b>${fmt(exp)}</b></div>`;
       html += `<div class="bf-row">Автопродление: <b class="${autorenew?'bf-on':'bf-off'}">${autorenew?'включено':'отключено'}</b></div>`;
     } else if (isTrial) {
@@ -126,10 +126,21 @@
     };
 
     const payBtn = document.getElementById('bfPay');
-    if (payBtn) payBtn.onclick = () => {
-      // belfed-payments.js навешивает оплату через bindButton; здесь
-      // мы просто прокидываем событие — main page bindings подхватят.
-      payBtn.dispatchEvent(new CustomEvent('belfed:pay', { bubbles: true, detail: { plan: 'monthly' } }));
+    if (payBtn) payBtn.onclick = async () => {
+      const msgEl = document.getElementById('bfMsg');
+      payBtn.disabled = true;
+      const orig = payBtn.textContent;
+      payBtn.textContent = 'Перенаправляем на оплату…';
+      try {
+        if (!window.BelfedPayments || !window.BelfedPayments.startCheckout) {
+          throw new Error('Модуль оплаты не загружен');
+        }
+        await window.BelfedPayments.startCheckout({ plan: 'month' });
+      } catch (err) {
+        if (msgEl) msgEl.textContent = 'Ошибка оплаты: ' + (err.message || err);
+        payBtn.disabled = false;
+        payBtn.textContent = orig;
+      }
     };
 
     const cancelBtn = document.getElementById('bfCancel');
