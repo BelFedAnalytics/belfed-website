@@ -24,18 +24,20 @@ const SHOP_ID    = IS_LIVE ? Deno.env.get("YOOKASSA_SHOP_ID")!     : Deno.env.ge
 const SECRET_KEY = IS_LIVE ? Deno.env.get("YOOKASSA_SECRET_KEY")! : Deno.env.get("YOOKASSA_TEST_SECRET_KEY")!;
 const VAT_CODE   = Number(Deno.env.get("YOOKASSA_VAT_CODE") ?? "1");
 const TAX_SYSTEM = Deno.env.get("YOOKASSA_TAX_SYSTEM");
+const PRICE_RUB  = Number(Deno.env.get("PRICE_MONTHLY_RUB") ?? "1500");
 
-const PLAN_AMOUNTS: Record<string, { amount: number; months: number; description: string }> = {
-  month:   { amount: 2990,  months: 1,  description: "BelFed Analytics — продление подписки 1 месяц" },
-  quarter: { amount: 7990,  months: 3,  description: "BelFed Analytics — продление подписки 3 месяца" },
-  year:    { amount: 24990, months: 12, description: "BelFed Analytics — продление подписки 12 месяцев" },
+// Единый план — один и тот же для всех подписчиков.
+const MONTHLY = {
+  amount: PRICE_RUB,
+  months: 1,
+  description: "BelFed Analytics — продление подписки 1 месяц",
 };
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
 async function chargeOne(sub: any) {
-  const plan = (sub.plan_code ?? sub.plan ?? "month") as string;
-  const p    = PLAN_AMOUNTS[plan] ?? PLAN_AMOUNTS.month;
+  const plan = "monthly";
+  const p    = MONTHLY;
 
   // Fetch the user's email for 54-FZ receipt
   const { data: prof } = await admin
@@ -47,7 +49,7 @@ async function chargeOne(sub: any) {
   const email = userRow?.user?.email;
   if (!email) throw new Error("no_email_for_receipt");
 
-  const idempotenceKey = `rec_${sub.id}_${new Date(sub.next_billing_at).toISOString().slice(0, 10)}`;
+  const idempotenceKey = `rec_${sub.id}_${new Date(sub.next_billing_at).toISOString().slice(0, 10)}_${PRICE_RUB}`;
 
   const receipt: Record<string, any> = {
     customer: { email },

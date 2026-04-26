@@ -185,6 +185,31 @@
         .dev-notice p { font-size: 14px; color: #555; line-height: 1.7; }
         .dev-notice a { color: var(--black); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
         .dev-notice a:hover { opacity: 0.6; }
+
+    /* SUBSCRIPTION WIDGET (belfed-subscription.js) */
+    .bf-section { padding: 40px; max-width: 1060px; border-top: 1px solid var(--border); }
+    .bf-section > h2 { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); margin-bottom: 20px; }
+    .bf-card { border: 1px solid var(--border); padding: 28px 32px; background: var(--white); margin-bottom: 16px; max-width: 720px; }
+    .bf-status { font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); color: var(--red); }
+    .bf-status--ok { color: var(--green); }
+    .bf-status--trial { color: #b8860b; }
+    .bf-row { font-size: 14px; margin-bottom: 8px; line-height: 1.5; color: #333; }
+    .bf-row b { font-weight: 700; color: var(--black); }
+    .bf-muted { color: var(--gray); font-size: 13px; }
+    .bf-on { color: var(--green); }
+    .bf-off { color: var(--red); }
+    .bf-actions { display: flex; gap: 12px; flex-wrap: wrap; max-width: 720px; }
+    .bf-actions .login-btn { width: auto; padding: 14px 22px; font-size: 11px; }
+    .bf-actions .bf-cta { background: var(--green); border-color: var(--green); }
+    .bf-actions .bf-cta:hover { background: transparent; color: var(--green); }
+    .bf-actions .bf-danger { background: transparent; color: var(--red); border-color: var(--red); }
+    .bf-actions .bf-danger:hover { background: var(--red); color: var(--white); }
+    .bf-msg { font-size: 12px; color: var(--gray); margin-top: 12px; line-height: 1.5; max-width: 720px; }
+    .bf-trial-banner { background: var(--light-gray); border: 1px solid var(--border); border-left: 4px solid #b8860b; padding: 18px 24px; margin: 0 40px 24px; max-width: 1060px; font-size: 14px; line-height: 1.5; }
+    .bf-trial-banner b { font-weight: 700; }
+    .bf-trial-banner .bf-trial-badge { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: #b8860b; font-weight: 700; margin-right: 8px; }
+    @media(max-width:700px) { .bf-section { padding: 28px 20px; } .bf-card { padding: 20px; } .bf-trial-banner { margin: 0 20px 20px; } }
+
     #membersContent { display: none; }
     @media(max-width:700px) {
       .members-hero { padding: 60px 20px 30px; }
@@ -231,8 +256,8 @@
         <input type="email" id="suEmail" placeholder="Email address">
         <input type="password" id="suPassword" placeholder="Password (min 6 chars)">
         <input type="password" id="suPassword2" placeholder="Confirm password">
-        <button class="login-btn" onclick="handleSignUp()">Start Free Trial</button>
-        <div style="font-size:10px;color:var(--gray);margin-top:14px;letter-spacing:0.05em">30 days free access &bull; No credit card required</div>
+        <button class="login-btn" onclick="handleSignUp()">Начать 14 дней бесплатно</button>
+        <div style="font-size:10px;color:var(--gray);margin-top:14px;letter-spacing:0.05em">14 дней полного доступа &bull; Карта не нужна</div>
       </div>
       <div id="loginError" class="login-error"></div>
       <div id="loginMsg" class="login-msg"></div>
@@ -281,14 +306,26 @@
         </div>
       </div>
 
-      <!-- Subscription --><div class="account-section" style="max-width:1060px;"><h2>// Подписка</h2><div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:16px;"><button data-plan="month" class="login-btn" style="width:auto;padding:14px 22px;">1 месяц — 2 990 ₽</button><button data-plan="quarter" class="login-btn" style="width:auto;padding:14px 22px;">3 месяца — 7 990 ₽</button><button data-plan="year" class="login-btn" style="width:auto;padding:14px 22px;">12 месяцев — 24 990 ₽</button></div><p id="payStatus" style="margin-top:12px;font-size:12px;color:var(--gray);"></p></div><!-- Account Info -->
+      <!-- Trial banner (виден только в режиме триала) -->
+      <div id="trialBanner" class="bf-trial-banner" style="display:none">
+        <span class="bf-trial-badge">🎁 Пробный доступ</span>
+        У вас <b id="trialDaysLeft">14</b> дней полного доступа. Карта не привязана — подписка оформляется только по вашему действию.
+      </div>
+
+      <!-- Subscription widget (belfed-subscription.js) -->
+      <div class="bf-section" id="subscriptionSection">
+        <h2>// Моя подписка</h2>
+        <div id="belfedSubscriptionBox"></div>
+      </div>
+
+      <!-- Account Info -->
       <div class="account-section">
-        <h2>// Account</h2>
+        <h2>// Аккаунт</h2>
         <div class="account-info"><span>Email:</span> <span id="acctEmail">&mdash;</span></div>
-        <div class="account-info"><span>Status:</span> <span id="acctStatus" class="status-badge">&mdash;</span></div>
-        <div class="account-info"><span>Member since:</span> <span id="acctSince">&mdash;</span></div>
-        <div class="account-info" id="acctTrialRow" style="display:none"><span>Trial ends:</span> <span id="acctTrialEnd">&mdash;</span></div>
-        <div class="account-info" id="acctTelegramRow"><span>Telegram:</span> <span id="acctTelegram">Not linked</span></div>
+        <div class="account-info"><span>Статус:</span> <span id="acctStatus" class="status-badge">&mdash;</span></div>
+        <div class="account-info"><span>Дата регистрации:</span> <span id="acctSince">&mdash;</span></div>
+        <div class="account-info" id="acctTrialRow" style="display:none"><span>Триал до:</span> <span id="acctTrialEnd">&mdash;</span></div>
+        <div class="account-info" id="acctTelegramRow"><span>Telegram:</span> <span id="acctTelegram">Не привязан</span></div>
       </div>
     </main>
 
@@ -301,7 +338,9 @@
     </footer>
   </div>
 
-    <script src="belfed-auth.js"></script>   <script src="belfed-payments.js"></script>
+    <script src="belfed-auth.js"></script>
+  <script src="belfed-payments.js"></script>
+  <script src="belfed-subscription.js"></script>
   <script>
     // --- Members page callbacks ---
     function onAuthReady(profile, session, entitlement) {
@@ -318,15 +357,24 @@
         if (profile) {
           var st = entitlement.status;
           var badge = document.getElementById('acctStatus');
-          badge.textContent = st.toUpperCase();
+          var stRu = ({active:'Активна', trial:'Пробный', expired:'Истекла', none:'Нет'})[st] || st.toUpperCase();
+          badge.textContent = stRu;
           badge.className = 'status-badge';
-          if (st === 'expired') badge.classList.add('expired');
+          if (st === 'expired' || st === 'none') badge.classList.add('expired');
           if (st === 'trial') badge.classList.add('trial');
+          // Trial banner + remaining days
           if (st === 'trial' && profile.trial_end) {
             var row = document.getElementById('acctTrialRow');
             if (row) row.style.display = 'block';
             var te = new Date(profile.trial_end);
-            document.getElementById('acctTrialEnd').textContent = te.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
+            document.getElementById('acctTrialEnd').textContent = te.toLocaleDateString('ru-RU', { year: 'numeric', month: 'short', day: 'numeric' });
+            var banner = document.getElementById('trialBanner');
+            if (banner) {
+              var days = Math.max(0, Math.ceil((te - new Date()) / 86400000));
+              var dEl = document.getElementById('trialDaysLeft');
+              if (dEl) dEl.textContent = days;
+              banner.style.display = 'block';
+            }
           }
           if (profile.telegram_id) {
             document.getElementById('acctTelegram').textContent = profile.telegram_id;

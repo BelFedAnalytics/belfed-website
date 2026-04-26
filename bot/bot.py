@@ -1,26 +1,22 @@
 """
 BelFed Analytics — Telegram bot (production, RU-only).
 
-Этот bot обслуживает только русскоязычную аудиторию. Оплаты принимаются
-через ЮKassa, только рубли и российские карты. EN-версия будет добавлена
-отдельным PR позднее.
+Логика триала: на этапе ранней стадии проекта мы даём 14 дней полного
+бесплатного доступа в платный канал — без привязки карты. Пользователь
+регистрируется на belfed.ru → автоматически получает trial 14 дней
+(триггер в БД) → привязывает Telegram через deep-link → бот выдаёт
+одноразовую invite-ссылку в платный канал. Если оплаты по триалу не
+было, через 24 часа после конца триала cron telegram-enforce-access
+кикает пользователя.
 
-Обязанности:
-1. Онбординг (приветствие, дисклеймер, пробный период).
-2. Привязка Telegram-аккаунта к профилю Supabase через deep-link
-   (https://t.me/BelfedBot?start=<token>).
-3. Чтение статуса подписки из Supabase.
-4. Выдача одноразовых invite-ссылок в платный канал только активным
-   подписчикам / пользователям с пробным доступом.
-5. /cancel — отмена автопродления.
+Платная подписка: 1 500 ₽ / мес, авто-продление, карты + SBP.
 
-Переменные окружения:
+ENV:
   TELEGRAM_BOT_TOKEN
-  SUPABASE_URL
-  SUPABASE_SERVICE_ROLE_KEY
-  TELEGRAM_TRADING_CHANNEL_ID   например -1003660492325
+  SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+  TELEGRAM_TRADING_CHANNEL_ID    -1003660492325
   TELEGRAM_COMMUNITY_RU_ID
-  BELFED_WEB_URL                https://belfed.ru
+  BELFED_WEB_URL                 https://belfed.ru
 """
 
 from __future__ import annotations
@@ -42,11 +38,10 @@ SUPABASE_SERVICE_KEY = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
 TRADING_CHANNEL_ID   = int(os.environ["TELEGRAM_TRADING_CHANNEL_ID"])
 COMMUNITY_RU_ID      = int(os.environ["TELEGRAM_COMMUNITY_RU_ID"])
 WEB_URL              = os.environ.get("BELFED_WEB_URL", "https://belfed.ru").rstrip("/")
+PRICE_RUB            = os.environ.get("PRICE_MONTHLY_RUB", "1500")
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-)
+logging.basicConfig(level=logging.INFO,
+                    format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("belfed-bot")
 
 # ---------- Supabase REST helpers -----------------------------------------
@@ -85,7 +80,7 @@ async def get_profile_by_telegram(telegram_id: int) -> dict | None:
     rows = await sb_get(
         "/rest/v1/profiles",
         params={"telegram_id": f"eq.{telegram_id}",
-                "select": "id,telegram_id,subscription_plan,subscription_expires_at"},
+                "select": "id,telegram_id,subscription_plan,subscription_expires_at,trial_started_at"},
     )
     return rows[0] if rows else None
 
@@ -107,38 +102,46 @@ TEXTS = {
     "welcome_new": (
         "// BELFED ANALYTICS · EST. 2025\n\n"
         "Добро пожаловать, {name}.\n\n"
-        "Мы анализируем и работаем на финансовых рынках более 8 лет. "
+        "Анализируем и работаем на финансовых рынках более 8 лет. "
         "Делимся торговыми идеями, обзорами рынков и аналитикой "
         "от ведущих инвест-домов.\n\n"
         "Акции · Криптовалюты · Сырьё · Валюты\n\n"
-        "// РЕЗУЛЬТАТЫ 2025 · belfed.ru\n"
-        "📊 Акции  +85.96R · 47.89% · 71 идея\n"
-        "📊 Крипто +87.00R · 75.00% · 12 идей\n\n"
-        "Чтобы получить доступ к платному каналу — оформите подписку "
-        "или привяжите аккаунт сайта.\n\n"
-        "🎁 Пробный доступ к сообществу до: {trial}"
+        "🎁 Чтобы получить 14 дней бесплатного доступа — "
+        "зарегистрируйтесь на belfed.ru, привяжите Telegram и зайдите "
+        "в закрытый канал.\n\n"
+        f"После триала: подписка {PRICE_RUB} ₽ / мес, отмена в любой момент."
     ),
     "menu": (
         "// BELFED ANALYTICS\n\n"
-        "Рады видеть вас снова, {name}.\n\n"
-        "Торговые идеи, аналитика и обсуждения по акциям, крипто, "
-        "сырью и валютам — всё здесь."
+        "Рады видеть вас снова, {name}."
     ),
-    "status_active":  "✅ Подписка активна\nПлан: {plan}\nДействует до: {until}\n{autorenew}",
-    "status_trial":   "🎁 Пробный период\nДействует до: {until}",
-    "status_none":    "❌ Подписки нет.\n\nОформить: {url}/members.html",
+    "trial_active": (
+        "🎁 Пробный доступ\n"
+        "Действует до: {until}\n"
+        "Осталось: {days} дн.\n\n"
+        f"Оформить подписку {PRICE_RUB} ₽ / мес: "
+        + WEB_URL + "/members.html#subscribe"
+    ),
+    "status_active":  "✅ Подписка активна\n"
+                      f"План: monthly ({PRICE_RUB} ₽ / мес)\n"
+                      "Действует до: {until}\n{autorenew}",
+    "status_none":    "❌ Подписки нет.\n\n"
+                      f"Оформить ({PRICE_RUB} ₽ / мес): " + WEB_URL + "/members.html#subscribe",
     "autorenew_on":   "Автопродление: включено",
-    "autorenew_off":  "Автопродление: отключено",
-    "need_link":      "Сначала привяжите аккаунт сайта: {url}/members.html (кнопка «Привязать Telegram»).",
-    "link_ok":        "✅ Аккаунт привязан. Теперь можно оформить подписку на сайте.",
+    "autorenew_off":  "Автопродление: отключено · доступ закончится в указанную дату",
+    "need_link":      "Сначала привяжите аккаунт сайта: " + WEB_URL + "/members.html (кнопка «Привязать Telegram»).",
+    "link_ok":        "✅ Telegram привязан. Бесплатный доступ открыт на 14 дней.",
     "link_bad":       "⚠️ Токен недействителен или истёк. Сгенерируйте новый на сайте.",
     "cancel_ok":      "Автопродление отключено. Доступ сохранится до {until}.",
     "cancel_none":    "У вас нет активной подписки для отмены.",
-    "btn_pay":        "💳 Оформить подписку",
-    "btn_community":  "💬 Войти в сообщество",
+    "btn_pay":        f"💳 Оформить — {PRICE_RUB} ₽ / мес",
+    "btn_paid":       "📺 Платный канал",
+    "btn_community":  "💬 Открытое сообщество",
     "btn_status":     "📋 Моя подписка",
     "btn_disclaimer": "⚠️ Disclaimer",
-    "btn_link":       "🔗 Привязать аккаунт сайта",
+    "btn_link":       "🔗 Привязать аккаунт",
+    "no_access":      "Сначала зарегистрируйтесь на " + WEB_URL + " и привяжите Telegram. "
+                      "Получите 14 дней бесплатного доступа.",
     "disclaimer": (
         "// DISCLAIMER\n"
         "────────────────────────\n\n"
@@ -155,12 +158,37 @@ TEXTS = {
     ),
 }
 
+# ---------- Helpers -------------------------------------------------------
+async def grant_paid_invite(context: ContextTypes.DEFAULT_TYPE, telegram_id: int) -> str | None:
+    """Выпускает одноразовую invite-ссылку в платный канал, действует 1 час."""
+    try:
+        # лифт бана если был
+        try:
+            await context.bot.unban_chat_member(TRADING_CHANNEL_ID, telegram_id, only_if_banned=True)
+        except Exception:
+            pass
+        inv = await context.bot.create_chat_invite_link(
+            TRADING_CHANNEL_ID,
+            member_limit=1,
+            expire_date=int(datetime.now().timestamp()) + 3600,
+            name=f"tg:{telegram_id}",
+        )
+        return inv.invite_link
+    except Exception as e:
+        log.error("grant_paid_invite failed: %s", e)
+        return None
+
+def has_access(profile: dict | None) -> bool:
+    if not profile: return False
+    exp = parse_ts(profile.get("subscription_expires_at"))
+    return bool(exp and exp > datetime.now(timezone.utc))
+
 # ---------- Handlers ------------------------------------------------------
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     args = context.args or []
 
-    # Deep-link: /start <token> — привязка аккаунта
+    # Deep-link /start <token>
     if args and len(args[0]) >= 16:
         token = args[0]
         status, _ = await sb_post(
@@ -169,6 +197,16 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         if status in (200, 201):
             await update.message.reply_text(TEXTS["link_ok"])
+            # сразу выдаём invite в платный канал, если есть доступ (триал/подписка)
+            profile = await get_profile_by_telegram(user.id)
+            if has_access(profile):
+                link = await grant_paid_invite(context, user.id)
+                if link:
+                    await update.message.reply_text(
+                        "📺 Ваша персональная ссылка в закрытый канал "
+                        "(действует 1 час, одноразовая):\n" + link,
+                        disable_web_page_preview=True,
+                    )
         else:
             await update.message.reply_text(TEXTS["link_bad"])
         await send_main_menu(update, context)
@@ -180,7 +218,7 @@ async def send_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     profile = await get_profile_by_telegram(user.id)
 
-    # Ссылка в открытое сообщество (для всех, ограничение 1 использование, 1 час)
+    # Открытое сообщество — для всех
     try:
         inv = await context.bot.create_chat_invite_link(
             COMMUNITY_RU_ID, member_limit=1,
@@ -191,62 +229,59 @@ async def send_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         log.error("community invite failed: %s", e)
         community_url = f"{WEB_URL}/members.html"
 
-    rows = [
-        [InlineKeyboardButton(TEXTS["btn_community"],  url=community_url)],
-        [InlineKeyboardButton(TEXTS["btn_status"],     callback_data="sub_status")],
-        [InlineKeyboardButton(TEXTS["btn_pay"],        url=f"{WEB_URL}/members.html#subscribe")],
-        [InlineKeyboardButton(TEXTS["btn_link"],       url=f"{WEB_URL}/members.html#link")],
-        [InlineKeyboardButton(TEXTS["btn_disclaimer"], callback_data="disclaimer")],
-    ]
+    rows = [[InlineKeyboardButton(TEXTS["btn_community"], url=community_url)]]
 
-    if profile:
-        text = TEXTS["menu"].format(name=user.first_name or "")
-    else:
-        trial_end = (datetime.now() + timedelta(days=14)).strftime("%d.%m.%Y")
-        text = TEXTS["welcome_new"].format(name=user.first_name or "", trial=trial_end)
+    # Кнопка платного канала — только если есть доступ
+    if has_access(profile):
+        rows.append([InlineKeyboardButton(TEXTS["btn_paid"],   callback_data="paid_invite")])
+
+    rows.append([InlineKeyboardButton(TEXTS["btn_status"],     callback_data="sub_status")])
+    rows.append([InlineKeyboardButton(TEXTS["btn_pay"],        url=f"{WEB_URL}/members.html#subscribe")])
+    if not profile:
+        rows.append([InlineKeyboardButton(TEXTS["btn_link"],   url=f"{WEB_URL}/members.html#link")])
+    rows.append([InlineKeyboardButton(TEXTS["btn_disclaimer"], callback_data="disclaimer")])
+
+    text = TEXTS["menu"].format(name=user.first_name or "") if profile \
+           else TEXTS["welcome_new"].format(name=user.first_name or "")
 
     target = update.callback_query.message if update.callback_query else update.message
     await target.reply_text(text, reply_markup=InlineKeyboardMarkup(rows))
 
 async def cmd_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(TEXTS["need_link"].format(url=WEB_URL))
+    await update.message.reply_text(TEXTS["need_link"])
 
 async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     profile = await get_profile_by_telegram(user.id)
     if not profile:
-        await update.message.reply_text(TEXTS["need_link"].format(url=WEB_URL))
+        await update.message.reply_text(TEXTS["need_link"])
         return
 
     sub = await get_subscription(profile["id"])
     exp = parse_ts(profile.get("subscription_expires_at"))
     now = datetime.now(timezone.utc)
+    plan = profile.get("subscription_plan")
 
     if sub and sub.get("status") == "active" and exp and exp > now:
         autorenew = TEXTS["autorenew_off"] if sub.get("cancel_at_period_end") else TEXTS["autorenew_on"]
-        msg = TEXTS["status_active"].format(
-            plan=sub.get("plan_code") or "—",
-            until=exp.strftime("%d.%m.%Y"),
-            autorenew=autorenew,
-        )
-    elif exp and exp > now:
-        msg = TEXTS["status_trial"].format(until=exp.strftime("%d.%m.%Y"))
+        msg = TEXTS["status_active"].format(until=exp.strftime("%d.%m.%Y"), autorenew=autorenew)
+    elif plan == "trial" and exp and exp > now:
+        days_left = max(0, (exp - now).days)
+        msg = TEXTS["trial_active"].format(until=exp.strftime("%d.%m.%Y"), days=days_left)
     else:
-        msg = TEXTS["status_none"].format(url=WEB_URL)
+        msg = TEXTS["status_none"]
 
-    await update.message.reply_text(msg)
+    await update.message.reply_text(msg, disable_web_page_preview=True)
 
 async def cmd_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     profile = await get_profile_by_telegram(user.id)
     if not profile:
-        await update.message.reply_text(TEXTS["need_link"].format(url=WEB_URL))
-        return
+        await update.message.reply_text(TEXTS["need_link"]); return
 
     sub = await get_subscription(profile["id"])
     if not sub or sub.get("status") != "active":
-        await update.message.reply_text(TEXTS["cancel_none"])
-        return
+        await update.message.reply_text(TEXTS["cancel_none"]); return
 
     await sb_patch(
         "/rest/v1/subscriptions",
@@ -266,26 +301,39 @@ async def on_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     user = query.from_user
 
+    if query.data == "paid_invite":
+        profile = await get_profile_by_telegram(user.id)
+        if not has_access(profile):
+            await query.message.reply_text(TEXTS["no_access"], disable_web_page_preview=True)
+            return
+        link = await grant_paid_invite(context, user.id)
+        if link:
+            await query.message.reply_text(
+                "📺 Ваша ссылка в закрытый канал (1 час, одноразовая):\n" + link,
+                disable_web_page_preview=True,
+            )
+        else:
+            await query.message.reply_text("⚠️ Не удалось создать ссылку. Проверьте, что бот — администратор канала.")
+        return
+
     if query.data == "sub_status":
+        # повторяем cmd_status для callback
         profile = await get_profile_by_telegram(user.id)
         if not profile:
-            await query.message.reply_text(TEXTS["need_link"].format(url=WEB_URL))
-            return
+            await query.message.reply_text(TEXTS["need_link"]); return
         sub = await get_subscription(profile["id"])
         exp = parse_ts(profile.get("subscription_expires_at"))
         now = datetime.now(timezone.utc)
+        plan = profile.get("subscription_plan")
         if sub and sub.get("status") == "active" and exp and exp > now:
             autorenew = TEXTS["autorenew_off"] if sub.get("cancel_at_period_end") else TEXTS["autorenew_on"]
-            msg = TEXTS["status_active"].format(
-                plan=sub.get("plan_code") or "—",
-                until=exp.strftime("%d.%m.%Y"),
-                autorenew=autorenew,
-            )
-        elif exp and exp > now:
-            msg = TEXTS["status_trial"].format(until=exp.strftime("%d.%m.%Y"))
+            msg = TEXTS["status_active"].format(until=exp.strftime("%d.%m.%Y"), autorenew=autorenew)
+        elif plan == "trial" and exp and exp > now:
+            days_left = max(0, (exp - now).days)
+            msg = TEXTS["trial_active"].format(until=exp.strftime("%d.%m.%Y"), days=days_left)
         else:
-            msg = TEXTS["status_none"].format(url=WEB_URL)
-        await query.message.reply_text(msg)
+            msg = TEXTS["status_none"]
+        await query.message.reply_text(msg, disable_web_page_preview=True)
         return
 
     if query.data == "disclaimer":
@@ -302,7 +350,7 @@ def main():
     app.add_handler(CommandHandler("cancel", cmd_cancel))
     app.add_handler(CallbackQueryHandler(on_button))
     app.add_error_handler(on_error)
-    log.info("BelFed bot (RU) running")
+    log.info("BelFed bot (RU, single plan + trial) running")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":

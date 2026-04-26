@@ -1,12 +1,12 @@
-// belfed-subscription.js — RU-only
-// Виджет «Моя подписка» для belfed.ru/members.html.
-// Подключается после supabase-js и belfed-auth.js (window.supaClient).
+// belfed-subscription.js — RU only, single plan, 14-day trial без карты.
+// Виджет «Моя подписка». Подключается после supabase-js и belfed-auth.js.
 (function () {
   'use strict';
 
   const SUPABASE_URL = 'https://obujqvqqmyfcfflhqvud.supabase.co';
   const FN_LINK      = SUPABASE_URL + '/functions/v1/telegram-link-start';
   const FN_CANCEL    = SUPABASE_URL + '/functions/v1/yookassa-cancel-subscription';
+  const PRICE_RUB    = 1500;
 
   function getClient() {
     return window.supaClient || window.belfedSupabase || window.supabaseClient;
@@ -27,7 +27,7 @@
     });
     const j = await r.json();
     if (!r.ok) throw new Error(j.error || 'Не удалось создать ссылку');
-    return j; // { token, deep_link, expires_in_seconds }
+    return j;
   }
 
   async function cancelSubscription(reason) {
@@ -42,94 +42,117 @@
     return j;
   }
 
-  async function loadSubscriptionStatus() {
+  async function loadStatus() {
     const c = getClient();
     const { data: { session } } = await c.auth.getSession();
     if (!session) return null;
-
     const [{ data: prof }, { data: sub }] = await Promise.all([
       c.from('profiles')
-       .select('subscription_plan, subscription_expires_at, telegram_id, telegram_username')
-       .eq('id', session.user.id).maybeSingle(),
+        .select('subscription_plan, subscription_expires_at, telegram_id, telegram_username, trial_started_at')
+        .eq('id', session.user.id).maybeSingle(),
       c.from('subscriptions')
-       .select('status, plan_code, current_period_end, cancel_at_period_end, payment_method_id')
-       .eq('user_id', session.user.id).maybeSingle(),
+        .select('status, plan_code, current_period_end, cancel_at_period_end, payment_method_id')
+        .eq('user_id', session.user.id).maybeSingle(),
     ]);
     return { profile: prof, subscription: sub };
   }
 
-  async function renderSubscriptionBox() {
+  function fmt(d) { return new Date(d).toLocaleDateString('ru-RU'); }
+  function daysLeft(d) {
+    return Math.max(0, Math.ceil((new Date(d) - new Date()) / 86400000));
+  }
+
+  async function render() {
     const box = document.getElementById('belfedSubscriptionBox');
     if (!box) return;
 
     let state;
-    try { state = await loadSubscriptionStatus(); }
-    catch (e) { box.textContent = ''; return; }
+    try { state = await loadStatus(); } catch { box.textContent = ''; return; }
     if (!state) { box.textContent = ''; return; }
 
     const { profile, subscription } = state;
     const exp = profile?.subscription_expires_at ? new Date(profile.subscription_expires_at) : null;
-    const active = exp && exp > new Date();
-    const autorenew = subscription && subscription.status === 'active' && !subscription.cancel_at_period_end;
+    const hasAccess = exp && exp > new Date();
+    const isPaid = subscription && subscription.status === 'active' && hasAccess;
+    const isTrial = !isPaid && hasAccess && profile?.subscription_plan === 'trial';
+    const autorenew = isPaid && !subscription.cancel_at_period_end;
 
-    let html = '<div style="margin-top:16px;font-size:13px;line-height:1.7">';
-    if (active) {
-      html += `<div>Статус: <b>АКТИВНА</b></div>`;
-      html += `<div>План: ${subscription?.plan_code ?? '—'}</div>`;
-      html += `<div>Действует до: ${exp.toLocaleDateString('ru-RU')}</div>`;
-      html += `<div>Автопродление: ${autorenew ? 'включено' : 'отключено'}</div>`;
+    let html = '';
+
+    // ====== STATUS PANEL ======
+    html += '<div class="bf-card">';
+    if (isPaid) {
+      html += `<div class="bf-status bf-status--ok">✅ ПОДПИСКА АКТИВНА</div>`;
+      html += `<div class="bf-row">План: monthly · ${PRICE_RUB} ₽ / мес</div>`;
+      html += `<div class="bf-row">Действует до: <b>${fmt(exp)}</b></div>`;
+      html += `<div class="bf-row">Автопродление: <b class="${autorenew?'bf-on':'bf-off'}">${autorenew?'включено':'отключено'}</b></div>`;
+    } else if (isTrial) {
+      const left = daysLeft(exp);
+      html += `<div class="bf-status bf-status--trial">🎁 ПРОБНЫЙ ДОСТУП · 14 дней</div>`;
+      html += `<div class="bf-row">Действует до: <b>${fmt(exp)}</b> · осталось ${left} дн.</div>`;
+      html += `<div class="bf-row bf-muted">После триала — подписка ${PRICE_RUB} ₽ / мес. Карта не привязана: оплата только по вашему действию.</div>`;
     } else {
-      html += `<div>Статус: <b>ПОДПИСКИ НЕТ</b></div>`;
+      html += `<div class="bf-status">❌ ПОДПИСКИ НЕТ</div>`;
+      html += `<div class="bf-row bf-muted">Оформите подписку, чтобы получить доступ в закрытый канал.</div>`;
     }
-    html += `<div>Telegram: ${profile?.telegram_id ? ('@' + (profile.telegram_username || profile.telegram_id)) : 'не привязан'}</div>`;
+    html += `<div class="bf-row">Telegram: ${profile?.telegram_id ? '<b>@' + (profile.telegram_username || profile.telegram_id) + '</b>' : '<span class="bf-muted">не привязан</span>'}</div>`;
     html += '</div>';
 
-    html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">';
+    // ====== ACTION BUTTONS ======
+    html += '<div class="bf-actions">';
     if (!profile?.telegram_id) {
-      html += '<button id="btnLinkTg" class="login-btn" style="width:auto;padding:10px 18px;">Привязать Telegram</button>';
+      html += '<button id="bfLinkTg" class="login-btn">🔗 Привязать Telegram</button>';
+    }
+    if (!isPaid) {
+      html += `<button id="bfPay" class="login-btn bf-cta">💳 Оформить подписку — ${PRICE_RUB} ₽ / мес</button>`;
     }
     if (autorenew) {
-      html += '<button id="btnCancelSub" class="login-btn" style="width:auto;padding:10px 18px;background:#8b1a1a;color:#fff;border-color:#8b1a1a;">Отменить автопродление</button>';
+      html += '<button id="bfCancel" class="login-btn bf-danger">Отменить автопродление</button>';
     }
-    html += '</div><p id="belfedSubMsg" style="margin-top:10px;font-size:12px;color:var(--gray);"></p>';
+    html += '</div>';
+    html += '<p id="bfMsg" class="bf-msg"></p>';
 
     box.innerHTML = html;
 
-    const linkBtn = document.getElementById('btnLinkTg');
-    if (linkBtn) linkBtn.addEventListener('click', async () => {
+    const linkBtn = document.getElementById('bfLinkTg');
+    if (linkBtn) linkBtn.onclick = async () => {
       try {
         const r = await generateTelegramLink();
         window.open(r.deep_link, '_blank');
-        document.getElementById('belfedSubMsg').textContent =
+        document.getElementById('bfMsg').textContent =
           'Открыт Telegram. Нажмите «Start» в чате бота, чтобы завершить привязку. Токен действует 15 минут.';
       } catch (e) { alert('Ошибка: ' + e.message); }
-    });
+    };
 
-    const cancelBtn = document.getElementById('btnCancelSub');
-    if (cancelBtn) cancelBtn.addEventListener('click', async () => {
+    const payBtn = document.getElementById('bfPay');
+    if (payBtn) payBtn.onclick = () => {
+      // belfed-payments.js навешивает оплату через bindButton; здесь
+      // мы просто прокидываем событие — main page bindings подхватят.
+      payBtn.dispatchEvent(new CustomEvent('belfed:pay', { bubbles: true, detail: { plan: 'monthly' } }));
+    };
+
+    const cancelBtn = document.getElementById('bfCancel');
+    if (cancelBtn) cancelBtn.onclick = async () => {
       if (!confirm('Отменить автопродление? Доступ сохранится до конца оплаченного периода.')) return;
       try {
         const r = await cancelSubscription('user_requested_web');
-        document.getElementById('belfedSubMsg').textContent =
-          'Автопродление отключено. Доступ до ' + new Date(r.access_until).toLocaleDateString('ru-RU') + '.';
-        setTimeout(renderSubscriptionBox, 800);
+        document.getElementById('bfMsg').textContent =
+          'Автопродление отключено. Доступ до ' + fmt(r.access_until) + '.';
+        setTimeout(render, 800);
       } catch (e) { alert('Ошибка: ' + e.message); }
-    });
+    };
   }
 
   document.addEventListener('DOMContentLoaded', () => {
     const iv = setInterval(() => {
       if (getClient() && document.getElementById('belfedSubscriptionBox')) {
         clearInterval(iv);
-        renderSubscriptionBox();
+        render();
       }
     }, 300);
   });
 
   window.BelfedSubscription = {
-    generateTelegramLink,
-    cancelSubscription,
-    loadSubscriptionStatus,
-    renderSubscriptionBox,
+    generateTelegramLink, cancelSubscription, loadStatus, render,
   };
 })();
