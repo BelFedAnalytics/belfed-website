@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://script.google.com https://docs.google.com https://*.supabase.co; img-src 'self'; frame-src 'none';">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Members Area — BelFed Analytics</title>
+  <title>Личный кабинет — BelFed Analytics</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
@@ -224,38 +224,38 @@
   <nav>
     <a href="/" class="nav-logo">BELFED_</a>
     <ul class="nav-links">
-      <li><a href="/">Home</a></li>
-      <li><a href="/trades.html">Trades</a></li>
-      <li><a href="/products.html">Products</a></li>
+      <li><a href="/">Главная</a></li>
+      <li><a href="/results.html">Результаты</a></li>
+      <li><a href="/#pricing">Подписка</a></li>
     </ul>
-    <button class="nav-cta" id="navAuthBtn" onclick="handleLogout()">Logout</button>
+    <button class="nav-cta" id="navAuthBtn" onclick="handleLogout()">Выйти</button>
   </nav>
 
   <div id="loginScreen">
     <div class="login-box">
-      <h2>Members Area</h2>
-      <div class="login-sub">Sign in to access your account</div>
+      <h2>Личный кабинет</h2>
+      <div class="login-sub">Войдите, чтобы получить доступ</div>
       <div class="auth-tabs">
-        <button class="auth-tab active" onclick="showAuthTab('signin')">Sign In</button>
-        <button class="auth-tab" onclick="showAuthTab('signup')">Sign Up</button>
+        <button class="auth-tab active" onclick="showAuthTab('signin')">Вход</button>
+        <button class="auth-tab" onclick="showAuthTab('signup')">Регистрация</button>
       </div>
       <div id="signinForm">
-        <input type="email" id="siEmail" placeholder="Email address">
-        <input type="password" id="siPassword" placeholder="Password">
-        <button class="login-btn" onclick="handleSignIn()">Sign In</button>
+        <input type="email" id="siEmail" placeholder="Электронная почта">
+        <input type="password" id="siPassword" placeholder="Пароль">
+        <button class="login-btn" onclick="handleSignIn()">Войти</button>
         <div style="margin-top:12px">
-          <a id="forgotPasswordLink" href="#" onclick="document.getElementById('forgotPasswordBlock').style.display='block';this.style.display='none';return false;" style="font-size:11px;color:var(--gray)">Forgot password?</a>
+          <a id="forgotPasswordLink" href="#" onclick="document.getElementById('forgotPasswordBlock').style.display='block';this.style.display='none';return false;" style="font-size:11px;color:var(--gray)">Забыли пароль?</a>
         </div>
         <div id="forgotPasswordBlock" style="display:none;margin-top:16px">
-          <input type="email" id="resetEmail" placeholder="Enter your email">
-          <button class="login-btn" onclick="handleForgotPassword()">Send Reset Link</button>
+          <input type="email" id="resetEmail" placeholder="Ваш e-mail">
+          <button class="login-btn" onclick="handleForgotPassword()">Отправить ссылку для сброса</button>
           <div id="resetStatus" style="font-size:12px;margin-top:8px;display:none"></div>
         </div>
       </div>
       <div id="signupForm" style="display:none">
-        <input type="email" id="suEmail" placeholder="Email address">
-        <input type="password" id="suPassword" placeholder="Password (min 6 chars)">
-        <input type="password" id="suPassword2" placeholder="Confirm password">
+        <input type="email" id="suEmail" placeholder="Электронная почта">
+        <input type="password" id="suPassword" placeholder="Пароль (минимум 6 символов)">
+        <input type="password" id="suPassword2" placeholder="Повторите пароль">
         <button class="login-btn" onclick="handleSignUp()">Начать 14 дней бесплатно</button>
         <div style="font-size:10px;color:var(--gray);margin-top:14px;letter-spacing:0.05em">14 дней полного доступа &bull; Карта не нужна</div>
       </div>
@@ -267,42 +267,42 @@
   <div id="membersContent">
     <main>
       <div class="members-hero">
-        <div class="tag">// Members Area</div>
-        <h1>Welcome back<span id="memberName"></span></h1>
-        <p>Access your trading dashboard, live signals, research, and account settings below.</p>
+        <div class="tag">// Личный кабинет</div>
+        <h1>С возвращением<span id="memberName"></span></h1>
+        <p>Доступ к торговым идеям, обзорам рынка, результатам сделок и настройкам вашей подписки.</p>
       </div>
 
             <div class="dev-notice">
-                      <p class="notice-tag">// In Development</p>
-                      <p>The web version of the members area is under development. All service materials are published daily in our <a href="https://t.me/BelfedBot" target="_blank">Telegram channel &rarr;</a></p>
+                      <p class="notice-tag">// В разработке</p>
+                      <p>Веб-версия личного кабинета находится в разработке. Все материалы сервиса ежедневно публикуются в нашем <a href="https://t.me/BelfedBot" target="_blank">Telegram-канале &rarr;</a></p>
                     </div>
       <div class="members-grid">
         <a href="/dashboard.html" class="member-card">
-          <div class="card-label">// Live Tracker</div>
-          <h3>Trade Dashboard</h3>
-          <p>Live open positions, P&amp;L tracking, weekly stats, and YTD scorecard for equities and crypto.</p>
-          <div class="card-arrow">&rarr; Open Dashboard</div>
+          <div class="card-label">// Трекер в реальном времени</div>
+          <h3>Панель сделок</h3>
+          <p>Открытые позиции, P&amp;L в настоящем времени, недельная статистика и сводка с начала года по акциям и криптовалютам.</p>
+          <div class="card-arrow">&rarr; Открыть панель</div>
         </a>
 
         <a href="/stock-analysis.html" class="member-card">
-          <div class="card-label">// Market Analytics</div>
-          <h3>Stock Analysis</h3>
-          <p>Detailed equity trade setups, technical analysis breakdowns, and sector research.</p>
-          <div class="card-arrow">&rarr; Open Stock Analysis</div>
+          <div class="card-label">// Аналитика рынка</div>
+          <h3>Анализ акций</h3>
+          <p>Разбор торговых сетапов, технический анализ и секторальные обзоры.</p>
+          <div class="card-arrow">&rarr; Открыть анализ</div>
         </a>
 
-        <div class="member-card" onclick="alert('Trading Set-ups and Results section coming soon.')">
-          <div class="card-label">// Set-ups</div>
-          <h3>Trading set-ups and results</h3>
-          <p>Review active ideas, completed trades, and performance summaries in one place.</p>
-          <div class="card-arrow">&rarr; Open Trading Set-ups</div>
+        <div class="member-card" onclick="alert('Раздел «Торговые сетапы и результаты» скоро будет доступен.')">
+          <div class="card-label">// Сетапы</div>
+          <h3>Торговые сетапы и результаты</h3>
+          <p>Активные идеи, завершённые сделки и сводка результатов в одном месте.</p>
+          <div class="card-arrow">&rarr; Открыть сетапы</div>
         </div>
 
-        <div class="member-card" onclick="alert('Settings section coming soon.')">
-          <div class="card-label">// Account</div>
-          <h3>Settings</h3>
-          <p>Manage your membership settings, email, password, and Telegram access details.</p>
-          <div class="card-arrow">&rarr; Open Settings</div>
+        <div class="member-card" onclick="alert('Раздел «Настройки» скоро будет доступен.')">
+          <div class="card-label">// Аккаунт</div>
+          <h3>Настройки</h3>
+          <p>Управление подпиской, электронной почтой, паролем и привязкой Telegram.</p>
+          <div class="card-arrow">&rarr; Открыть настройки</div>
         </div>
       </div>
 
@@ -330,10 +330,10 @@
     </main>
 
     <footer>
-      <span>&copy; 2025&ndash;2026 BelFed Analytics. All rights reserved.</span>
+      <span>&copy; 2025&ndash;2026 BelFed Analytics. Все права защищены.</span>
       <div class="footer-links">
-        <a href="/disclaimer.html">Disclaimer</a>
-        <span>Not financial advice.</span>
+        <a href="/disclaimer.html">Ограничение ответственности</a>
+        <span>Не является инвестиционной рекомендацией.</span>
       </div>
     </footer>
   </div>
@@ -352,7 +352,7 @@
         if (session && session.user) {
           document.getElementById('acctEmail').textContent = session.user.email;
           var created = new Date(session.user.created_at);
-          document.getElementById('acctSince').textContent = created.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
+          document.getElementById('acctSince').textContent = created.toLocaleDateString('ru-RU', { year: 'numeric', month: 'short', day: 'numeric' });
         }
         if (profile) {
           var st = entitlement.status;
