@@ -15,7 +15,8 @@ ENV:
   TELEGRAM_BOT_TOKEN
   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
   TELEGRAM_TRADING_CHANNEL_ID    -1003660492325
-  TELEGRAM_COMMUNITY_RU_ID
+  TELEGRAM_COMMUNITY_RU_ID       -1003773738299
+  TELEGRAM_COMMUNITY_EN_ID       -1003869302680
   BELFED_WEB_URL                 https://belfed.ru
 """
 
@@ -37,6 +38,9 @@ SUPABASE_URL         = os.environ["SUPABASE_URL"].rstrip("/")
 SUPABASE_SERVICE_KEY = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
 TRADING_CHANNEL_ID   = int(os.environ["TELEGRAM_TRADING_CHANNEL_ID"])
 COMMUNITY_RU_ID      = int(os.environ["TELEGRAM_COMMUNITY_RU_ID"])
+# EN community — опциональная env (если не задана, EN-юзеры получают RU-группу как fallback)
+_en_id = os.environ.get("TELEGRAM_COMMUNITY_EN_ID", "").strip()
+COMMUNITY_EN_ID      = int(_en_id) if _en_id else None
 WEB_URL              = os.environ.get("BELFED_WEB_URL", "https://belfed.ru").rstrip("/")
 PRICE_RUB            = os.environ.get("PRICE_MONTHLY_RUB", "1500")
 
@@ -284,7 +288,12 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if is_admin(profile):
         msg = "✅ Администратор. Доступ ко всем материалам без ограничений."
     elif sub and sub.get("status") == "active" and exp and exp > now:
-        autorenew = TEXTS["autorenew_off"] if sub.get("cancel_at_period_end") else TEXTS["autorenew_on"]
+        # Автопродление включено только если есть payment_method_id (рекуррент сохранён)
+        # И пользователь не отменил его через cancel_at_period_end.
+        has_pm = bool(sub.get("payment_method_id"))
+        autorenew = (TEXTS["autorenew_on"]
+                     if has_pm and not sub.get("cancel_at_period_end")
+                     else TEXTS["autorenew_off"])
         msg = TEXTS["status_active"].format(until=exp.strftime("%d.%m.%Y"), autorenew=autorenew)
     elif plan == "trial" and exp and exp > now:
         days_left = max(0, (exp - now).days)
@@ -347,7 +356,10 @@ async def on_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         now = datetime.now(timezone.utc)
         plan = profile.get("subscription_plan")
         if sub and sub.get("status") == "active" and exp and exp > now:
-            autorenew = TEXTS["autorenew_off"] if sub.get("cancel_at_period_end") else TEXTS["autorenew_on"]
+            has_pm = bool(sub.get("payment_method_id"))
+            autorenew = (TEXTS["autorenew_on"]
+                         if has_pm and not sub.get("cancel_at_period_end")
+                         else TEXTS["autorenew_off"])
             msg = TEXTS["status_active"].format(until=exp.strftime("%d.%m.%Y"), autorenew=autorenew)
         elif plan == "trial" and exp and exp > now:
             days_left = max(0, (exp - now).days)
