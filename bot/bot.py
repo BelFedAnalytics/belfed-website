@@ -181,8 +181,12 @@ async def grant_paid_invite(context: ContextTypes.DEFAULT_TYPE, telegram_id: int
 
 def has_access(profile: dict | None) -> bool:
     if not profile: return False
+    if profile.get("subscription_status") == "admin": return True
     exp = parse_ts(profile.get("subscription_expires_at"))
     return bool(exp and exp > datetime.now(timezone.utc))
+
+def is_admin(profile: dict | None) -> bool:
+    return bool(profile and profile.get("subscription_status") == "admin")
 
 # ---------- Handlers ------------------------------------------------------
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -197,9 +201,13 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             {"p_token": token, "p_telegram_id": user.id, "p_username": user.username or ""},
         )
         if status in (200, 201):
-            await update.message.reply_text(TEXTS["link_ok"])
-            # сразу выдаём invite в платный канал, если есть доступ (триал/подписка)
+            # сначала берём профиль, чтобы понимать роль и правильно поздравить
             profile = await get_profile_by_telegram(user.id)
+            if is_admin(profile):
+                await update.message.reply_text("✅ Telegram привязан. Доступ администратора.")
+            else:
+                await update.message.reply_text(TEXTS["link_ok"])
+            # сразу выдаём invite в платный канал, если есть доступ (триал/подписка/админ)
             if has_access(profile):
                 link = await grant_paid_invite(context, user.id)
                 if link:
@@ -238,10 +246,10 @@ async def send_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     rows.append([InlineKeyboardButton(TEXTS["btn_status"],     callback_data="sub_status")])
 
-    # Кнопка «Оформить» — только если нет активной платной подписки
+    # Кнопка «Оформить» — только если нет активной платной подписки и не админ
     sub = await get_subscription(profile["id"]) if profile else None
     has_active_paid = sub and sub.get("status") == "active"
-    if not has_active_paid:
+    if not has_active_paid and not is_admin(profile):
         rows.append([InlineKeyboardButton(TEXTS["btn_pay"],    url=f"{WEB_URL}/members.html#subscribe")])
     if not profile:
         rows.append([InlineKeyboardButton(TEXTS["btn_link"],   url=f"{WEB_URL}/members.html#link")])
@@ -273,7 +281,9 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     now = datetime.now(timezone.utc)
     plan = profile.get("subscription_plan")
 
-    if sub and sub.get("status") == "active" and exp and exp > now:
+    if is_admin(profile):
+        msg = "✅ Администратор. Доступ ко всем материалам без ограничений."
+    elif sub and sub.get("status") == "active" and exp and exp > now:
         autorenew = TEXTS["autorenew_off"] if sub.get("cancel_at_period_end") else TEXTS["autorenew_on"]
         msg = TEXTS["status_active"].format(until=exp.strftime("%d.%m.%Y"), autorenew=autorenew)
     elif plan == "trial" and exp and exp > now:
