@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://script.google.com https://docs.google.com; img-src 'self'; frame-src 'none';">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Контакты | BelFed Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com/">
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --black: #0a0a0a;
+      --white: #f5f5f0;
+      --gray: #888;
+      --light-gray: #e8e8e3;
+      --border: #d0d0ca;
+      --font: 'Courier Prime', 'Courier New', monospace;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font);
+      background: var(--white);
+      color: var(--black);
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 40px; height: 56px;
+    }
+    .nav-logo { font-size: 17px; font-weight: 700; letter-spacing: 0.05em; text-decoration: none; color: var(--black); }
+    .nav-links { display: flex; gap: 32px; list-style: none; }
+    .nav-links a { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; color: var(--black); transition: opacity 0.2s; }
+    .nav-links a:hover { opacity: 0.5; }
+    .nav-cta { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; color: var(--white); background: var(--black); padding: 10px 20px; border: 1px solid var(--black); transition: background 0.2s, color 0.2s; }
+    .nav-cta:hover { background: transparent; color: var(--black); }
+    main { padding-top: 56px; }
+    .legal-content {
+      max-width: 720px;
+      padding: 60px 40px 80px;
+    }
+    .legal-tag {
+      font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase;
+      color: var(--gray); margin-bottom: 24px;
+    }
+    .legal-content h1 {
+      font-size: clamp(28px, 4vw, 40px); font-weight: 700;
+      line-height: 1.2; margin-bottom: 40px;
+    }
+    .legal-content h2 {
+      font-size: 16px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; margin-top: 40px; margin-bottom: 16px;
+      padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    }
+    .legal-content p {
+      font-size: 14px; line-height: 1.8; color: #333; margin-bottom: 16px;
+    }
+    .legal-content table {
+      width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 14px;
+    }
+    .legal-content table td {
+      padding: 10px 12px; border: 1px solid var(--border); color: #333;
+    }
+    .legal-content table td:first-child {
+      font-weight: 700; white-space: nowrap; width: 220px; color: var(--black);
+    }
+    .legal-content a { color: #333; text-decoration: underline; }
+    .legal-content a:hover { color: var(--black); }
+    .contact-links { list-style: none; padding: 0; margin-bottom: 16px; }
+    .contact-links li { font-size: 14px; line-height: 1.8; color: #333; padding: 10px 0; border-bottom: 1px solid var(--border); display: flex; gap: 12px; }
+    .contact-links li:first-child { border-top: 1px solid var(--border); }
+    .contact-links .contact-label { font-weight: 700; color: var(--black); min-width: 120px; }
+    .doc-links { list-style: none; padding: 0; }
+    .doc-links li { font-size: 14px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .doc-links li:first-child { border-top: 1px solid var(--border); }
+    footer {
+      border-top: 1px solid var(--border); padding: 24px 40px;
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 12px; color: var(--gray); flex-wrap: wrap; gap: 12px;
+    }
+    footer a { color: var(--gray); text-decoration: none; }
+    footer a:hover { color: var(--black); }
+    .footer-links { display: flex; gap: 20px; }
+    @media(max-width: 768px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      .legal-content { padding: 40px 20px 60px; }
+      footer { flex-direction: column; gap: 12px; text-align: center; }
+      .contact-links li { flex-direction: column; gap: 4px; }
+      .legal-content table td:first-child { width: auto; white-space: normal; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/ru/" class="nav-logo">BELFED_</a>
+    <ul class="nav-links">
+      <li><a href="/ru/">Главная</a></li>
+      <li><a href="/about.html">О нас</a></li>
+      <li><a href="/ru/trades.html">Результаты</a></li>
+      <li><a href="/ru/disclaimer.html">Ограничение ответственности</a></li>
+      <li><a href="/ru/contacts.html">Контакты</a></li>
+      <li><a href="https://t.me/BelfedBot" target="_blank">Telegram</a></li>
+    </ul>
+    <a href="/members.html" class="nav-cta">Личный кабинет</a>
+  </nav>
+
+  <main>
+    <div class="legal-content">
+      <div class="legal-tag">// Контакты</div>
+      <h1>// Контакты</h1>
+
+      <h2>Реквизиты</h2>
+      <table>
+        <tr>
+          <td>Наименование</td>
+          <td>BelFed Analytics</td>
+        </tr>
+        <tr>
+          <td>Индивидуальный предприниматель</td>
+          <td>Фёдоров Артём Сергеевич</td>
+        </tr>
+        <tr>
+          <td>ИНН</td>
+          <td>781103296545</td>
+        </tr>
+        <tr>
+          <td>ОГРНИП</td>
+          <td>326784700016572</td>
+        </tr>
+        <tr>
+          <td>Адрес регистрации</td>
+          <td>Санкт-Петербург, Россия</td>
+        </tr>
+      </table>
+
+      <h2>Связь</h2>
+      <ul class="contact-links">
+        <li>
+          <span class="contact-label">Email</span>
+          <span><a href="mailto:contact@belfed.com">contact@belfed.com</a></span>
+        </li>
+        <li>
+          <span class="contact-label">Telegram-бот</span>
+          <span><a href="https://t.me/BelfedBot" target="_blank">@BelfedBot</a> — для подписки и автоматизации</span>
+        </li>
+      </ul>
+      <p>Мы отвечаем в течение одного рабочего дня. Технические вопросы и предложения о сотрудничестве направляйте на email.</p>
+
+      <h2>Документы</h2>
+      <ul class="doc-links">
+        <li><a href="/ru/oferta.html">Договор-оферта на оказание информационно-аналитических услуг</a></li>
+        <li><a href="/ru/disclaimer.html">Ограничение ответственности</a></li>
+      </ul>
+
+    </div>
+  </main>
+
+  <footer>
+    <span>&copy; 2025&ndash;2026 BelFed Analytics. Все права защищены.</span>
+    <div class="footer-links">
+      <a href="/ru/disclaimer.html">Ограничение ответственности</a>
+      <a href="/ru/oferta.html">Оферта</a>
+      <a href="/ru/contacts.html">Контакты</a>
+    </div>
+    <span>Не является финансовой консультацией.</span>
+  </footer>
+</body>
+</html>
