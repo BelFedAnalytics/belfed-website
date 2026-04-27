@@ -228,6 +228,42 @@ Deno.serve(async (req) => {
           .eq("provider", "yookassa").eq("provider_payment_id", paymentId);
       }
 
+      // ---- Capture receipt email + promote lite-profile to full -------------
+      // YooKassa returns the customer email it collected on the payment page in:
+      //   obj.receipt_registration.customer.email  (after receipt is registered)
+      //   obj.receipt.customer.email               (when included in our request)
+      // Fallback: obj.payer.email (rarely used)
+      const receiptEmail: string | null =
+        obj?.receipt_registration?.customer?.email
+        ?? obj?.receipt?.customer?.email
+        ?? obj?.payer?.email
+        ?? null;
+
+      if (receiptEmail) {
+        // Save on the payment row (audit)
+        await admin.from("payments").update({ receipt_email: receiptEmail })
+          .eq("provider", "yookassa").eq("provider_payment_id", paymentId);
+
+        // If user is still lite (ghost email) — promote to full account
+        const { data: prof } = await admin
+          .from("profiles")
+          .select("is_lite_profile, email")
+          .eq("id", userId)
+          .maybeSingle();
+
+        if (prof?.is_lite_profile) {
+          const { data: promoteRes, error: promoteErr } = await admin.rpc("promote_lite_to_full", {
+            p_user_id: userId,
+            p_real_email: receiptEmail,
+          });
+          if (promoteErr) {
+            console.error("promote_lite_to_full failed:", promoteErr);
+          } else {
+            console.log("promote_lite_to_full result:", promoteRes);
+          }
+        }
+      }
+
       // Grant Telegram access (first payment OR re-activation)
       await inviteLinkedTelegramUser(userId).catch((e) => console.error("tg invite failed", e));
     }
