@@ -80,7 +80,7 @@ async def get_profile_by_telegram(telegram_id: int) -> dict | None:
     rows = await sb_get(
         "/rest/v1/profiles",
         params={"telegram_id": f"eq.{telegram_id}",
-                "select": "id,telegram_id,subscription_plan,subscription_expires_at,trial_started_at"},
+                "select": "id,email,telegram_id,subscription_status,subscription_plan,subscription_expires_at,trial_started_at"},
     )
     return rows[0] if rows else None
 
