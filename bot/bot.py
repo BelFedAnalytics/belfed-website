@@ -130,6 +130,7 @@ TEXTS = {
     "autorenew_on":   "Автопродление: включено",
     "autorenew_off":  "Автопродление: отключено · доступ закончится в указанную дату",
     "need_link":      "Сначала привяжите аккаунт сайта: " + WEB_URL + "/members.html (кнопка «Привязать Telegram»).",
+    "link_already":   "✅ Аккаунт сайта уже привязан к этому Telegram. Откройте /status чтобы посмотреть подписку.",
     "link_ok":        "✅ Telegram привязан. Бесплатный доступ открыт на 14 дней — без привязки карты.",
     "link_bad":       "⚠️ Токен недействителен или истёк. Сгенерируйте новый на сайте.",
     "cancel_ok":      "Автопродление отключено. Доступ сохранится до {until}.",
@@ -236,7 +237,12 @@ async def send_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         rows.append([InlineKeyboardButton(TEXTS["btn_paid"],   callback_data="paid_invite")])
 
     rows.append([InlineKeyboardButton(TEXTS["btn_status"],     callback_data="sub_status")])
-    rows.append([InlineKeyboardButton(TEXTS["btn_pay"],        url=f"{WEB_URL}/members.html#subscribe")])
+
+    # Кнопка «Оформить» — только если нет активной платной подписки
+    sub = await get_subscription(profile["id"]) if profile else None
+    has_active_paid = sub and sub.get("status") == "active"
+    if not has_active_paid:
+        rows.append([InlineKeyboardButton(TEXTS["btn_pay"],    url=f"{WEB_URL}/members.html#subscribe")])
     if not profile:
         rows.append([InlineKeyboardButton(TEXTS["btn_link"],   url=f"{WEB_URL}/members.html#link")])
     rows.append([InlineKeyboardButton(TEXTS["btn_disclaimer"], callback_data="disclaimer")])
@@ -248,7 +254,12 @@ async def send_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await target.reply_text(text, reply_markup=InlineKeyboardMarkup(rows))
 
 async def cmd_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(TEXTS["need_link"])
+    user = update.effective_user
+    profile = await get_profile_by_telegram(user.id)
+    if profile:
+        await update.message.reply_text(TEXTS["link_already"])
+    else:
+        await update.message.reply_text(TEXTS["need_link"])
 
 async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
