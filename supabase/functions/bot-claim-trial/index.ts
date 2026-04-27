@@ -3,34 +3,34 @@
 //
 // Called by the Telegram bot (bot.py) on /start trial deep-link.
 // Creates a "lite" profile (ghost-email tg_<id>@belfed.local) with a 14-day trial
-// and returns a one-shot invite link to the paid Telegram channel.
+// and returns a one-shot invite link to the paid Telegram group (RU or EN).
 //
 // AUTH: shared secret in header `x-bot-secret` must match BOT_SHARED_SECRET env.
 //
 // REQUIRED SECRETS:
 //   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 //   TELEGRAM_BOT_TOKEN              — for createChatInviteLink call
-//   TRADING_CHANNEL_ID              — paid channel chat_id (e.g. -1003660492325)
+//   TRADING_CHANNEL_ID              — RU paid chat_id (e.g. -1003773738299)
+//   TRADING_CHANNEL_ID_EN           — EN paid chat_id (e.g. -1003869302680)
 //   BOT_SHARED_SECRET               — random string, also set on bot server
 //   TRIAL_DAYS                      — optional, defaults to 14
 //
 // REQUEST (POST application/json):
-//   { "telegram_id": "118296372", "telegram_username": "tyoma_fyodorov", "source": "telegram_direct" }
+//   { "telegram_id": "118296372", "telegram_username": "tyoma_fyodorov",
+//     "source": "trial_home_hero", "lang": "ru" }
 //
 // RESPONSE 200:
-//   { "ok": true, "user_id": "...", "trial_end": "...", "invite_link": "https://t.me/+...", "created": true }
-//   { "ok": true, "already_active": true, "subscription_expires_at": "...", "invite_link": "https://t.me/+..." }
-// RESPONSE 4xx:
-//   { "ok": false, "error": "trial_already_used", "trial_end": "...", "subscription_status": "expired" }
+//   { "ok": true, "user_id": "...", "trial_end": "...", "invite_link": "https://t.me/+...", "created": true, "lang": "ru" }
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const SUPABASE_URL       = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_ROLE_KEY   = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const BOT_TOKEN          = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
-const TRADING_CHANNEL_ID = Deno.env.get("TRADING_CHANNEL_ID")!;
-const BOT_SHARED_SECRET  = Deno.env.get("BOT_SHARED_SECRET")!;
-const TRIAL_DAYS         = parseInt(Deno.env.get("TRIAL_DAYS") ?? "14", 10);
+const SUPABASE_URL          = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE_KEY      = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const BOT_TOKEN             = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
+const TRADING_CHANNEL_ID    = Deno.env.get("TRADING_CHANNEL_ID")!;
+const TRADING_CHANNEL_ID_EN = Deno.env.get("TRADING_CHANNEL_ID_EN") ?? "";
+const BOT_SHARED_SECRET     = Deno.env.get("BOT_SHARED_SECRET")!;
+const TRIAL_DAYS            = parseInt(Deno.env.get("TRIAL_DAYS") ?? "14", 10);
 
 const cors = {
   "Access-Control-Allow-Origin":  "*",
@@ -39,6 +39,11 @@ const cors = {
 };
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
+
+function pickChannelId(lang: string): string {
+  if (lang === "en" && TRADING_CHANNEL_ID_EN) return TRADING_CHANNEL_ID_EN;
+  return TRADING_CHANNEL_ID; // RU is default
+}
 
 async function createInviteLink(chatId: string, expireSeconds = 24 * 3600): Promise<string | null> {
   const url = `https://api.telegram.org/bot${BOT_TOKEN}/createChatInviteLink`;
@@ -56,7 +61,7 @@ async function createInviteLink(chatId: string, expireSeconds = 24 * 3600): Prom
   });
   if (!r.ok) {
     const text = await r.text();
-    console.error("createChatInviteLink failed:", r.status, text);
+    console.error("createChatInviteLink failed:", r.status, text, "chat_id=", chatId);
     return null;
   }
   const j = await r.json();
@@ -67,7 +72,6 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST")    return new Response("Method Not Allowed", { status: 405, headers: cors });
 
-  // Shared-secret check
   const incomingSecret = req.headers.get("x-bot-secret") ?? "";
   if (!BOT_SHARED_SECRET || incomingSecret !== BOT_SHARED_SECRET) {
     return json({ ok: false, error: "unauthorized" }, 401);
@@ -84,6 +88,8 @@ Deno.serve(async (req) => {
   const telegramId = telegramIdRaw == null ? "" : String(telegramIdRaw).trim();
   const telegramUsername = body?.telegram_username ? String(body.telegram_username).trim() : null;
   const source = body?.source ? String(body.source).trim() : "telegram_direct";
+  const langRaw = body?.lang ? String(body.lang).trim().toLowerCase() : "ru";
+  const lang = (langRaw === "en") ? "en" : "ru";
 
   if (!telegramId || !/^\d+$/.test(telegramId)) {
     return json({ ok: false, error: "telegram_id_required" }, 400);
@@ -91,12 +97,12 @@ Deno.serve(async (req) => {
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
-  // 1. Claim trial via RPC
   const { data: claimRes, error: claimErr } = await admin.rpc("claim_trial_by_telegram", {
     p_telegram_id: telegramId,
     p_telegram_username: telegramUsername,
     p_trial_days: TRIAL_DAYS,
     p_source: source,
+    p_lang: lang,
   });
 
   if (claimErr) {
@@ -105,15 +111,19 @@ Deno.serve(async (req) => {
   }
 
   const result = claimRes as any;
+  // Effective lang: DB value (if user exists with saved lang) or what we sent
+  const effectiveLang = (result?.lang === "en") ? "en" : "ru";
+  const chatId = pickChannelId(effectiveLang);
+
   if (!result?.ok) {
-    // Already-used trial — still return invite if subscription is currently active
     if (result?.error === "trial_already_used" && result?.subscription_status === "active") {
-      const inviteLink = await createInviteLink(TRADING_CHANNEL_ID);
+      const inviteLink = await createInviteLink(chatId);
       return json({
         ok: true,
         user_id: result.user_id,
         already_active: true,
         invite_link: inviteLink,
+        lang: effectiveLang,
       });
     }
     return json({
@@ -122,13 +132,12 @@ Deno.serve(async (req) => {
       user_id: result?.user_id ?? null,
       trial_end: result?.trial_end ?? null,
       subscription_status: result?.subscription_status ?? null,
+      lang: effectiveLang,
     }, 409);
   }
 
-  // 2. Create one-shot invite link to paid channel
-  const inviteLink = await createInviteLink(TRADING_CHANNEL_ID);
+  const inviteLink = await createInviteLink(chatId);
   if (!inviteLink) {
-    // Trial granted but invite failed — return success without link, bot can retry
     return json({
       ok: true,
       user_id: result.user_id,
@@ -136,19 +145,19 @@ Deno.serve(async (req) => {
       created: result.created ?? false,
       already_active: result.already_active ?? false,
       invite_link: null,
+      lang: effectiveLang,
       warning: "invite_link_creation_failed",
     });
   }
 
-  // 3. Log the access grant
   try {
     await admin.from("telegram_access_log").insert({
       user_id: result.user_id,
       telegram_id: parseInt(telegramId, 10),
-      chat_id: parseInt(TRADING_CHANNEL_ID, 10),
+      chat_id: parseInt(chatId, 10),
       action: "invite",
       result: "ok",
-      detail: `trial granted via ${source}; invite=${inviteLink}`,
+      detail: `trial granted via ${source} [lang=${effectiveLang}]; invite=${inviteLink}`,
     });
   } catch (e) {
     console.warn("access log insert failed:", e);
@@ -161,5 +170,6 @@ Deno.serve(async (req) => {
     created: result.created ?? false,
     already_active: result.already_active ?? false,
     invite_link: inviteLink,
+    lang: effectiveLang,
   });
 });
