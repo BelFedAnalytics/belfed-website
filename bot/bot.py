@@ -18,6 +18,9 @@ ENV:
   TELEGRAM_COMMUNITY_RU_ID       -1003773738299
   TELEGRAM_COMMUNITY_EN_ID       -1003869302680
   BELFED_WEB_URL                 https://belfed.ru
+  BOT_SHARED_SECRET              shared secret for bot-claim-trial edge fn
+  BOT_CLAIM_TRIAL_URL            optional override, default = SUPABASE_URL/functions/v1/bot-claim-trial
+  TELEGRAM_PREVIEW_CHANNEL_URL   optional, public preview channel link to show in welcome
 """
 
 from __future__ import annotations
@@ -43,6 +46,12 @@ _en_id = os.environ.get("TELEGRAM_COMMUNITY_EN_ID", "").strip()
 COMMUNITY_EN_ID      = int(_en_id) if _en_id else None
 WEB_URL              = os.environ.get("BELFED_WEB_URL", "https://belfed.ru").rstrip("/")
 PRICE_RUB            = os.environ.get("PRICE_MONTHLY_RUB", "1500")
+BOT_SHARED_SECRET    = os.environ.get("BOT_SHARED_SECRET", "")
+BOT_CLAIM_TRIAL_URL  = os.environ.get(
+    "BOT_CLAIM_TRIAL_URL",
+    f"{SUPABASE_URL}/functions/v1/bot-claim-trial",
+)
+PREVIEW_CHANNEL_URL  = os.environ.get("TELEGRAM_PREVIEW_CHANNEL_URL", "").strip()
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -80,6 +89,37 @@ async def sb_patch(path: str, params: dict, body: dict) -> int:
         return r.status_code
 
 # ---------- Data access ---------------------------------------------------
+async def claim_trial_via_edge(telegram_id: int, username: str | None, source: str = "telegram_direct") -> dict | None:
+    """Вызывает edge-функцию bot-claim-trial: создаёт lite-профиль и возвращает invite-ссылку."""
+    if not BOT_SHARED_SECRET:
+        log.error("BOT_SHARED_SECRET is not set; cannot call bot-claim-trial")
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            r = await client.post(
+                BOT_CLAIM_TRIAL_URL,
+                headers={
+                    "Content-Type": "application/json",
+                    "x-bot-secret": BOT_SHARED_SECRET,
+                },
+                json={
+                    "telegram_id": str(telegram_id),
+                    "telegram_username": username or "",
+                    "source": source,
+                },
+            )
+            try:
+                data = r.json()
+            except Exception:
+                data = None
+            if r.status_code >= 500:
+                log.error("bot-claim-trial 5xx: %s %s", r.status_code, r.text[:300])
+                return None
+            return data
+    except Exception as e:
+        log.error("claim_trial_via_edge failed: %s", e)
+        return None
+
 async def get_profile_by_telegram(telegram_id: int) -> dict | None:
     rows = await sb_get(
         "/rest/v1/profiles",
@@ -147,6 +187,27 @@ TEXTS = {
     "btn_link":       "🔗 Привязать аккаунт",
     "no_access":      "Сначала зарегистрируйтесь на " + WEB_URL + " и привяжите Telegram. "
                       "Получите 14 дней бесплатного доступа — без привязки карты.",
+    "trial_claim_ok": (
+        "🎁 14 дней бесплатного доступа открыты.\n\n"
+        "Ваша персональная ссылка в закрытый канал "
+        "(одноразовая, действует 24 часа):\n{invite}\n\n"
+        f"После триала: подписка {PRICE_RUB} ₽ / мес. "
+        "Email понадобится только при первой оплате — для чека."
+    ),
+    "trial_claim_already_active": (
+        "✅ У вас уже есть активный доступ.\n\n"
+        "Свежая ссылка в закрытый канал "
+        "(одноразовая, действует 24 часа):\n{invite}"
+    ),
+    "trial_claim_used": (
+        "⚠️ Триал на этот Telegram-аккаунт уже был активирован ранее.\n\n"
+        "Чтобы продолжить пользоваться сервисом, оформите подписку "
+        f"{PRICE_RUB} ₽ / мес: " + WEB_URL + "/members.html#subscribe"
+    ),
+    "trial_claim_error": (
+        "⚠️ Не удалось открыть триал. Попробуйте ещё раз через минуту "
+        "или напишите нам на " + WEB_URL + "/members.html"
+    ),
     "disclaimer": (
         "// DISCLAIMER\n"
         "────────────────────────\n\n"
@@ -196,6 +257,38 @@ def is_admin(profile: dict | None) -> bool:
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     args = context.args or []
+
+    # Deep-link /start trial — рекламная воронка без регистрации
+    # Форматы: "trial", "trial_<utm_source>" (для атрибуции рекламы)
+    if args and (args[0] == "trial" or args[0].startswith("trial_")):
+        source = args[0]  # сохраним как trial_source для атрибуции
+        res = await claim_trial_via_edge(user.id, user.username, source=source)
+        if res is None:
+            await update.message.reply_text(TEXTS["trial_claim_error"])
+            await send_main_menu(update, context)
+            return
+
+        if res.get("ok"):
+            invite = res.get("invite_link") or "—"
+            if res.get("already_active"):
+                await update.message.reply_text(
+                    TEXTS["trial_claim_already_active"].format(invite=invite),
+                    disable_web_page_preview=True,
+                )
+            else:
+                await update.message.reply_text(
+                    TEXTS["trial_claim_ok"].format(invite=invite),
+                    disable_web_page_preview=True,
+                )
+        else:
+            err = res.get("error")
+            if err == "trial_already_used":
+                await update.message.reply_text(TEXTS["trial_claim_used"])
+            else:
+                log.warning("claim_trial returned error: %s", res)
+                await update.message.reply_text(TEXTS["trial_claim_error"])
+        await send_main_menu(update, context)
+        return
 
     # Deep-link /start <token>
     if args and len(args[0]) >= 16:
