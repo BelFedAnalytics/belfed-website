@@ -24,7 +24,8 @@ const MODE             = Deno.env.get("YOOKASSA_MODE") ?? "test";
 const IS_LIVE          = MODE === "live";
 
 const TG_TOKEN         = Deno.env.get("TELEGRAM_BOT_TOKEN") ?? "";
-const PAID_CHAT_ID     = Deno.env.get("TELEGRAM_PAID_CHAT_ID") ?? "";
+const PAID_CHAT_ID     = Deno.env.get("TELEGRAM_PAID_CHAT_ID") ?? "";              // RU paid (default)
+const PAID_CHAT_ID_EN  = Deno.env.get("TELEGRAM_PAID_CHAT_ID_EN") ?? "";           // EN paid (optional)
 
 // https://yookassa.ru/developers/using-api/webhooks#ip
 const YOOKASSA_CIDRS_V4 = [
@@ -77,12 +78,16 @@ async function inviteLinkedTelegramUser(userId: string) {
   if (!TG_TOKEN || !PAID_CHAT_ID) return;
   const { data: prof } = await admin
     .from("profiles")
-    .select("telegram_id")
+    .select("telegram_id, lang")
     .eq("id", userId)
     .maybeSingle();
-  const chatId = Number(PAID_CHAT_ID);
   const tgId = prof?.telegram_id ? Number(prof.telegram_id) : null;
   if (!tgId) return; // user hasn't linked yet — bot's own /start will grant access later
+
+  const lang = (prof?.lang === "en") ? "en" : "ru";
+  const chatId = Number(
+    lang === "en" && PAID_CHAT_ID_EN ? PAID_CHAT_ID_EN : PAID_CHAT_ID
+  );
 
   // 1) lift ban if previously kicked
   await tg("unbanChatMember", { chat_id: chatId, user_id: tgId, only_if_banned: true });
@@ -96,13 +101,16 @@ async function inviteLinkedTelegramUser(userId: string) {
   });
   const link = res?.result?.invite_link;
 
-  // 3) DM the user with the invite link
+  // 3) DM the user with the invite link (localized RU/EN)
   if (link) {
+    const text = lang === "en"
+      ? "✅ Payment received — welcome to BelFed Analytics.\n\n" +
+        "Your personal invite link (valid 1 hour, single-use):\n" + link
+      : "✅ Оплата получена — добро пожаловать в BelFed Analytics.\n\n" +
+        "Ваша персональная ссылка-приглашение (действует 1 час, одноразовая):\n" + link;
     await tg("sendMessage", {
       chat_id: tgId,
-      text:
-        "✅ Оплата получена — добро пожаловать в BelFed Analytics.\n\n" +
-        "Ваша персональная ссылка-приглашение (действует 1 час, одноразовая):\n" + link,
+      text,
       disable_web_page_preview: true,
     });
     await admin.from("telegram_access_log").insert({

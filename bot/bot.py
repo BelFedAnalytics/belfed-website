@@ -52,6 +52,10 @@ BOT_CLAIM_TRIAL_URL  = os.environ.get(
     "BOT_CLAIM_TRIAL_URL",
     f"{SUPABASE_URL}/functions/v1/bot-claim-trial",
 )
+YOOKASSA_CREATE_URL  = os.environ.get(
+    "YOOKASSA_CREATE_PAYMENT_URL",
+    f"{SUPABASE_URL}/functions/v1/yookassa-create-payment",
+)
 PREVIEW_CHANNEL_URL  = os.environ.get("TELEGRAM_PREVIEW_CHANNEL_URL", "").strip()
 
 logging.basicConfig(level=logging.INFO,
@@ -122,6 +126,38 @@ async def claim_trial_via_edge(telegram_id: int, username: str | None,
             return data
     except Exception as e:
         log.error("claim_trial_via_edge failed [lang=%s]: %s", lang, e)
+        return None
+
+async def create_payment_via_edge(user_id: str, return_url: str) -> dict | None:
+    """Бот создаёт платёж через yookassa-create-payment (x-bot-secret авторизация).
+    Возвращает dict с confirmation_url или None при ошибке."""
+    if not BOT_SHARED_SECRET:
+        log.error("BOT_SHARED_SECRET is not set; cannot call yookassa-create-payment")
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            r = await client.post(
+                YOOKASSA_CREATE_URL,
+                headers={
+                    "Content-Type": "application/json",
+                    "x-bot-secret": BOT_SHARED_SECRET,
+                },
+                json={
+                    "plan":       "month",
+                    "user_id":    user_id,
+                    "return_url": return_url,
+                },
+            )
+            try:
+                data = r.json()
+            except Exception:
+                data = None
+            if r.status_code >= 400:
+                log.error("yookassa-create-payment %s: %s", r.status_code, r.text[:300])
+                return None
+            return data
+    except Exception as e:
+        log.error("create_payment_via_edge failed: %s", e)
         return None
 
 async def set_user_language(telegram_id: int, lang: str) -> bool:
@@ -224,6 +260,15 @@ TEXTS_RU = {
     "btn_lang_ru":     "🇷🇺 Русский",
     "btn_lang_en":     "🇬🇧 English",
     "lang_saved":      "✅ Язык: Русский",
+    "pay_creating":    "⏳ Готовлю страницу оплаты…",
+    "pay_link": (
+        f"💳 Оплата подписки — {PRICE_RUB} ₽ / мес\n\n"
+        "Перейдите по ссылке для оплаты (безопасная страница YooKassa):\n{url}\n\n"
+        "После оплаты вернитесь в этот чат — я пришлю персональный invite в закрытый канал."
+    ),
+    "pay_error":       "⚠️ Не удалось создать платёж. Попробуйте через минуту.",
+    "pay_no_profile":  "Сначала активируйте бесплатный доступ — /start",
+    "btn_open_pay":    "💳 Открыть страницу оплаты",
 }
 
 TEXTS_EN = {
@@ -295,6 +340,15 @@ TEXTS_EN = {
     "btn_lang_ru":     "🇷🇺 Русский",
     "btn_lang_en":     "🇬🇧 English",
     "lang_saved":      "✅ Language: English",
+    "pay_creating":    "⏳ Preparing payment page…",
+    "pay_link": (
+        f"💳 Subscription — {PRICE_RUB} RUB / month (~${PRICE_USD})\n\n"
+        "Open the secure YooKassa payment page:\n{url}\n\n"
+        "After payment, return to this chat — I'll send your personal invite to the private channel."
+    ),
+    "pay_error":       "⚠️ Couldn't create payment. Please try again in a minute.",
+    "pay_no_profile":  "Activate the free trial first — /start",
+    "btn_open_pay":    "💳 Open payment page",
 }
 
 def T(lang: str, key: str) -> str:
@@ -477,7 +531,12 @@ async def send_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE,
     sub = await get_subscription(profile["id"]) if profile else None
     has_active_paid = sub and sub.get("status") == "active"
     if not has_active_paid and not is_admin(profile):
-        rows.append([InlineKeyboardButton(T(lang, "btn_pay"), url=f"{web_url}/members.html#subscribe")])
+        if profile:
+            # Бот сам создаёт платёж — Telegram-only flow
+            rows.append([InlineKeyboardButton(T(lang, "btn_pay"), callback_data="start_payment")])
+        else:
+            # Нет профиля — fallback на сайт (редкий случай, юзер открыл бота без deep-link)
+            rows.append([InlineKeyboardButton(T(lang, "btn_pay"), url=f"{web_url}/members.html#subscribe")])
     if not profile:
         rows.append([InlineKeyboardButton(T(lang, "btn_link"), url=f"{web_url}/members.html#link")])
     rows.append([InlineKeyboardButton(T(lang, "btn_disclaimer"), callback_data="disclaimer")])
@@ -624,6 +683,29 @@ async def on_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         profile = await get_profile_by_telegram(user.id)
         lang = await get_user_lang(update, profile)
         await query.message.reply_text(T(lang, "disclaimer"))
+        return
+
+    if data == "start_payment":
+        profile = await get_profile_by_telegram(user.id)
+        lang = await get_user_lang(update, profile)
+        if not profile:
+            await query.message.reply_text(T(lang, "pay_no_profile"))
+            return
+        # Сообщаем, что готовим платёж (синхр. вызов может занять 2-5 сек)
+        await query.message.reply_text(T(lang, "pay_creating"))
+        web_url = WEB_URL_EN if lang == "en" else WEB_URL_RU
+        return_url = f"{web_url}/members.html?payment=return"
+        res = await create_payment_via_edge(profile["id"], return_url)
+        if not res or not res.get("confirmation_url"):
+            await query.message.reply_text(T(lang, "pay_error"))
+            return
+        url = res["confirmation_url"]
+        kb = InlineKeyboardMarkup([[InlineKeyboardButton(T(lang, "btn_open_pay"), url=url)]])
+        await query.message.reply_text(
+            T(lang, "pay_link").format(url=url),
+            reply_markup=kb,
+            disable_web_page_preview=True,
+        )
 
 async def on_error(update: object, context: ContextTypes.DEFAULT_TYPE):
     log.exception("unhandled error", exc_info=context.error)
