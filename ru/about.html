@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>О нас | BelFed Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --black: #0a0a0a;
+      --white: #f5f5f0;
+      --gray: #888;
+      --light-gray: #e8e8e3;
+      --border: #d0d0ca;
+      --green: #1a6b3a;
+      --red: #8b1a1a;
+      --font: 'Courier Prime', 'Courier New', monospace;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font);
+      background: var(--white);
+      color: var(--black);
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    /* NAV */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 40px;
+      height: 56px;
+    }
+    .nav-logo {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-decoration: none;
+      color: var(--black);
+    }
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      list-style: none;
+    }
+    .nav-links a {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-decoration: none;
+      color: var(--black);
+      transition: opacity 0.2s;
+    }
+    .nav-links a:hover { opacity: 0.5; }
+    .nav-links a.nav-active {
+      border-bottom: 1px solid var(--black);
+      padding-bottom: 2px;
+    }
+    .nav-cta {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-decoration: none;
+      color: var(--white);
+      background: var(--black);
+      padding: 10px 20px;
+      border: 1px solid var(--black);
+      transition: background 0.2s, color 0.2s;
+    }
+    .nav-cta:hover {
+      background: transparent;
+      color: var(--black);
+    }
+    .lang-switch { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; color: var(--gray); border: 1px solid var(--border); padding: 6px 12px; transition: all 0.2s; margin-left: 16px; }
+    .lang-switch:hover { color: var(--black); border-color: var(--black); }
+    /* MAIN */
+    main {
+      padding-top: 56px;
+    }
+    /* ABOUT */
+    .about-section {
+      padding: 80px 40px 60px;
+      max-width: 700px;
+    }
+    .about-tag {
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--gray);
+      margin-bottom: 32px;
+    }
+    .about-section h1 {
+      font-size: clamp(28px, 4vw, 48px);
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.01em;
+      margin-bottom: 40px;
+    }
+    .about-section p {
+      font-size: 15px;
+      line-height: 1.7;
+      color: #333;
+      margin-bottom: 24px;
+    }
+    .about-signature {
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      max-width: 260px;
+    }
+    .about-signature .name {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .about-signature .title {
+      font-size: 13px;
+      color: var(--gray);
+    }
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 24px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--gray);
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 80px;
+    }
+    footer a {
+      color: var(--gray);
+      text-decoration: none;
+    }
+    footer a:hover { color: var(--black); }
+    .footer-links {
+      display: flex;
+      gap: 20px;
+    }
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      .about-section { padding: 60px 20px 40px; }
+      footer { padding: 20px; flex-direction: column; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/" class="nav-logo">BELFED_</a>
+    <ul class="nav-links">
+      <li><a href="/">Главная</a></li>
+      <li><a href="/ru/about.html" class="nav-active">О нас</a></li>
+      <li><a href="/ru/products.html">Услуги и цены</a></li>
+      <li><a href="/ru/trades.html">Результаты</a></li>
+      <li><a href="/ru/contacts.html">Контакты</a></li>
+      <li><a href="https://t.me/BelfedBot" target="_blank">Telegram</a></li>
+    </ul>
+    <div>
+      <a href="/members.html" class="nav-cta">Личный кабинет</a>
+      <a href="https://belfed.com/about.html" class="lang-switch">EN</a>
+    </div>
+  </nav>
+
+  <main>
+    <section class="about-section">
+      <div class="about-tag">// О BelFed Analytics</div>
+      <h1>Дисциплинированный подход к поиску преимущества — и его реализации.</h1>
+
+      <p>BelFed Analytics — это исследовательский сервис торговой аналитики для тех, кто ищет устойчивое преимущество и сбалансированные возможности с разумным соотношением риска и прибыли на глобальных финансовых рынках.</p>
+
+      <p>Мы — новый сервис, построенный вокруг одной задачи: предоставлять собственную рыночную аналитику и исследования, а также подборку инсайтов от ведущих отраслевых компаний — для тех, кто хочет ясности в том, где сейчас находятся глобальные финансовые рынки и где открываются лучшие возможности.</p>
+
+      <p>Наш процесс объединяет макроэкономические исследования с техническим анализом для выявления высоковероятностных торговых сетапов на глобальных рынках. Мы изучаем макроэкономический фон, отслеживаем межрыночные сигналы и используем price action для уточнения времени входа и исполнения.</p>
+
+      <p>Мы также считаем, что успешная торговля требует большего, чем просто сильные исследования. Дисциплина, психология и управление риском — основа долгосрочной результативности, поэтому наша работа сочетает глубокий аналитический подход с практическим принятием решений.</p>
+
+      <p>Наша миссия проста: предоставлять понятные исследования, конкретные торговые идеи и дисциплинированный подход к поиску преимущества — и его реализации.</p>
+
+      <div class="about-signature">
+        <div class="name">Артём Фёдоров</div>
+        <div class="title">Управляющий партнёр и главный инвестиционный директор</div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>&copy; 2026 BELFED ANALYTICS. Все права защищены.</span>
+  </footer>
+
+  <div style="border-top: 1px solid var(--border); padding: 16px 40px; font-size: 12px; color: var(--gray); text-align: center;">
+    <a href="/ru/disclaimer.html" style="color: var(--gray); margin: 0 12px;">Ограничение ответственности</a>
+    <a href="/ru/oferta.html" style="color: var(--gray); margin: 0 12px;">Договор-оферта</a>
+    <a href="/ru/contacts.html" style="color: var(--gray); margin: 0 12px;">Контакты</a>
+    <span style="margin: 0 12px;">&copy; 2026 BelFed Analytics</span>
+  </div>
+</body>
+</html>
