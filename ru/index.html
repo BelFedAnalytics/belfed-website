@@ -42,6 +42,21 @@
         .nav-links a:hover { opacity: 0.5; }
         .nav-cta { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; color: var(--white); background: var(--black); padding: 10px 20px; border: 1px solid var(--black); transition: background 0.2s, color 0.2s; }
         .nav-cta:hover { background: transparent; color: var(--black); }
+        .nav-actions-row { display: flex; align-items: center; }
+        .hamburger { display: none; background: transparent; border: 1px solid var(--black); width: 38px; height: 38px; cursor: pointer; flex-direction: column; justify-content: center; align-items: center; gap: 4px; padding: 0; }
+        .hamburger span { display: block; width: 18px; height: 2px; background: var(--black); transition: all 0.3s; }
+        .hamburger.open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+        .hamburger.open span:nth-child(2) { opacity: 0; }
+        .hamburger.open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+        .menu-dropdown { position: fixed; top: 56px; left: 0; right: 0; background: var(--white); border-bottom: 1px solid var(--black); z-index: 99; transform: translateY(-110%); transition: transform 0.3s ease-out; padding: 8px 20px 16px; display: none; }
+        .menu-dropdown.open { transform: translateY(0); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+        .menu-dropdown ul { list-style: none; display: flex; flex-direction: column; gap: 0; padding: 0; margin: 0; }
+        .menu-dropdown ul a { font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; text-decoration: none; color: var(--black); padding: 14px 4px; display: block; border-bottom: 1px solid var(--border); }
+        .menu-dropdown ul li:last-child a { border-bottom: none; }
+        .bottom-bar { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: var(--white); border-top: 1px solid var(--black); padding: 10px 14px 12px; gap: 10px; z-index: 98; box-shadow: 0 -4px 12px rgba(0,0,0,0.04); grid-template-columns: 1fr 1fr; }
+        .bottom-bar a { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; text-decoration: none; padding: 13px 10px; text-align: center; border: 1px solid var(--black); }
+        .bottom-bar .secondary { color: var(--black); background: var(--white); }
+        .bottom-bar .primary { color: var(--white); background: var(--black); }
         main { padding-top: 56px; }
         .hero { padding: 80px 40px 60px; max-width: 900px; }
         .hero-tag { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); margin-bottom: 32px; }
@@ -116,10 +131,22 @@
         @media (max-width: 768px) {
             nav { padding: 0 20px; }
             .nav-links { display: none; }
+            .nav-actions-row { display: none; }
+            .hamburger { display: flex; }
+            .menu-dropdown { display: block; }
+            .bottom-bar { display: grid; }
+            body { padding-bottom: 76px; }
             .hero { padding: 60px 20px 40px; }
             .stats-bar { padding: 20px; gap: 32px; flex-wrap: wrap; }
-            .stats-columns { flex-direction: column; }
+            .stats-columns { flex-direction: column; padding: 0; }
+            .stats-column { padding: 28px 20px; }
             .stats-column:first-child { border-right: none; border-bottom: 1px solid var(--border); }
+            .stats-column-items { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
+            .stat-item { padding: 0 8px; border-right: 1px solid var(--border); text-align: left; }
+            .stat-item:last-child { border-right: none; }
+            .stat-item:first-child { padding-left: 0; }
+            .stat-item .stat-value { font-size: clamp(20px, 6.5vw, 26px); }
+            .stat-item .stat-label { font-size: 9px; letter-spacing: 0.1em; margin-top: 6px; }
             .about-section, .services-section, .subscribe-section, .pricing-section { padding: 40px 20px; }
             .pricing-card { padding: 28px 20px; }
             .pricing-card-price { font-size: 36px; }
@@ -141,11 +168,29 @@
         <li><a href="/ru/contacts.html">Контакты</a></li>
         <li><a href="https://t.me/BelfedBot" target="_blank">Telegram</a></li>
     </ul>
-    <div>
+    <div class="nav-actions-row">
         <a href="/members.html" class="nav-cta">Личный кабинет</a>
         <a href="https://belfed.com/" class="lang-switch">EN</a>
     </div>
+    <button class="hamburger" id="hamb" aria-label="Меню" aria-expanded="false">
+        <span></span><span></span><span></span>
+    </button>
 </nav>
+<div class="menu-dropdown" id="menuDrop">
+    <ul>
+        <li><a href="/">Главная</a></li>
+        <li><a href="/ru/about.html">О нас</a></li>
+        <li><a href="/ru/products.html">Услуги и цены</a></li>
+        <li><a href="/ru/trades.html">Результаты</a></li>
+        <li><a href="/ru/contacts.html">Контакты</a></li>
+        <li><a href="/members.html">Личный кабинет</a></li>
+        <li><a href="https://belfed.com/">EN</a></li>
+    </ul>
+</div>
+<div class="bottom-bar">
+    <a href="/members.html" class="secondary">Личный кабинет</a>
+    <a href="https://t.me/BelfedBot?start=trial_home_bottom_ru" class="primary">Открыть в Telegram</a>
+</div>
 
 <main>
 
@@ -279,6 +324,19 @@ if (subscribeForm) {
         });
     });
 }
+(function(){
+    var hamb = document.getElementById('hamb');
+    var drop = document.getElementById('menuDrop');
+    if (!hamb || !drop) return;
+    hamb.addEventListener('click', function(){
+        var open = drop.classList.toggle('open');
+        hamb.classList.toggle('open', open);
+        hamb.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    drop.querySelectorAll('a').forEach(function(a){
+        a.addEventListener('click', function(){ drop.classList.remove('open'); hamb.classList.remove('open'); hamb.setAttribute('aria-expanded','false'); });
+    });
+})();
 </script>
 
 </body>
