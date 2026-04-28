@@ -51,6 +51,24 @@ tr:hover{background:#f0ede4}
 .tag-hit{display:inline-block;padding:1px 6px;font-size:10px;background:var(--green);color:var(--paper);margin-left:4px}
 .actions-cell{display:flex;gap:6px;flex-wrap:nowrap}
 .actions-cell button{padding:5px 10px;font-size:10px;letter-spacing:1px}
+/* Tooltip system: hover-only CSS tooltip used on action icons & table headers */
+.actions-cell button[data-tooltip],th[data-tooltip],label[data-tooltip]{position:relative;cursor:help}
+.actions-cell button[data-tooltip]{cursor:pointer}
+.actions-cell button[data-tooltip]:hover::after,th[data-tooltip]:hover::after,label[data-tooltip]:hover::after{
+  content:attr(data-tooltip);
+  position:absolute;
+  bottom:100%;left:50%;transform:translateX(-50%);
+  background:#000;color:#fff;padding:4px 8px;
+  font-size:11px;line-height:1.3;white-space:nowrap;border-radius:3px;
+  margin-bottom:6px;z-index:100;
+  font-family:var(--font);
+  letter-spacing:0.5px;text-transform:none;font-weight:normal;opacity:1;
+  pointer-events:none;
+  box-shadow:0 2px 6px rgba(0,0,0,0.25);
+}
+th[data-tooltip]:hover::after{font-size:10px;letter-spacing:0.3px;bottom:auto;top:100%;margin-bottom:0;margin-top:4px}
+label[data-tooltip]{display:inline-block;padding-right:20px}
+label[data-tooltip]::before{content:'?';position:absolute;right:0;top:50%;transform:translateY(-50%);width:13px;height:13px;line-height:13px;text-align:center;border:1px solid currentColor;border-radius:50%;font-size:9px;opacity:0.7;text-transform:none;letter-spacing:0;font-weight:normal}
 .table-wrap{overflow-x:auto}
 #loginScreen{display:flex;justify-content:center;align-items:center;min-height:70vh}
 .login-box{background:var(--paper);border:2px solid var(--ink);padding:36px;max-width:380px;width:100%}
@@ -130,14 +148,14 @@ tr:hover{background:#f0ede4}
           <table id="positions-table">
             <thead>
               <tr>
-                <th>#</th><th>Класс</th><th>Тикер</th><th>Напр</th>
+                <th>#</th><th data-tooltip="Класс актива">Класс</th><th>Тикер</th><th data-tooltip="Направление">Напр</th>
                 <th>Вход</th><th>Стоп</th>
-                <th>Це1</th><th>Це2</th><th>Це3</th>
-                <th>Пуб</th><th>Действия</th>
+                <th data-tooltip="Цель тейк-профита 1">Це1</th><th data-tooltip="Цель тейк-профита 2">Це2</th><th data-tooltip="Цель тейк-профита 3">Це3</th>
+                <th data-tooltip="Опубликовано в каналах">Пуб</th><th data-tooltip="Грейд × Риск на сделку">G/R</th><th>Действия</th>
               </tr>
             </thead>
             <tbody id="positions-tbody">
-              <tr><td colspan="11" style="text-align:center;opacity:0.5">Loading...</td></tr>
+              <tr><td colspan="12" style="text-align:center;opacity:0.5">Loading...</td></tr>
             </tbody>
           </table>
         </div>
@@ -186,6 +204,23 @@ tr:hover{background:#f0ede4}
           <div><label>Цель 1</label><input id="f-target_1" type="number" step="any" placeholder="опционально"></div>
           <div><label>Цель 2</label><input id="f-target_2" type="number" step="any" placeholder="опционально"></div>
           <div><label>Цель 3</label><input id="f-target_3" type="number" step="any" placeholder="опционально"></div>
+        </div>
+        <div class="row">
+          <div>
+            <label data-tooltip="Качество сетапа от 1 до 5, 5 — максимальная уверенность">Грейд (вес позиции)</label>
+            <select id="f-grade">
+              <option value="">—</option>
+              <option value="5">★★★★★ (5 — best)</option>
+              <option value="4">★★★★ (4)</option>
+              <option value="3">★★★ (3)</option>
+              <option value="2">★★ (2)</option>
+              <option value="1">★ (1 — speculative)</option>
+            </select>
+          </div>
+          <div>
+            <label data-tooltip="Размер риска в единицах R. По умолчанию 1.0R = стандартная единица риска на сделку">Риск (R)</label>
+            <input id="f-risk_r" type="number" step="0.1" min="0.1" max="10" placeholder="1.0">
+          </div>
         </div>
         <label>TradingView URL (опционально)</label>
         <input id="f-tradingview_url" placeholder="https://www.tradingview.com/x/...">
@@ -451,7 +486,7 @@ function renderOpenList() {
   const filtered = openListCache.filter(p => matchesAsset(p.asset_class, openAssetFilter));
   if (filtered.length === 0) {
     const empty = openAssetFilter === 'crypto' ? I18N.noOpenCrypto : I18N.noOpenStock;
-    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;opacity:0.5;padding:24px">${empty}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;opacity:0.5;padding:24px">${empty}</td></tr>`;
     return;
   }
   tbody.innerHTML = filtered.map(p => {
@@ -462,6 +497,9 @@ function renderOpenList() {
       p.publish_to_ru ? 'RU' : '',
       p.publish_to_en ? 'EN' : ''
     ].filter(Boolean).join('+') || '—';
+    const grade = p.grade ? `${p.grade}★` : '—';
+    const riskR = (p.risk_r !== null && p.risk_r !== undefined) ? `${parseFloat(p.risk_r)}R` : '1R';
+    const gr = (p.grade || (p.risk_r !== null && p.risk_r !== undefined)) ? `${grade} · ${riskR}` : '—';
     return `
       <tr>
         <td>${p.id}</td>
@@ -474,11 +512,12 @@ function renderOpenList() {
         <td>${fmt(p.target_2)}${tHit(p.target_2_hit_at)}</td>
         <td>${fmt(p.target_3)}${tHit(p.target_3_hit_at)}</td>
         <td>${pub}</td>
+        <td>${gr}</td>
         <td class="actions-cell">
-          <button class="secondary" onclick="openComment(${p.id},'${p.ticker}')">💬</button>
-          <button class="secondary" onclick="openMoveStop(${p.id},'${p.ticker}',${p.stop_price})">🛡</button>
-          <button class="secondary" onclick="editPosition(${p.id})">✎</button>
-          <button class="danger" onclick="openClose(${p.id},'${p.ticker}',${p.entry_price})">✕</button>
+          <button class="secondary" data-tooltip="Добавить комментарий" onclick="openComment(${p.id},'${p.ticker}')">💬</button>
+          <button class="secondary" data-tooltip="Перенести стоп" onclick="openMoveStop(${p.id},'${p.ticker}',${p.stop_price})">🛡</button>
+          <button class="secondary" data-tooltip="Редактировать позицию" onclick="editPosition(${p.id})">✎</button>
+          <button class="danger" data-tooltip="Закрыть позицию" onclick="openClose(${p.id},'${p.ticker}',${p.entry_price})">✕</button>
         </td>
       </tr>
     `;
@@ -487,14 +526,14 @@ function renderOpenList() {
 
 async function loadList() {
   const tbody = document.getElementById('positions-tbody');
-  tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;opacity:0.5">${I18N.loading}</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;opacity:0.5">${I18N.loading}</td></tr>`;
   const { data, error } = await sb
     .from('active_positions')
     .select('*')
     .in('status', ['open', 'partially_closed'])
     .order('opened_at', { ascending: false });
   if (error) {
-    tbody.innerHTML = `<tr><td colspan="11"><div class="msg err">${error.message}</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12"><div class="msg err">${error.message}</div></td></tr>`;
     return;
   }
   openListCache = data || [];
@@ -583,6 +622,10 @@ function getFormPayload() {
     const v = document.getElementById(id).value.trim();
     return v === '' ? null : v;
   };
+  const gradeRaw = document.getElementById('f-grade').value;
+  const grade = gradeRaw === '' ? null : (parseInt(gradeRaw, 10) || null);
+  const riskRaw = document.getElementById('f-risk_r').value;
+  const risk_r = riskRaw === '' ? null : (parseFloat(riskRaw) || null);
   return {
     asset_class: document.getElementById('f-asset_class').value,
     ticker: document.getElementById('f-ticker').value.trim().toUpperCase().replace(/^\$/, ''),
@@ -592,6 +635,8 @@ function getFormPayload() {
     target_1: num('f-target_1'),
     target_2: num('f-target_2'),
     target_3: num('f-target_3'),
+    grade,
+    risk_r,
     tradingview_url: str('f-tradingview_url'),
     comment_ru: str('f-comment_ru'),
     comment_en: str('f-comment_en'),
@@ -689,7 +734,8 @@ function changeAssetType() {
 
 function resetForm() {
   ['f-ticker','f-entry_price','f-stop_price','f-target_1','f-target_2','f-target_3',
-   'f-tradingview_url','f-comment_ru','f-comment_en'].forEach(id => document.getElementById(id).value = '');
+   'f-risk_r','f-tradingview_url','f-comment_ru','f-comment_en'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-grade').value = '';
   document.getElementById('f-asset_class').value = 'stock';
   document.getElementById('f-direction').value = 'long';
   document.getElementById('f-publish_to_ru').checked = false;
@@ -711,6 +757,8 @@ async function editPosition(id) {
   document.getElementById('f-target_1').value = data.target_1 ?? '';
   document.getElementById('f-target_2').value = data.target_2 ?? '';
   document.getElementById('f-target_3').value = data.target_3 ?? '';
+  document.getElementById('f-grade').value = data.grade ?? '';
+  document.getElementById('f-risk_r').value = (data.risk_r !== null && data.risk_r !== undefined) ? data.risk_r : '';
   document.getElementById('f-tradingview_url').value = data.tradingview_url ?? '';
   document.getElementById('f-comment_ru').value = data.comment_ru ?? '';
   document.getElementById('f-comment_en').value = data.comment_en ?? '';
