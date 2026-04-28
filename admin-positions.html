@@ -67,7 +67,19 @@ tr:hover{background:#f0ede4}
 .tab-btn.active{color:var(--ink);border-bottom-color:var(--ink)}
 .tab-pane{display:none}
 .tab-pane.active{display:block}
-@media(max-width:700px){body{padding:14px 10px;font-size:12px}h1{font-size:16px;letter-spacing:1px}th,td{padding:6px 7px;font-size:10px}.section{padding:16px 14px}}
+.subtab-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.subtab-btn{font-family:var(--font);font-size:11px;font-weight:bold;letter-spacing:1.5px;padding:8px 16px;background:var(--paper);border:1px solid var(--ink);color:var(--ink);cursor:pointer;text-transform:uppercase;transition:background 0.15s ease}
+.subtab-btn:hover{background:#f0ede4}
+.subtab-btn.active{background:var(--ink);color:var(--bg)}
+.asset-picker{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;padding:24px 8px}
+.asset-picker-btn{font-family:var(--font);flex:1;min-width:240px;max-width:340px;padding:36px 20px;background:var(--paper);border:2px solid var(--ink);color:var(--ink);cursor:pointer;text-align:center;letter-spacing:2px;text-transform:uppercase;font-size:13px;font-weight:bold;transition:all 0.15s ease}
+.asset-picker-btn:hover{background:var(--ink);color:var(--bg)}
+.asset-picker-btn .ap-emoji{display:block;font-size:42px;margin-bottom:12px;letter-spacing:0}
+.asset-picker-btn .ap-sub{display:block;font-size:10px;font-weight:normal;opacity:0.7;margin-top:8px;letter-spacing:1px;text-transform:none}
+.change-type-btn{font-family:var(--font);font-size:11px;letter-spacing:1.5px;padding:7px 14px;background:transparent;border:1px dashed var(--muted);color:var(--ink);cursor:pointer;margin-bottom:16px;text-transform:uppercase}
+.change-type-btn:hover{border-style:solid;background:#f0ede4}
+.asset-class-badge{display:inline-block;padding:3px 10px;font-size:11px;letter-spacing:1px;background:var(--ink);color:var(--bg);margin-left:10px;font-weight:bold}
+@media(max-width:700px){body{padding:14px 10px;font-size:12px}h1{font-size:16px;letter-spacing:1px}th,td{padding:6px 7px;font-size:10px}.section{padding:16px 14px}.asset-picker-btn{padding:24px 14px;min-width:140px}.asset-picker-btn .ap-emoji{font-size:32px}}
 </style>
 </head>
 <body>
@@ -110,6 +122,10 @@ tr:hover{background:#f0ede4}
           <h2 style="border:none;padding:0;margin:0">Открытые и частично закрытые</h2>
           <button class="secondary" onclick="loadList()">Обновить</button>
         </div>
+        <div class="subtab-bar" id="open-subtabs" style="margin-top:16px">
+          <button class="subtab-btn active" data-asset="stock" onclick="setOpenFilter('stock')">📈 Акции (<span id="open-count-stock">0</span>)</button>
+          <button class="subtab-btn" data-asset="crypto" onclick="setOpenFilter('crypto')">🪙 Крипто (<span id="open-count-crypto">0</span>)</button>
+        </div>
         <div class="table-wrap" style="margin-top:14px">
           <table id="positions-table">
             <thead>
@@ -130,16 +146,32 @@ tr:hover{background:#f0ede4}
 
     <!-- ============== NEW TAB ============== -->
     <div id="tab-new" class="tab-pane">
-      <div class="section">
-        <h2 id="form-title">Новая позиция</h2>
+      <!-- Step 1: pick asset class -->
+      <div class="section" id="new-step-pick">
+        <h2 style="border:none;padding:0;margin:0 0 6px">Новая позиция</h2>
+        <div class="muted" style="margin-bottom:18px">Выберите тип актива, чтобы продолжить</div>
+        <div class="asset-picker">
+          <button class="asset-picker-btn" type="button" onclick="pickAssetClass('stock')">
+            <span class="ap-emoji">📈</span>
+            Акция
+            <span class="ap-sub">TSLA, FIGS, LMND…</span>
+          </button>
+          <button class="asset-picker-btn" type="button" onclick="pickAssetClass('crypto')">
+            <span class="ap-emoji">🪙</span>
+            Криптовалюта
+            <span class="ap-sub">BTC, ETH, SOL…</span>
+          </button>
+        </div>
+      </div>
+      <!-- Step 2: form -->
+      <div class="section" id="new-step-form" style="display:none">
+        <button class="change-type-btn" type="button" onclick="changeAssetType()">← Сменить тип актива</button>
+        <h2 id="form-title" style="display:flex;align-items:center;flex-wrap:wrap">Новая позиция<span id="form-asset-badge" class="asset-class-badge"></span></h2>
+        <input type="hidden" id="f-asset_class" value="stock">
         <div class="row">
           <div>
-            <label>Класс актива</label>
-            <select id="f-asset_class"><option value="stock">Акция</option><option value="crypto">Крипта</option></select>
-          </div>
-          <div>
             <label>Тикер</label>
-            <input id="f-ticker" placeholder="AAPL или BTC" oninput="this.value=this.value.toUpperCase()">
+            <input id="f-ticker" placeholder="TSLA, FIGS, LMND" oninput="this.value=this.value.toUpperCase()">
           </div>
           <div>
             <label>Направление</label>
@@ -147,8 +179,8 @@ tr:hover{background:#f0ede4}
           </div>
         </div>
         <div class="row">
-          <div><label>Цена входа</label><input id="f-entry_price" type="number" step="any" placeholder="0.00"></div>
-          <div><label>Стоп-лосс</label><input id="f-stop_price" type="number" step="any" placeholder="0.00"></div>
+          <div><label>Цена входа</label><input id="f-entry_price" type="number" step="any" placeholder="150.50"></div>
+          <div><label>Стоп-лосс</label><input id="f-stop_price" type="number" step="any" placeholder="145.00"></div>
         </div>
         <div class="row">
           <div><label>Цель 1</label><input id="f-target_1" type="number" step="any" placeholder="опционально"></div>
@@ -180,6 +212,10 @@ tr:hover{background:#f0ede4}
     <div id="tab-closed" class="tab-pane">
       <div class="section">
         <h2 style="border:none;padding:0">Закрытые позиции</h2>
+        <div class="subtab-bar" id="closed-subtabs" style="margin-top:16px">
+          <button class="subtab-btn active" data-asset="stock" onclick="setClosedFilter('stock')">📈 Акции (<span id="closed-count-stock">0</span>)</button>
+          <button class="subtab-btn" data-asset="crypto" onclick="setClosedFilter('crypto')">🪙 Крипто (<span id="closed-count-crypto">0</span>)</button>
+        </div>
         <div class="table-wrap" style="margin-top:14px">
           <table>
             <thead>
@@ -254,6 +290,27 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 let editingId = null;
 let modalCtx = {};
+
+// Sub-tab filter state (default: stocks)
+let openAssetFilter = 'stock';
+let closedAssetFilter = 'stock';
+// Cached full lists from latest fetch (so we can re-filter without re-querying)
+let openListCache = [];
+let closedListCache = [];
+
+// i18n strings used inside JS-generated table fallbacks
+const I18N = {
+  loading: 'Загрузка...',
+  noOpenStock: 'Нет открытых позиций по акциям',
+  noOpenCrypto: 'Нет открытых позиций по крипте',
+  noClosedStock: 'Нет закрытых позиций по акциям',
+  noClosedCrypto: 'Нет закрытых позиций по крипте',
+  pickStock: '📈 Акция',
+  pickCrypto: '🪙 Крипто',
+  formTitleNew: 'Новая позиция',
+  formTitleEditPrefix: 'Редактирование #',
+  formTitleEditSuffix: ' (без автопубликации)'
+};
 
 // ========== Auth ==========
 async function signIn() {
@@ -373,23 +430,31 @@ async function callPublisher(event, position_id, extra={}) {
 }
 
 // ========== List ==========
-async function loadList() {
+// Treat 'equity' as alias for 'stock' so legacy / future rows still group correctly.
+function matchesAsset(rowClass, filter) {
+  const c = (rowClass || '').toLowerCase();
+  if (filter === 'stock') return c === 'stock' || c === 'equity' || c === '';
+  return c === filter;
+}
+
+function updateOpenCounts() {
+  const stockN = openListCache.filter(p => matchesAsset(p.asset_class, 'stock')).length;
+  const cryptoN = openListCache.filter(p => matchesAsset(p.asset_class, 'crypto')).length;
+  const sEl = document.getElementById('open-count-stock');
+  const cEl = document.getElementById('open-count-crypto');
+  if (sEl) sEl.textContent = stockN;
+  if (cEl) cEl.textContent = cryptoN;
+}
+
+function renderOpenList() {
   const tbody = document.getElementById('positions-tbody');
-  tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;opacity:0.5">Loading...</td></tr>';
-  const { data, error } = await sb
-    .from('active_positions')
-    .select('*')
-    .in('status', ['open', 'partially_closed'])
-    .order('opened_at', { ascending: false });
-  if (error) {
-    tbody.innerHTML = `<tr><td colspan="11"><div class="msg err">${error.message}</div></td></tr>`;
+  const filtered = openListCache.filter(p => matchesAsset(p.asset_class, openAssetFilter));
+  if (filtered.length === 0) {
+    const empty = openAssetFilter === 'crypto' ? I18N.noOpenCrypto : I18N.noOpenStock;
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;opacity:0.5;padding:24px">${empty}</td></tr>`;
     return;
   }
-  if (!data || data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;opacity:0.5;padding:24px">No open positions</td></tr>';
-    return;
-  }
-  tbody.innerHTML = data.map(p => {
+  tbody.innerHTML = filtered.map(p => {
     const dirClass = p.direction === 'long' ? 'dir-long' : 'dir-short';
     const dirArrow = p.direction === 'long' ? '📈' : '📉';
     const tHit = (h) => h ? '<span class="tag-hit">HIT</span>' : '';
@@ -420,23 +485,52 @@ async function loadList() {
   }).join('');
 }
 
-async function loadClosed() {
-  const tbody = document.getElementById('closed-tbody');
+async function loadList() {
+  const tbody = document.getElementById('positions-tbody');
+  tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;opacity:0.5">${I18N.loading}</td></tr>`;
   const { data, error } = await sb
     .from('active_positions')
-    .select('id,asset_class,ticker,direction,entry_price,exit_price,result_rr,closed_at,archived_to_sheet_at')
-    .in('status', ['closed', 'cancelled'])
-    .order('closed_at', { ascending: false })
-    .limit(100);
+    .select('*')
+    .in('status', ['open', 'partially_closed'])
+    .order('opened_at', { ascending: false });
   if (error) {
-    tbody.innerHTML = `<tr><td colspan="9"><div class="msg err">${error.message}</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11"><div class="msg err">${error.message}</div></td></tr>`;
     return;
   }
-  if (!data || data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;opacity:0.5;padding:18px">No closed positions yet</td></tr>';
+  openListCache = data || [];
+  updateOpenCounts();
+  renderOpenList();
+}
+
+function setOpenFilter(asset) {
+  openAssetFilter = asset;
+  document.querySelectorAll('#open-subtabs .subtab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.asset === asset);
+  });
+  renderOpenList();
+}
+
+// External callers (bot inserts, refreshes) should hit refreshOpenList() — keeps active filter.
+async function refreshOpenList() { await loadList(); }
+
+function updateClosedCounts() {
+  const stockN = closedListCache.filter(p => matchesAsset(p.asset_class, 'stock')).length;
+  const cryptoN = closedListCache.filter(p => matchesAsset(p.asset_class, 'crypto')).length;
+  const sEl = document.getElementById('closed-count-stock');
+  const cEl = document.getElementById('closed-count-crypto');
+  if (sEl) sEl.textContent = stockN;
+  if (cEl) cEl.textContent = cryptoN;
+}
+
+function renderClosedList() {
+  const tbody = document.getElementById('closed-tbody');
+  const filtered = closedListCache.filter(p => matchesAsset(p.asset_class, closedAssetFilter));
+  if (filtered.length === 0) {
+    const empty = closedAssetFilter === 'crypto' ? I18N.noClosedCrypto : I18N.noClosedStock;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;opacity:0.5;padding:18px">${empty}</td></tr>`;
     return;
   }
-  tbody.innerHTML = data.map(p => `
+  tbody.innerHTML = filtered.map(p => `
     <tr>
       <td>${p.id}</td>
       <td>${p.asset_class}</td>
@@ -450,6 +544,34 @@ async function loadClosed() {
     </tr>
   `).join('');
 }
+
+async function loadClosed() {
+  const tbody = document.getElementById('closed-tbody');
+  tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;opacity:0.5">${I18N.loading}</td></tr>`;
+  const { data, error } = await sb
+    .from('active_positions')
+    .select('id,asset_class,ticker,direction,entry_price,exit_price,result_rr,closed_at,archived_to_sheet_at')
+    .in('status', ['closed', 'cancelled'])
+    .order('closed_at', { ascending: false })
+    .limit(100);
+  if (error) {
+    tbody.innerHTML = `<tr><td colspan="9"><div class="msg err">${error.message}</div></td></tr>`;
+    return;
+  }
+  closedListCache = data || [];
+  updateClosedCounts();
+  renderClosedList();
+}
+
+function setClosedFilter(asset) {
+  closedAssetFilter = asset;
+  document.querySelectorAll('#closed-subtabs .subtab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.asset === asset);
+  });
+  renderClosedList();
+}
+
+async function refreshHistoryList() { await loadClosed(); }
 
 // ========== Save (create/update) ==========
 function getFormPayload() {
@@ -518,9 +640,51 @@ async function savePosition() {
         'info');
     }
   }
+  // Preserve the success message; just clear the editing state and refresh lists.
+  // User can use ← Сменить тип актива or Сброс to clear the form when ready.
   editingId = null;
-  document.getElementById('form-title').textContent = 'Новая позиция';
+  document.getElementById('form-title').firstChild.nodeValue = I18N.formTitleNew;
   loadList();
+  loadClosed();
+}
+
+function applyAssetClassUi(cls) {
+  // Update placeholders + visible badge to match the chosen asset class.
+  const ticker = document.getElementById('f-ticker');
+  const entry = document.getElementById('f-entry_price');
+  const stop = document.getElementById('f-stop_price');
+  const t1 = document.getElementById('f-target_1');
+  const t2 = document.getElementById('f-target_2');
+  const t3 = document.getElementById('f-target_3');
+  const badge = document.getElementById('form-asset-badge');
+  if (cls === 'crypto') {
+    if (ticker) ticker.placeholder = 'BTC, ETH, SOL';
+    if (entry) entry.placeholder = '0.00';
+    if (stop) stop.placeholder = '0.00';
+    if (badge) badge.textContent = I18N.pickCrypto;
+  } else {
+    if (ticker) ticker.placeholder = 'TSLA, FIGS, LMND';
+    if (entry) entry.placeholder = '150.50';
+    if (stop) stop.placeholder = '145.00';
+    if (badge) badge.textContent = I18N.pickStock;
+  }
+  if (t1) t1.placeholder = 'опционально';
+  if (t2) t2.placeholder = 'опционально';
+  if (t3) t3.placeholder = 'опционально';
+}
+
+function pickAssetClass(cls) {
+  document.getElementById('f-asset_class').value = cls;
+  applyAssetClassUi(cls);
+  document.getElementById('new-step-pick').style.display = 'none';
+  document.getElementById('new-step-form').style.display = 'block';
+}
+
+function changeAssetType() {
+  // Going back to picker resets the editing state and the form.
+  resetForm();
+  document.getElementById('new-step-form').style.display = 'none';
+  document.getElementById('new-step-pick').style.display = 'block';
 }
 
 function resetForm() {
@@ -532,7 +696,8 @@ function resetForm() {
   document.getElementById('f-publish_to_en').checked = false;
   document.getElementById('form-msg').innerHTML = '';
   editingId = null;
-  document.getElementById('form-title').textContent = 'Новая позиция';
+  document.getElementById('form-title').firstChild && (document.getElementById('form-title').firstChild.nodeValue = I18N.formTitleNew);
+  applyAssetClassUi('stock');
 }
 
 async function editPosition(id) {
@@ -552,7 +717,13 @@ async function editPosition(id) {
   document.getElementById('f-publish_to_ru').checked = !!data.publish_to_ru;
   document.getElementById('f-publish_to_en').checked = !!data.publish_to_en;
   editingId = id;
-  document.getElementById('form-title').textContent = `Редактирование #${id} ${data.ticker} (без автопубликации)`;
+  // Skip the asset picker step when editing an existing position.
+  document.getElementById('new-step-pick').style.display = 'none';
+  document.getElementById('new-step-form').style.display = 'block';
+  applyAssetClassUi(data.asset_class === 'crypto' ? 'crypto' : 'stock');
+  const titleEl = document.getElementById('form-title');
+  // Replace text node while preserving the badge span.
+  titleEl.firstChild.nodeValue = `${I18N.formTitleEditPrefix}${id} ${data.ticker}${I18N.formTitleEditSuffix}`;
   document.querySelector('.tab-btn:nth-child(2)').click();
 }
 
