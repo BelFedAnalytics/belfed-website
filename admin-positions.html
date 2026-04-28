@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BELFED — АДМИН · ПОЗИЦИИ</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f2eb;--paper:#fff;--ink:#000;--border:#000;--soft-border:#ccc;
+  --green:#1a7a1a;--red:#c50000;--amber:#e6a800;--muted:#999;
+  --font:'Courier New',Courier,monospace;
+}
+body{background:var(--bg);font-family:var(--font);color:var(--ink);padding:24px 20px;line-height:1.6;font-size:14px}
+.container{max-width:1400px;margin:0 auto}
+header{text-align:center;margin-bottom:32px;padding-bottom:18px;border-bottom:2px solid var(--ink)}
+h1{font-size:22px;font-weight:bold;letter-spacing:3px;margin-bottom:8px}
+.subtitle{font-size:12px;opacity:0.6;letter-spacing:1px}
+.nav{display:flex;gap:24px;justify-content:center;margin-top:14px;font-size:11px;letter-spacing:1px}
+.nav a{color:var(--ink);text-decoration:none;border-bottom:1px dashed var(--muted)}
+.nav a:hover{border-bottom-style:solid}
+.section{background:var(--paper);border:1px solid var(--ink);padding:22px 24px;margin-bottom:24px}
+.section h2{font-size:14px;letter-spacing:2px;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--ink)}
+label{display:block;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;opacity:0.6;margin-bottom:4px;margin-top:14px}
+input,select,textarea{font-family:var(--font);width:100%;padding:9px 12px;font-size:13px;border:1px solid var(--ink);background:var(--bg);outline:none}
+input:focus,select:focus,textarea:focus{background:var(--paper)}
+textarea{min-height:80px;resize:vertical}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}
+button{font-family:var(--font);font-size:12px;letter-spacing:2px;padding:11px 22px;border:1px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer;text-transform:uppercase}
+button:hover{background:#222}
+button:disabled{opacity:0.4;cursor:not-allowed}
+button.secondary{background:var(--paper);color:var(--ink)}
+button.secondary:hover{background:#f0ede4}
+button.danger{background:var(--red);color:var(--paper);border-color:var(--red)}
+button.danger:hover{opacity:0.85}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.msg{margin-top:12px;padding:10px 12px;font-size:12px;letter-spacing:0.5px}
+.msg.ok{background:#e8f5e9;color:var(--green);border:1px solid var(--green)}
+.msg.err{background:#fff0f0;color:var(--red);border:1px solid var(--red)}
+.msg.info{background:#fff8e0;color:#7a5e00;border:1px solid var(--amber)}
+.checkbox-row{display:flex;align-items:center;gap:10px;margin-top:14px;font-size:13px}
+.checkbox-row input{width:auto}
+table{width:100%;border-collapse:collapse;background:var(--paper);border:1px solid var(--ink);font-size:12px}
+th,td{padding:8px 10px;text-align:left;border:1px solid var(--soft-border);white-space:nowrap}
+th{background:var(--ink);color:var(--bg);font-weight:bold;font-size:11px;letter-spacing:1px}
+tr:nth-child(even){background:#fafaf5}
+tr:hover{background:#f0ede4}
+.dir-long{color:var(--green);font-weight:bold}
+.dir-short{color:var(--red);font-weight:bold}
+.tag-hit{display:inline-block;padding:1px 6px;font-size:10px;background:var(--green);color:var(--paper);margin-left:4px}
+.actions-cell{display:flex;gap:6px;flex-wrap:nowrap}
+.actions-cell button{padding:5px 10px;font-size:10px;letter-spacing:1px}
+.table-wrap{overflow-x:auto}
+#loginScreen{display:flex;justify-content:center;align-items:center;min-height:70vh}
+.login-box{background:var(--paper);border:2px solid var(--ink);padding:36px;max-width:380px;width:100%}
+.login-box h2{font-size:16px;letter-spacing:2px;text-align:center;margin-bottom:6px;border:none;padding:0}
+.login-sub{font-size:11px;opacity:0.5;margin-bottom:18px;letter-spacing:1px;text-align:center}
+.muted{opacity:0.6;font-size:11px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
+.modal-box{background:var(--paper);border:2px solid var(--ink);padding:28px;max-width:560px;width:100%;max-height:90vh;overflow:auto}
+.modal-box h3{font-size:14px;letter-spacing:2px;margin-bottom:16px;border-bottom:1px solid var(--ink);padding-bottom:8px}
+.preview-block{background:var(--bg);border:1px solid var(--soft-border);padding:14px;font-size:12px;white-space:pre-wrap;margin:10px 0}
+.flex-spread{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+.tab-bar{display:flex;gap:0;margin-bottom:24px;border-bottom:2px solid var(--ink)}
+.tab-btn{font-family:var(--font);font-size:12px;font-weight:bold;letter-spacing:2px;padding:10px 22px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;color:var(--muted)}
+.tab-btn.active{color:var(--ink);border-bottom-color:var(--ink)}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+@media(max-width:700px){body{padding:14px 10px;font-size:12px}h1{font-size:16px;letter-spacing:1px}th,td{padding:6px 7px;font-size:10px}.section{padding:16px 14px}}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-box">
+    <h2>BELFED · ADMIN</h2>
+    <div class="login-sub">УПРАВЛЕНИЕ ПОЗИЦИЯМИ</div>
+    <label>Email</label>
+    <input type="email" id="login-email" placeholder="admin@belfed.ru">
+    <label>Пароль</label>
+    <input type="password" id="login-password" placeholder="">
+    <div class="btn-row"><button onclick="signIn()" style="flex:1">Войти</button></div>
+    <div id="login-msg"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <div class="container">
+    <header>
+      <h1>BELFED · ПОЗИЦИИ</h1>
+      <div class="subtitle">Активные сделки — полный CRUD</div>
+      <div class="nav">
+        <a href="/dashboard.html">Дашборд</a>
+        <a href="/admin-analysis.html">Админ анализа</a>
+        <a href="#" onclick="signOut();return false;">Выйти</a>
+      </div>
+    </header>
+
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('list')">Открытые</button>
+      <button class="tab-btn" onclick="switchTab('new')">+ Новая позиция</button>
+      <button class="tab-btn" onclick="switchTab('closed')">История</button>
+    </div>
+
+    <!-- ============== LIST TAB ============== -->
+    <div id="tab-list" class="tab-pane active">
+      <div class="section">
+        <div class="flex-spread">
+          <h2 style="border:none;padding:0;margin:0">Открытые и частично закрытые</h2>
+          <button class="secondary" onclick="loadList()">Обновить</button>
+        </div>
+        <div class="table-wrap" style="margin-top:14px">
+          <table id="positions-table">
+            <thead>
+              <tr>
+                <th>#</th><th>Класс</th><th>Тикер</th><th>Напр</th>
+                <th>Вход</th><th>Стоп</th>
+                <th>Це1</th><th>Це2</th><th>Це3</th>
+                <th>Пуб</th><th>Действия</th>
+              </tr>
+            </thead>
+            <tbody id="positions-tbody">
+              <tr><td colspan="11" style="text-align:center;opacity:0.5">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============== NEW TAB ============== -->
+    <div id="tab-new" class="tab-pane">
+      <div class="section">
+        <h2 id="form-title">Новая позиция</h2>
+        <div class="row">
+          <div>
+            <label>Класс актива</label>
+            <select id="f-asset_class"><option value="stock">Акция</option><option value="crypto">Крипта</option></select>
+          </div>
+          <div>
+            <label>Тикер</label>
+            <input id="f-ticker" placeholder="AAPL или BTC" oninput="this.value=this.value.toUpperCase()">
+          </div>
+          <div>
+            <label>Направление</label>
+            <select id="f-direction"><option value="long">Long</option><option value="short">Short</option></select>
+          </div>
+        </div>
+        <div class="row">
+          <div><label>Цена входа</label><input id="f-entry_price" type="number" step="any" placeholder="0.00"></div>
+          <div><label>Стоп-лосс</label><input id="f-stop_price" type="number" step="any" placeholder="0.00"></div>
+        </div>
+        <div class="row">
+          <div><label>Цель 1</label><input id="f-target_1" type="number" step="any" placeholder="опционально"></div>
+          <div><label>Цель 2</label><input id="f-target_2" type="number" step="any" placeholder="опционально"></div>
+          <div><label>Цель 3</label><input id="f-target_3" type="number" step="any" placeholder="опционально"></div>
+        </div>
+        <label>TradingView URL (опционально)</label>
+        <input id="f-tradingview_url" placeholder="https://www.tradingview.com/x/...">
+
+        <label>Комментарий RU (опционально)</label>
+        <textarea id="f-comment_ru" placeholder="Коротко по идее..."></textarea>
+
+        <label>Комментарий EN (опционально)</label>
+        <textarea id="f-comment_en" placeholder="Если пусто—бот предложит автоперевод"></textarea>
+        <button class="secondary" type="button" onclick="translateComment()" style="margin-top:8px;font-size:11px;padding:7px 14px">Перевести RU → EN</button>
+
+        <div class="checkbox-row"><input type="checkbox" id="f-publish_to_ru"><label for="f-publish_to_ru" style="margin:0">Опубликовать в RU канал</label></div>
+        <div class="checkbox-row"><input type="checkbox" id="f-publish_to_en"><label for="f-publish_to_en" style="margin:0">Опубликовать в EN канал</label></div>
+
+        <div class="btn-row">
+          <button onclick="savePosition()">Сохранить и опубликовать</button>
+          <button class="secondary" onclick="resetForm()">Сброс</button>
+        </div>
+        <div id="form-msg"></div>
+      </div>
+    </div>
+
+    <!-- ============== HISTORY TAB ============== -->
+    <div id="tab-closed" class="tab-pane">
+      <div class="section">
+        <h2 style="border:none;padding:0">Закрытые позиции</h2>
+        <div class="table-wrap" style="margin-top:14px">
+          <table>
+            <thead>
+              <tr><th>#</th><th>Класс</th><th>Тикер</th><th>Напр</th><th>Вход</th><th>Выход</th><th>Результат R</th><th>Закрыто</th><th>Sheet</th></tr>
+            </thead>
+            <tbody id="closed-tbody"><tr><td colspan="9" style="text-align:center;opacity:0.5">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: close position -->
+<div id="modal-close" class="modal" style="display:none">
+  <div class="modal-box">
+    <h3>Закрыть позицию</h3>
+    <div id="close-info" class="muted" style="margin-bottom:10px"></div>
+    <label>Цена выхода</label>
+    <input id="close-exit_price" type="number" step="any">
+    <div class="checkbox-row"><input type="checkbox" id="close-publish-ru"><label for="close-publish-ru" style="margin:0">Опубликовать RU</label></div>
+    <div class="checkbox-row"><input type="checkbox" id="close-publish-en"><label for="close-publish-en" style="margin:0">Опубликовать EN</label></div>
+    <div class="btn-row">
+      <button onclick="confirmClose()">Закрыть и опубликовать</button>
+      <button class="secondary" onclick="hideModal('modal-close')">Отмена</button>
+    </div>
+    <div id="close-msg"></div>
+  </div>
+</div>
+
+<!-- Modal: move stop -->
+<div id="modal-stop" class="modal" style="display:none">
+  <div class="modal-box">
+    <h3>Сдвинуть стоп</h3>
+    <div id="stop-info" class="muted" style="margin-bottom:10px"></div>
+    <label>Новый стоп</label>
+    <input id="stop-new" type="number" step="any">
+    <div class="checkbox-row"><input type="checkbox" id="stop-publish-ru"><label for="stop-publish-ru" style="margin:0">Опубликовать RU</label></div>
+    <div class="checkbox-row"><input type="checkbox" id="stop-publish-en"><label for="stop-publish-en" style="margin:0">Опубликовать EN</label></div>
+    <div class="btn-row">
+      <button onclick="confirmStop()">Обновить</button>
+      <button class="secondary" onclick="hideModal('modal-stop')">Отмена</button>
+    </div>
+    <div id="stop-msg"></div>
+  </div>
+</div>
+
+<!-- Modal: comment -->
+<div id="modal-comment" class="modal" style="display:none">
+  <div class="modal-box">
+    <h3>Комментарий к позиции</h3>
+    <div id="comment-info" class="muted" style="margin-bottom:10px"></div>
+    <label>Комментарий RU</label>
+    <textarea id="comment-ru"></textarea>
+    <button class="secondary" type="button" onclick="translateModalComment()" style="margin-top:8px;font-size:11px;padding:7px 14px">Перевести RU → EN</button>
+    <label>Комментарий EN</label>
+    <textarea id="comment-en"></textarea>
+    <div class="checkbox-row"><input type="checkbox" id="comment-publish-ru" checked><label for="comment-publish-ru" style="margin:0">Опубликовать RU</label></div>
+    <div class="checkbox-row"><input type="checkbox" id="comment-publish-en" checked><label for="comment-publish-en" style="margin:0">Опубликовать EN</label></div>
+    <div class="btn-row">
+      <button onclick="confirmComment()">Сохранить и опубликовать</button>
+      <button class="secondary" onclick="hideModal('modal-comment')">Отмена</button>
+    </div>
+    <div id="comment-msg"></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL  = 'https://obujqvqqmyfcfflhqvud.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9idWpxdnFxbXlmY2ZmbGhxdnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDgxNjYsImV4cCI6MjA4OTkyNDE2Nn0.syl4YBLbf8aBitxyK3gCL51pPYxWjEW99mMTXJaQQ8w';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+let editingId = null;
+let modalCtx = {};
+
+// ========== Auth ==========
+async function signIn() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const msg = document.getElementById('login-msg');
+  msg.innerHTML = '';
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) {
+    msg.innerHTML = '<div class="msg err">' + error.message + '</div>';
+    return;
+  }
+  await checkAdminAndShow();
+}
+
+async function signOut() {
+  await sb.auth.signOut();
+  location.reload();
+}
+
+async function checkAdminAndShow() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+    return;
+  }
+  const { data: profile } = await sb
+    .from('profiles')
+    .select('subscription_status,email')
+    .eq('id', session.user.id)
+    .maybeSingle();
+  if (!profile || profile.subscription_status !== 'admin') {
+    document.getElementById('login-msg').innerHTML =
+      '<div class="msg err">Access denied — your account is not an admin.</div>';
+    return;
+  }
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  loadList();
+  loadClosed();
+}
+
+// ========== Helpers ==========
+function fmt(p) {
+  if (p === null || p === undefined) return '—';
+  const v = parseFloat(p);
+  if (!isFinite(v)) return String(p);
+  if (v >= 1000) return v.toLocaleString('en-US', { maximumFractionDigits: 2 });
+  if (v >= 10) return v.toFixed(2);
+  return v.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
+}
+
+function showMsg(elId, text, kind='ok') {
+  document.getElementById(elId).innerHTML = `<div class="msg ${kind}">${text}</div>`;
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+function showModal(id) { document.getElementById(id).style.display = 'flex'; }
+function hideModal(id) { document.getElementById(id).style.display = 'none'; }
+
+// ========== Admin proxy (auth=user JWT, server attaches x-bot-secret) ==========
+async function adminAction(payload) {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return { ok: false, error: 'no_session' };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/positions-admin-action`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, data };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
+async function translateComment() {
+  const ru = document.getElementById('f-comment_ru').value.trim();
+  if (!ru) { return showMsg('form-msg', 'Сначала напиши RU комментарий', 'err'); }
+  showMsg('form-msg', 'Перевожу...', 'info');
+  const r = await adminAction({ action: 'translate', text: ru, source: 'ru', target: 'en' });
+  if (r.ok && r.data?.translation) {
+    document.getElementById('f-comment_en').value = r.data.translation;
+    showMsg('form-msg', `✓ Переведено через ${r.data.provider || 'AI'}`, 'ok');
+  } else {
+    showMsg('form-msg', `Перевод не удался: ${r.data?.error || r.status || r.error}`, 'err');
+  }
+}
+
+async function translateModalComment() {
+  const ru = document.getElementById('comment-ru').value.trim();
+  if (!ru) { return showMsg('comment-msg', 'Сначала напиши RU комментарий', 'err'); }
+  showMsg('comment-msg', 'Перевожу...', 'info');
+  const r = await adminAction({ action: 'translate', text: ru, source: 'ru', target: 'en' });
+  if (r.ok && r.data?.translation) {
+    document.getElementById('comment-en').value = r.data.translation;
+    showMsg('comment-msg', `✓ Переведено через ${r.data.provider || 'AI'}`, 'ok');
+  } else {
+    showMsg('comment-msg', `Перевод не удался: ${r.data?.error || r.status || r.error}`, 'err');
+  }
+}
+
+// ========== Publisher (via authenticated admin proxy) ==========
+async function callPublisher(event, position_id, extra={}) {
+  return await adminAction({ action: 'publish', event, position_id, ...extra });
+}
+
+// ========== List ==========
+async function loadList() {
+  const tbody = document.getElementById('positions-tbody');
+  tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;opacity:0.5">Loading...</td></tr>';
+  const { data, error } = await sb
+    .from('active_positions')
+    .select('*')
+    .in('status', ['open', 'partially_closed'])
+    .order('opened_at', { ascending: false });
+  if (error) {
+    tbody.innerHTML = `<tr><td colspan="11"><div class="msg err">${error.message}</div></td></tr>`;
+    return;
+  }
+  if (!data || data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;opacity:0.5;padding:24px">No open positions</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(p => {
+    const dirClass = p.direction === 'long' ? 'dir-long' : 'dir-short';
+    const dirArrow = p.direction === 'long' ? '📈' : '📉';
+    const tHit = (h) => h ? '<span class="tag-hit">HIT</span>' : '';
+    const pub = [
+      p.publish_to_ru ? 'RU' : '',
+      p.publish_to_en ? 'EN' : ''
+    ].filter(Boolean).join('+') || '—';
+    return `
+      <tr>
+        <td>${p.id}</td>
+        <td>${p.asset_class}</td>
+        <td><b>${p.ticker}</b></td>
+        <td class="${dirClass}">${dirArrow} ${p.direction}</td>
+        <td>${fmt(p.entry_price)}</td>
+        <td>${fmt(p.stop_price)}</td>
+        <td>${fmt(p.target_1)}${tHit(p.target_1_hit_at)}</td>
+        <td>${fmt(p.target_2)}${tHit(p.target_2_hit_at)}</td>
+        <td>${fmt(p.target_3)}${tHit(p.target_3_hit_at)}</td>
+        <td>${pub}</td>
+        <td class="actions-cell">
+          <button class="secondary" onclick="openComment(${p.id},'${p.ticker}')">💬</button>
+          <button class="secondary" onclick="openMoveStop(${p.id},'${p.ticker}',${p.stop_price})">🛡</button>
+          <button class="secondary" onclick="editPosition(${p.id})">✎</button>
+          <button class="danger" onclick="openClose(${p.id},'${p.ticker}',${p.entry_price})">✕</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function loadClosed() {
+  const tbody = document.getElementById('closed-tbody');
+  const { data, error } = await sb
+    .from('active_positions')
+    .select('id,asset_class,ticker,direction,entry_price,exit_price,result_rr,closed_at,archived_to_sheet_at')
+    .in('status', ['closed', 'cancelled'])
+    .order('closed_at', { ascending: false })
+    .limit(100);
+  if (error) {
+    tbody.innerHTML = `<tr><td colspan="9"><div class="msg err">${error.message}</div></td></tr>`;
+    return;
+  }
+  if (!data || data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;opacity:0.5;padding:18px">No closed positions yet</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(p => `
+    <tr>
+      <td>${p.id}</td>
+      <td>${p.asset_class}</td>
+      <td><b>${p.ticker}</b></td>
+      <td class="${p.direction==='long'?'dir-long':'dir-short'}">${p.direction}</td>
+      <td>${fmt(p.entry_price)}</td>
+      <td>${fmt(p.exit_price)}</td>
+      <td>${p.result_rr !== null ? (parseFloat(p.result_rr) >= 0 ? '+' : '') + parseFloat(p.result_rr).toFixed(2) + 'R' : '—'}</td>
+      <td>${p.closed_at ? new Date(p.closed_at).toLocaleString() : '—'}</td>
+      <td>${p.archived_to_sheet_at ? '✓' : '—'}</td>
+    </tr>
+  `).join('');
+}
+
+// ========== Save (create/update) ==========
+function getFormPayload() {
+  const num = (id) => {
+    const v = document.getElementById(id).value;
+    return v === '' ? null : parseFloat(v);
+  };
+  const str = (id) => {
+    const v = document.getElementById(id).value.trim();
+    return v === '' ? null : v;
+  };
+  return {
+    asset_class: document.getElementById('f-asset_class').value,
+    ticker: document.getElementById('f-ticker').value.trim().toUpperCase().replace(/^\$/, ''),
+    direction: document.getElementById('f-direction').value,
+    entry_price: num('f-entry_price'),
+    stop_price:  num('f-stop_price'),
+    target_1: num('f-target_1'),
+    target_2: num('f-target_2'),
+    target_3: num('f-target_3'),
+    tradingview_url: str('f-tradingview_url'),
+    comment_ru: str('f-comment_ru'),
+    comment_en: str('f-comment_en'),
+    publish_to_ru: document.getElementById('f-publish_to_ru').checked,
+    publish_to_en: document.getElementById('f-publish_to_en').checked,
+  };
+}
+
+function validate(p) {
+  if (!p.ticker) return 'Введи тикер';
+  if (!p.entry_price || p.entry_price <= 0) return 'Цена входа должна быть положительной';
+  if (!p.stop_price || p.stop_price <= 0) return 'Стоп должен быть положительным';
+  if (p.direction === 'long' && p.stop_price >= p.entry_price) return 'Для long: стоп должен быть НИЖЕ цены входа';
+  if (p.direction === 'short' && p.stop_price <= p.entry_price) return 'Для short: стоп должен быть ВЫШЕ цены входа';
+  return null;
+}
+
+async function savePosition() {
+  const p = getFormPayload();
+  const err = validate(p);
+  if (err) return showMsg('form-msg', err, 'err');
+
+  let row;
+  if (editingId) {
+    const { data, error } = await sb.from('active_positions')
+      .update(p).eq('id', editingId).select().maybeSingle();
+    if (error) return showMsg('form-msg', error.message, 'err');
+    row = data;
+    showMsg('form-msg', `Обновлено #${row.id} ${row.ticker}`, 'ok');
+  } else {
+    const { data, error } = await sb.from('active_positions')
+      .insert({ ...p, status: 'open' }).select().maybeSingle();
+    if (error) return showMsg('form-msg', error.message, 'err');
+    row = data;
+    showMsg('form-msg', `Создано #${row.id} ${row.ticker}`, 'ok');
+  }
+
+  // Publish if requested AND it's a brand-new position (don't double-fire on edit)
+  if (!editingId && (p.publish_to_ru || p.publish_to_en)) {
+    const r = await callPublisher('opened', row.id, { triggered_price: p.entry_price });
+    if (r.ok) {
+      showMsg('form-msg', `Создано #${row.id} ${row.ticker} — опубликовано.`, 'ok');
+    } else {
+      showMsg('form-msg',
+        `Создано #${row.id}, но публикация не прошла (status ${r.status}). Используй бота или проверь логи.`,
+        'info');
+    }
+  }
+  editingId = null;
+  document.getElementById('form-title').textContent = 'Новая позиция';
+  loadList();
+}
+
+function resetForm() {
+  ['f-ticker','f-entry_price','f-stop_price','f-target_1','f-target_2','f-target_3',
+   'f-tradingview_url','f-comment_ru','f-comment_en'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-asset_class').value = 'stock';
+  document.getElementById('f-direction').value = 'long';
+  document.getElementById('f-publish_to_ru').checked = false;
+  document.getElementById('f-publish_to_en').checked = false;
+  document.getElementById('form-msg').innerHTML = '';
+  editingId = null;
+  document.getElementById('form-title').textContent = 'Новая позиция';
+}
+
+async function editPosition(id) {
+  const { data, error } = await sb.from('active_positions').select('*').eq('id', id).maybeSingle();
+  if (error || !data) return alert('Not found: ' + (error?.message ?? ''));
+  document.getElementById('f-asset_class').value = data.asset_class;
+  document.getElementById('f-ticker').value = data.ticker;
+  document.getElementById('f-direction').value = data.direction;
+  document.getElementById('f-entry_price').value = data.entry_price ?? '';
+  document.getElementById('f-stop_price').value = data.stop_price ?? '';
+  document.getElementById('f-target_1').value = data.target_1 ?? '';
+  document.getElementById('f-target_2').value = data.target_2 ?? '';
+  document.getElementById('f-target_3').value = data.target_3 ?? '';
+  document.getElementById('f-tradingview_url').value = data.tradingview_url ?? '';
+  document.getElementById('f-comment_ru').value = data.comment_ru ?? '';
+  document.getElementById('f-comment_en').value = data.comment_en ?? '';
+  document.getElementById('f-publish_to_ru').checked = !!data.publish_to_ru;
+  document.getElementById('f-publish_to_en').checked = !!data.publish_to_en;
+  editingId = id;
+  document.getElementById('form-title').textContent = `Редактирование #${id} ${data.ticker} (без автопубликации)`;
+  document.querySelector('.tab-btn:nth-child(2)').click();
+}
+
+// ========== Close ==========
+function openClose(id, ticker, entry) {
+  modalCtx = { id, ticker, entry };
+  document.getElementById('close-info').textContent = `#${id} ${ticker} (entry ${fmt(entry)})`;
+  document.getElementById('close-exit_price').value = '';
+  document.getElementById('close-publish-ru').checked = true;
+  document.getElementById('close-publish-en').checked = true;
+  document.getElementById('close-msg').innerHTML = '';
+  showModal('modal-close');
+}
+
+async function confirmClose() {
+  const exit = parseFloat(document.getElementById('close-exit_price').value);
+  if (!exit || exit <= 0) return showMsg('close-msg', 'Введи корректную цену выхода', 'err');
+
+  const { data: pos } = await sb.from('active_positions')
+    .select('entry_price,stop_price,direction,publish_to_ru,publish_to_en')
+    .eq('id', modalCtx.id).maybeSingle();
+  if (!pos) return showMsg('close-msg', 'Позиция не найдена', 'err');
+  const risk = Math.abs(parseFloat(pos.entry_price) - parseFloat(pos.stop_price));
+  const dir = pos.direction;
+  const rr = dir === 'long'
+    ? (exit - parseFloat(pos.entry_price)) / risk
+    : (parseFloat(pos.entry_price) - exit) / risk;
+
+  const updates = {
+    status: 'closed',
+    closed_at: new Date().toISOString(),
+    exit_price: exit,
+    result_rr: Math.round(rr * 100) / 100,
+    publish_to_ru: document.getElementById('close-publish-ru').checked,
+    publish_to_en: document.getElementById('close-publish-en').checked,
+  };
+  const { error } = await sb.from('active_positions').update(updates).eq('id', modalCtx.id);
+  if (error) return showMsg('close-msg', error.message, 'err');
+
+  if (updates.publish_to_ru || updates.publish_to_en) {
+    const r = await callPublisher('closed', modalCtx.id, { triggered_price: exit });
+    if (!r.ok) {
+      showMsg('close-msg', `Закрыто в БД. Публикация не прошла (${r.status}). Используй бота или проверь логи.`, 'info');
+      setTimeout(() => { hideModal('modal-close'); loadList(); loadClosed(); }, 1800);
+      return;
+    }
+  }
+  showMsg('close-msg', `✓ Закрыто @ ${fmt(exit)} · ${rr.toFixed(2)}R`, 'ok');
+  setTimeout(() => { hideModal('modal-close'); loadList(); loadClosed(); }, 900);
+}
+
+// ========== Move stop ==========
+function openMoveStop(id, ticker, currentStop) {
+  modalCtx = { id, ticker, currentStop };
+  document.getElementById('stop-info').textContent = `#${id} ${ticker} — current stop ${fmt(currentStop)}`;
+  document.getElementById('stop-new').value = '';
+  document.getElementById('stop-publish-ru').checked = false;
+  document.getElementById('stop-publish-en').checked = false;
+  document.getElementById('stop-msg').innerHTML = '';
+  showModal('modal-stop');
+}
+
+async function confirmStop() {
+  const newStop = parseFloat(document.getElementById('stop-new').value);
+  if (!newStop || newStop <= 0) return showMsg('stop-msg', 'Введи корректный стоп', 'err');
+  const oldStop = modalCtx.currentStop;
+  const { error } = await sb.from('active_positions')
+    .update({ stop_price: newStop }).eq('id', modalCtx.id);
+  if (error) return showMsg('stop-msg', error.message, 'err');
+
+  if (document.getElementById('stop-publish-ru').checked || document.getElementById('stop-publish-en').checked) {
+    const r = await callPublisher('stop_moved', modalCtx.id, { old_stop: oldStop, new_stop: newStop });
+    if (!r.ok) showMsg('stop-msg', `Стоп обновлён. Публикация не прошла (${r.status}).`, 'info');
+    else showMsg('stop-msg', `✓ Стоп ${fmt(oldStop)} → ${fmt(newStop)} · опубликовано`, 'ok');
+  } else {
+    showMsg('stop-msg', `✓ Стоп ${fmt(oldStop)} → ${fmt(newStop)}`, 'ok');
+  }
+  setTimeout(() => { hideModal('modal-stop'); loadList(); }, 900);
+}
+
+// ========== Comment ==========
+async function openComment(id, ticker) {
+  modalCtx = { id, ticker };
+  document.getElementById('comment-info').textContent = `#${id} ${ticker}`;
+  const { data } = await sb.from('active_positions').select('comment_ru,comment_en').eq('id', id).maybeSingle();
+  document.getElementById('comment-ru').value = data?.comment_ru ?? '';
+  document.getElementById('comment-en').value = data?.comment_en ?? '';
+  document.getElementById('comment-msg').innerHTML = '';
+  showModal('modal-comment');
+}
+
+async function confirmComment() {
+  const ru = document.getElementById('comment-ru').value.trim();
+  const en = document.getElementById('comment-en').value.trim();
+  if (!ru && !en) return showMsg('comment-msg', 'Введи хотя бы один комментарий', 'err');
+  const { error } = await sb.from('active_positions')
+    .update({ comment_ru: ru || null, comment_en: en || null })
+    .eq('id', modalCtx.id);
+  if (error) return showMsg('comment-msg', error.message, 'err');
+
+  const pubRu = document.getElementById('comment-publish-ru').checked;
+  const pubEn = document.getElementById('comment-publish-en').checked;
+  if (pubRu || pubEn) {
+    // Temporarily set publish flags so the publisher pushes to right channels
+    await sb.from('active_positions')
+      .update({ publish_to_ru: pubRu, publish_to_en: pubEn })
+      .eq('id', modalCtx.id);
+    const r = await callPublisher('comment', modalCtx.id);
+    if (r.ok) showMsg('comment-msg', '✓ Сохранено и опубликовано', 'ok');
+    else showMsg('comment-msg', `Сохранено. Публикация не прошла (${r.status}).`, 'info');
+  } else {
+    showMsg('comment-msg', '✓ Сохранено', 'ok');
+  }
+  setTimeout(() => { hideModal('modal-comment'); loadList(); }, 900);
+}
+
+// ========== Init ==========
+sb.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN') checkAdminAndShow();
+});
+checkAdminAndShow();
+</script>
+
+</body>
+</html>
