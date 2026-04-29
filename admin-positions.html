@@ -97,6 +97,12 @@ label[data-tooltip]::before{content:'?';position:absolute;right:0;top:50%;transf
 .change-type-btn{font-family:var(--font);font-size:11px;letter-spacing:1.5px;padding:7px 14px;background:transparent;border:1px dashed var(--muted);color:var(--ink);cursor:pointer;margin-bottom:16px;text-transform:uppercase}
 .change-type-btn:hover{border-style:solid;background:#f0ede4}
 .asset-class-badge{display:inline-block;padding:3px 10px;font-size:11px;letter-spacing:1px;background:var(--ink);color:var(--bg);margin-left:10px;font-weight:bold}
+.status-partial{color:#ff9500;font-weight:600}
+.badge-partial{display:inline-block;padding:2px 6px;background:#ff9500;color:white;font-size:10px;border-radius:3px;margin-left:6px;letter-spacing:0.5px;font-weight:bold;vertical-align:middle}
+td.col-rem-partial{background:#fff4e0;color:#ff9500;font-weight:bold}
+.partial-hint{font-size:11px;opacity:0.7;margin-top:4px;letter-spacing:0.3px;text-transform:none}
+.btn-partial{background:#ff9500;color:#fff;border-color:#ff9500}
+.btn-partial:hover{background:#e68500}
 @media(max-width:700px){body{padding:14px 10px;font-size:12px}h1{font-size:16px;letter-spacing:1px}th,td{padding:6px 7px;font-size:10px}.section{padding:16px 14px}.asset-picker-btn{padding:24px 14px;min-width:140px}.asset-picker-btn .ap-emoji{font-size:32px}}
 </style>
 </head>
@@ -151,11 +157,11 @@ label[data-tooltip]::before{content:'?';position:absolute;right:0;top:50%;transf
                 <th>#</th><th data-tooltip="Класс актива">Класс</th><th>Тикер</th><th data-tooltip="Направление">Напр</th>
                 <th>Вход</th><th>Стоп</th>
                 <th data-tooltip="Цель тейк-профита 1">Це1</th><th data-tooltip="Цель тейк-профита 2">Це2</th><th data-tooltip="Цель тейк-профита 3">Це3</th>
-                <th data-tooltip="Опубликовано в каналах">Пуб</th><th data-tooltip="Грейд × Риск на сделку">G/R</th><th>Действия</th>
+                <th data-tooltip="Опубликовано в каналах">Пуб</th><th data-tooltip="Грейд × Риск на сделку">G/R</th><th data-tooltip="Оставшийся размер">Ост</th><th>Действия</th>
               </tr>
             </thead>
             <tbody id="positions-tbody">
-              <tr><td colspan="12" style="text-align:center;opacity:0.5">Loading...</td></tr>
+              <tr><td colspan="13" style="text-align:center;opacity:0.5">Loading...</td></tr>
             </tbody>
           </table>
         </div>
@@ -254,9 +260,9 @@ label[data-tooltip]::before{content:'?';position:absolute;right:0;top:50%;transf
         <div class="table-wrap" style="margin-top:14px">
           <table>
             <thead>
-              <tr><th>#</th><th>Класс</th><th>Тикер</th><th>Напр</th><th>Вход</th><th>Выход</th><th>Результат R</th><th>Закрыто</th><th>Sheet</th></tr>
+              <tr><th>#</th><th>Класс</th><th>Тикер</th><th>Напр</th><th>Вход</th><th>Выход</th><th>Результат R</th><th data-tooltip="Кол-во частичных закрытий до полного">Закрытия</th><th>Закрыто</th><th>Sheet</th></tr>
             </thead>
-            <tbody id="closed-tbody"><tr><td colspan="9" style="text-align:center;opacity:0.5">Loading...</td></tr></tbody>
+            <tbody id="closed-tbody"><tr><td colspan="10" style="text-align:center;opacity:0.5">Loading...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -295,6 +301,32 @@ label[data-tooltip]::before{content:'?';position:absolute;right:0;top:50%;transf
       <button class="secondary" onclick="hideModal('modal-stop')">Отмена</button>
     </div>
     <div id="stop-msg"></div>
+  </div>
+</div>
+
+<!-- Modal: partial close -->
+<div id="modal-partial" class="modal" style="display:none">
+  <div class="modal-box">
+    <h3>Частичное закрытие</h3>
+    <div id="partial-info" class="muted" style="margin-bottom:10px"></div>
+    <label>% к закрытию</label>
+    <input id="partial-pct" type="number" min="1" max="100" step="1" value="33" oninput="updatePartialPreview()">
+    <div id="partial-remaining" class="partial-hint">Останется после: 67%</div>
+    <label>Цена выхода</label>
+    <input id="partial-exit_price" type="number" step="any" oninput="updatePartialPreview()">
+    <label>Результат R (авто)</label>
+    <input id="partial-rr" type="text" readonly style="opacity:0.8">
+    <label>Комментарий RU (опционально)</label>
+    <textarea id="partial-comment-ru" maxlength="280" placeholder="Коротко по идее..."></textarea>
+    <label>Комментарий EN (опционально)</label>
+    <textarea id="partial-comment-en" maxlength="280" placeholder="Short note..."></textarea>
+    <div class="checkbox-row"><input type="checkbox" id="partial-publish-ru"><label for="partial-publish-ru" style="margin:0">Опубликовать в RU канал</label></div>
+    <div class="checkbox-row"><input type="checkbox" id="partial-publish-en"><label for="partial-publish-en" style="margin:0">Опубликовать в EN канал</label></div>
+    <div class="btn-row">
+      <button class="btn-partial" onclick="confirmPartial()">Применить частичное закрытие</button>
+      <button class="secondary" onclick="hideModal('modal-partial')">Отмена</button>
+    </div>
+    <div id="partial-msg"></div>
   </div>
 </div>
 
@@ -486,7 +518,7 @@ function renderOpenList() {
   const filtered = openListCache.filter(p => matchesAsset(p.asset_class, openAssetFilter));
   if (filtered.length === 0) {
     const empty = openAssetFilter === 'crypto' ? I18N.noOpenCrypto : I18N.noOpenStock;
-    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;opacity:0.5;padding:24px">${empty}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;opacity:0.5;padding:24px">${empty}</td></tr>`;
     return;
   }
   tbody.innerHTML = filtered.map(p => {
@@ -500,9 +532,21 @@ function renderOpenList() {
     const grade = p.grade ? `${p.grade}★` : '—';
     const riskR = (p.risk_r !== null && p.risk_r !== undefined) ? `${parseFloat(p.risk_r)}R` : '1R';
     const gr = (p.grade || (p.risk_r !== null && p.risk_r !== undefined)) ? `${grade} · ${riskR}` : '—';
+    // Остаток %: 100 (или null) — позиция целая; меньше — частично закрыта.
+    const rem = (p.remaining_pct === null || p.remaining_pct === undefined) ? 100 : parseFloat(p.remaining_pct);
+    const isPartial = p.status === 'partial' || p.status === 'partially_closed' || (rem < 100 && rem > 0);
+    const remCell = (rem >= 100)
+      ? `<td>—</td>`
+      : `<td class="col-rem-partial">${Math.round(rem)}%</td>`;
+    const partialBadge = isPartial ? '<span class="badge-partial">ЧАСТИЧНО</span>' : '';
+    // Кнопка частичного закрытия — только для open/partial и есть остаток.
+    const canPartial = (p.status === 'open' || p.status === 'partial' || p.status === 'partially_closed') && rem > 0;
+    const partialBtn = canPartial
+      ? `<button class="secondary" style="color:#ff9500;border-color:#ff9500" data-tooltip="Закрыть часть позиции" onclick="openPartial(${p.id},'${p.ticker}',${p.entry_price},${p.stop_price},'${p.direction}',${rem})">🔻</button>`
+      : '';
     return `
       <tr>
-        <td>${p.id}</td>
+        <td>${p.id}${partialBadge}</td>
         <td>${p.asset_class}</td>
         <td><b>${p.ticker}</b></td>
         <td class="${dirClass}">${dirArrow} ${p.direction}</td>
@@ -513,9 +557,11 @@ function renderOpenList() {
         <td>${fmt(p.target_3)}${tHit(p.target_3_hit_at)}</td>
         <td>${pub}</td>
         <td>${gr}</td>
+        ${remCell}
         <td class="actions-cell">
           <button class="secondary" data-tooltip="Добавить комментарий" onclick="openComment(${p.id},'${p.ticker}')">💬</button>
           <button class="secondary" data-tooltip="Перенести стоп" onclick="openMoveStop(${p.id},'${p.ticker}',${p.stop_price})">🛡</button>
+          ${partialBtn}
           <button class="secondary" data-tooltip="Редактировать позицию" onclick="editPosition(${p.id})">✎</button>
           <button class="danger" data-tooltip="Закрыть позицию" onclick="openClose(${p.id},'${p.ticker}',${p.entry_price})">✕</button>
         </td>
@@ -526,14 +572,14 @@ function renderOpenList() {
 
 async function loadList() {
   const tbody = document.getElementById('positions-tbody');
-  tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;opacity:0.5">${I18N.loading}</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;opacity:0.5">${I18N.loading}</td></tr>`;
   const { data, error } = await sb
     .from('active_positions')
     .select('*')
-    .in('status', ['open', 'partially_closed'])
+    .in('status', ['open', 'partial', 'partially_closed'])
     .order('opened_at', { ascending: false });
   if (error) {
-    tbody.innerHTML = `<tr><td colspan="12"><div class="msg err">${error.message}</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="13"><div class="msg err">${error.message}</div></td></tr>`;
     return;
   }
   openListCache = data || [];
@@ -566,10 +612,15 @@ function renderClosedList() {
   const filtered = closedListCache.filter(p => matchesAsset(p.asset_class, closedAssetFilter));
   if (filtered.length === 0) {
     const empty = closedAssetFilter === 'crypto' ? I18N.noClosedCrypto : I18N.noClosedStock;
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;opacity:0.5;padding:18px">${empty}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;opacity:0.5;padding:18px">${empty}</td></tr>`;
     return;
   }
-  tbody.innerHTML = filtered.map(p => `
+  tbody.innerHTML = filtered.map(p => {
+    const closesN = (p.partial_closes && Array.isArray(p.partial_closes))
+      ? p.partial_closes.length
+      : (p.partial_closes_count ?? 0);
+    const closesCell = closesN > 0 ? `${closesN}x частично → полное` : '—';
+    return `
     <tr>
       <td>${p.id}</td>
       <td>${p.asset_class}</td>
@@ -578,24 +629,37 @@ function renderClosedList() {
       <td>${fmt(p.entry_price)}</td>
       <td>${fmt(p.exit_price)}</td>
       <td>${p.result_rr !== null ? (parseFloat(p.result_rr) >= 0 ? '+' : '') + parseFloat(p.result_rr).toFixed(2) + 'R' : '—'}</td>
+      <td>${closesCell}</td>
       <td>${p.closed_at ? new Date(p.closed_at).toLocaleString() : '—'}</td>
       <td>${p.archived_to_sheet_at ? '✓' : '—'}</td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
 }
 
 async function loadClosed() {
   const tbody = document.getElementById('closed-tbody');
-  tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;opacity:0.5">${I18N.loading}</td></tr>`;
-  const { data, error } = await sb
+  tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;opacity:0.5">${I18N.loading}</td></tr>`;
+  // Пробуем вытянуть связанные partial_closes через embedded relation;
+  // если реляция ещё не настроена — возвращаемся к старому запросу.
+  let { data, error } = await sb
     .from('active_positions')
-    .select('id,asset_class,ticker,direction,entry_price,exit_price,result_rr,closed_at,archived_to_sheet_at')
+    .select('id,asset_class,ticker,direction,entry_price,exit_price,result_rr,closed_at,archived_to_sheet_at,partial_closes(id)')
     .in('status', ['closed', 'cancelled'])
     .order('closed_at', { ascending: false })
     .limit(100);
   if (error) {
-    tbody.innerHTML = `<tr><td colspan="9"><div class="msg err">${error.message}</div></td></tr>`;
-    return;
+    const fb = await sb
+      .from('active_positions')
+      .select('id,asset_class,ticker,direction,entry_price,exit_price,result_rr,closed_at,archived_to_sheet_at')
+      .in('status', ['closed', 'cancelled'])
+      .order('closed_at', { ascending: false })
+      .limit(100);
+    if (fb.error) {
+      tbody.innerHTML = `<tr><td colspan="10"><div class="msg err">${fb.error.message}</div></td></tr>`;
+      return;
+    }
+    data = fb.data;
+    error = null;
   }
   closedListCache = data || [];
   updateClosedCounts();
@@ -886,6 +950,80 @@ async function confirmComment() {
     showMsg('comment-msg', '✓ Сохранено', 'ok');
   }
   setTimeout(() => { hideModal('modal-comment'); loadList(); }, 900);
+}
+
+// ========== Частичное закрытие ==========
+// Открывает модалку частичного закрытия. currentRem — текущий remaining_pct (1–100);
+// пользователь может закрыть от 1 до currentRem процентов.
+function openPartial(id, ticker, entry, stop, direction, currentRem) {
+  modalCtx = { id, ticker, entry, stop, direction, currentRem };
+  document.getElementById('partial-info').textContent =
+    `#${id} ${ticker} (вход ${fmt(entry)}, стоп ${fmt(stop)}, остаток ${Math.round(currentRem)}%)`;
+  const pctInput = document.getElementById('partial-pct');
+  pctInput.max = Math.max(1, Math.round(currentRem));
+  pctInput.value = Math.min(33, pctInput.max);
+  document.getElementById('partial-exit_price').value = '';
+  document.getElementById('partial-rr').value = '';
+  document.getElementById('partial-comment-ru').value = '';
+  document.getElementById('partial-comment-en').value = '';
+  document.getElementById('partial-publish-ru').checked = false;
+  document.getElementById('partial-publish-en').checked = false;
+  document.getElementById('partial-msg').innerHTML = '';
+  updatePartialPreview();
+  showModal('modal-partial');
+}
+
+// Онлайн-превью: «Останется после» + расчёт R по direction/entry/stop/exit.
+function updatePartialPreview() {
+  const pct = parseFloat(document.getElementById('partial-pct').value) || 0;
+  const ctx = modalCtx || {};
+  const cur = (ctx.currentRem === undefined || ctx.currentRem === null) ? 100 : parseFloat(ctx.currentRem);
+  const remAfter = Math.max(0, Math.round((cur - pct) * 100) / 100);
+  document.getElementById('partial-remaining').textContent = `Останется после: ${remAfter}%`;
+  const exit = parseFloat(document.getElementById('partial-exit_price').value);
+  const entry = parseFloat(ctx.entry);
+  const stop = parseFloat(ctx.stop);
+  const rrEl = document.getElementById('partial-rr');
+  if (!isFinite(exit) || !isFinite(entry) || !isFinite(stop) || entry === stop) {
+    rrEl.value = '';
+    return;
+  }
+  const risk = Math.abs(entry - stop);
+  const rr = ctx.direction === 'long' ? (exit - entry) / risk : (entry - exit) / risk;
+  rrEl.value = (rr >= 0 ? '+' : '') + rr.toFixed(2) + 'R';
+}
+
+// Отправляет частичное закрытие в positions-admin-action.
+// Серверная логика (не в этом файле):
+//  - INSERT в partial_closes(position_id, exit_price, pct_closed, remaining_after, r_result, comment_*, source)
+//  - UPDATE active_positions SET remaining_pct = remaining_pct - pct_to_close,
+//      status = (remaining = 0 ? 'closed' : 'partial')
+//  - Если включены publish — вызвать positions-publish event='partial_closed'
+async function confirmPartial() {
+  const pct = parseInt(document.getElementById('partial-pct').value, 10);
+  const exit = parseFloat(document.getElementById('partial-exit_price').value);
+  const cur = parseFloat(modalCtx.currentRem || 100);
+  if (!pct || pct < 1 || pct > 100) return showMsg('partial-msg', 'Введите % от 1 до 100', 'err');
+  if (pct > cur) return showMsg('partial-msg', `Осталось всего ${Math.round(cur)}% — нельзя закрыть ${pct}%`, 'err');
+  if (!exit || exit <= 0) return showMsg('partial-msg', 'Введите корректную цену выхода', 'err');
+  const payload = {
+    action: 'partial_close',
+    position_id: modalCtx.id,
+    pct_to_close: pct,
+    exit_price: exit,
+    comment_ru: document.getElementById('partial-comment-ru').value.trim() || null,
+    comment_en: document.getElementById('partial-comment-en').value.trim() || null,
+    publish_to_ru: document.getElementById('partial-publish-ru').checked,
+    publish_to_en: document.getElementById('partial-publish-en').checked,
+  };
+  showMsg('partial-msg', 'Отправляю...', 'info');
+  const r = await adminAction(payload);
+  if (!r.ok) {
+    return showMsg('partial-msg', `Ошибка (${r.status || ''}): ${r.data?.error || r.error || 'unknown'}`, 'err');
+  }
+  const remAfter = Math.max(0, cur - pct);
+  showMsg('partial-msg', `✓ Закрыто ${pct}% · остаток ${Math.round(remAfter)}%`, 'ok');
+  setTimeout(() => { hideModal('modal-partial'); loadList(); loadClosed(); }, 1000);
 }
 
 // ========== Init ==========
