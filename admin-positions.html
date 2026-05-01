@@ -260,9 +260,9 @@ td.col-rem-partial{background:#fff4e0;color:#ff9500;font-weight:bold}
         <div class="table-wrap" style="margin-top:14px">
           <table>
             <thead>
-              <tr><th>#</th><th>Класс</th><th>Тикер</th><th>Напр</th><th>Вход</th><th>Выход</th><th>Результат R</th><th data-tooltip="Кол-во частичных закрытий до полного">Закрытия</th><th>Закрыто</th><th>Sheet</th></tr>
+              <tr><th>#</th><th>Класс</th><th>Тикер</th><th>Напр</th><th>Вход</th><th>Выход</th><th>Результат R</th><th data-tooltip="Кол-во частичных закрытий до полного">Закрытия</th><th>Закрыто</th><th>Sheet</th><th>Действия</th></tr>
             </thead>
-            <tbody id="closed-tbody"><tr><td colspan="10" style="text-align:center;opacity:0.5">Loading...</td></tr></tbody>
+            <tbody id="closed-tbody"><tr><td colspan="11" style="text-align:center;opacity:0.5">Loading...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -562,8 +562,10 @@ function renderOpenList() {
           <button class="secondary" data-tooltip="Добавить комментарий" onclick="openComment(${p.id},'${p.ticker}')">💬</button>
           <button class="secondary" data-tooltip="Перенести стоп" onclick="openMoveStop(${p.id},'${p.ticker}',${p.stop_price})">🛡</button>
           ${partialBtn}
+          <button class="secondary" data-tooltip="Добавить к позиции" onclick="addToPosition('${p.ticker}','${p.asset_class||'stock'}','${p.direction}')">➕</button>
           <button class="secondary" data-tooltip="Редактировать позицию" onclick="editPosition(${p.id})">✎</button>
           <button class="danger" data-tooltip="Закрыть позицию" onclick="openClose(${p.id},'${p.ticker}',${p.entry_price})">✕</button>
+          <button class="danger" data-tooltip="Удалить (TG + Sheet + БД)" onclick="deletePosition(${p.id},'${p.ticker}')">🗑</button>
         </td>
       </tr>
     `;
@@ -612,7 +614,7 @@ function renderClosedList() {
   const filtered = closedListCache.filter(p => matchesAsset(p.asset_class, closedAssetFilter));
   if (filtered.length === 0) {
     const empty = closedAssetFilter === 'crypto' ? I18N.noClosedCrypto : I18N.noClosedStock;
-    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;opacity:0.5;padding:18px">${empty}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;opacity:0.5;padding:18px">${empty}</td></tr>`;
     return;
   }
   tbody.innerHTML = filtered.map(p => {
@@ -632,13 +634,16 @@ function renderClosedList() {
       <td>${closesCell}</td>
       <td>${p.closed_at ? new Date(p.closed_at).toLocaleString() : '—'}</td>
       <td>${p.archived_to_sheet_at ? '✓' : '—'}</td>
+      <td class="actions-cell">
+        <button class="danger" data-tooltip="Удалить (TG + Sheet + БД)" onclick="deletePosition(${p.id},'${p.ticker}')">🗑</button>
+      </td>
     </tr>`;
   }).join('');
 }
 
 async function loadClosed() {
   const tbody = document.getElementById('closed-tbody');
-  tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;opacity:0.5">${I18N.loading}</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;opacity:0.5">${I18N.loading}</td></tr>`;
   // Пробуем вытянуть связанные partial_closes через embedded relation;
   // если реляция ещё не настроена — возвращаемся к старому запросу.
   let { data, error } = await sb
@@ -655,7 +660,7 @@ async function loadClosed() {
       .order('closed_at', { ascending: false })
       .limit(100);
     if (fb.error) {
-      tbody.innerHTML = `<tr><td colspan="10"><div class="msg err">${fb.error.message}</div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="11"><div class="msg err">${fb.error.message}</div></td></tr>`;
       return;
     }
     data = fb.data;
@@ -724,6 +729,7 @@ async function savePosition() {
   if (err) return showMsg('form-msg', err, 'err');
 
   let row;
+  const wasEditing = !!editingId;
   if (editingId) {
     const { data, error } = await sb.from('active_positions')
       .update(p).eq('id', editingId).select().maybeSingle();
@@ -739,13 +745,31 @@ async function savePosition() {
   }
 
   // Publish if requested AND it's a brand-new position (don't double-fire on edit)
-  if (!editingId && (p.publish_to_ru || p.publish_to_en)) {
+  if (!wasEditing && (p.publish_to_ru || p.publish_to_en)) {
     const r = await callPublisher('opened', row.id, { triggered_price: p.entry_price });
     if (r.ok) {
       showMsg('form-msg', `Создано #${row.id} ${row.ticker} — опубликовано.`, 'ok');
     } else {
       showMsg('form-msg',
         `Создано #${row.id}, но публикация не прошла (status ${r.status}). Используй бота или проверь логи.`,
+        'info');
+    }
+  }
+
+  // Edit broadcast: when an existing position was updated, re-render the
+  // original 'opened' Telegram message in both channels (silent skip after 48h).
+  if (wasEditing) {
+    const eb = await adminAction({ action: 'edit_broadcast', position_id: row.id });
+    if (eb.ok) {
+      const st = eb.data?.edit_status || {};
+      const parts = [];
+      if (st.ru) parts.push(`RU: ${st.ru}`);
+      if (st.en) parts.push(`EN: ${st.en}`);
+      const summary = parts.length ? ` — TG ${parts.join(', ')}` : '';
+      showMsg('form-msg', `Обновлено #${row.id} ${row.ticker}${summary}`, 'ok');
+    } else {
+      showMsg('form-msg',
+        `Обновлено #${row.id} в БД, но редактирование в TG не прошло (status ${eb.status}). Проверь логи.`,
         'info');
     }
   }
@@ -808,6 +832,48 @@ function resetForm() {
   editingId = null;
   document.getElementById('form-title').firstChild && (document.getElementById('form-title').firstChild.nodeValue = I18N.formTitleNew);
   applyAssetClassUi('stock');
+}
+
+// ========== Add to position ==========
+// Opens the New-position form with only the ticker/direction/asset_class
+// prefilled. The new row will be a fully independent position.
+function addToPosition(ticker, assetClass, direction) {
+  resetForm();
+  const cls = (assetClass === 'crypto') ? 'crypto' : 'stock';
+  document.getElementById('f-asset_class').value = cls;
+  document.getElementById('f-ticker').value = ticker || '';
+  document.getElementById('f-direction').value = direction || 'long';
+  applyAssetClassUi(cls);
+  document.getElementById('new-step-pick').style.display = 'none';
+  document.getElementById('new-step-form').style.display = 'block';
+  // Switch to the New-position tab
+  document.querySelector('.tab-btn:nth-child(2)').click();
+  setTimeout(() => {
+    const el = document.getElementById('f-entry_price');
+    if (el) el.focus();
+  }, 50);
+}
+
+// ========== Delete position ==========
+// Hard-deletes a position: TG deleteMessage on every event message, Sheet
+// row deleteDimension, DB row delete. Works on any status. Confirmation
+// required — irreversible.
+async function deletePosition(id, ticker) {
+  const ok = confirm(`⚠️ Удалить позицию #${id} ${ticker}?\n\n• Будут удалены сообщения в Telegram (RU + EN)\n• Будет удалена строка в Google Sheets\n• Будет удалена запись в БД\n\nЭто действие нельзя отменить.`);
+  if (!ok) return;
+  const r = await adminAction({ action: 'delete', position_id: id });
+  if (!r.ok) {
+    alert(`Ошибка удаления #${id}: ${r.data?.error || r.status || r.error || 'unknown'}`);
+    return;
+  }
+  const tg = r.data?.tg_results || {};
+  const sheet = r.data?.sheet_result || '—';
+  const tgSummary =
+    `RU ✓${tg.ru_ok ?? 0}/✕${tg.ru_fail ?? 0}, ` +
+    `EN ✓${tg.en_ok ?? 0}/✕${tg.en_fail ?? 0}`;
+  alert(`Удалено #${id} ${ticker}\nTG: ${tgSummary}\nSheet: ${sheet}`);
+  loadList();
+  loadClosed();
 }
 
 async function editPosition(id) {
