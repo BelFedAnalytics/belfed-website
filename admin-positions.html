@@ -968,16 +968,27 @@ async function confirmStop() {
   const newStop = parseFloat(document.getElementById('stop-new').value);
   if (!newStop || newStop <= 0) return showMsg('stop-msg', 'Введи корректный стоп', 'err');
   const oldStop = modalCtx.currentStop;
-  const { error } = await sb.from('active_positions')
-    .update({ stop_price: newStop }).eq('id', modalCtx.id);
-  if (error) return showMsg('stop-msg', error.message, 'err');
-
-  if (document.getElementById('stop-publish-ru').checked || document.getElementById('stop-publish-en').checked) {
-    const r = await callPublisher('stop_moved', modalCtx.id, { old_stop: oldStop, new_stop: newStop });
-    if (!r.ok) showMsg('stop-msg', `Стоп обновлён. Публикация не прошла (${r.status}).`, 'info');
-    else showMsg('stop-msg', `✓ Стоп ${fmt(oldStop)} → ${fmt(newStop)} · опубликовано`, 'ok');
+  const publish_to_ru = document.getElementById('stop-publish-ru').checked;
+  const publish_to_en = document.getElementById('stop-publish-en').checked;
+  // Атомарно: обновить BD + записать в Sheet + опционально опубликовать.
+  // Без Sheet write синхронизация (каждые 5 мин) вернёт старое значение.
+  const r = await adminAction({
+    action: 'stop_change',
+    position_id: modalCtx.id,
+    new_stop: newStop,
+    publish_to_ru,
+    publish_to_en,
+  });
+  if (!r.ok) {
+    return showMsg('stop-msg', `Ошибка: ${r.data?.error || r.status || r.error}`, 'err');
+  }
+  const sheetNote = r.data?.sheet_result === 'updated'
+    ? ''
+    : ` (sheet: ${r.data?.sheet_result || 'unknown'})`;
+  if (publish_to_ru || publish_to_en) {
+    showMsg('stop-msg', `✓ Стоп ${fmt(oldStop)} → ${fmt(newStop)} · опубликовано${sheetNote}`, 'ok');
   } else {
-    showMsg('stop-msg', `✓ Стоп ${fmt(oldStop)} → ${fmt(newStop)}`, 'ok');
+    showMsg('stop-msg', `✓ Стоп ${fmt(oldStop)} → ${fmt(newStop)}${sheetNote}`, 'ok');
   }
   setTimeout(() => { hideModal('modal-stop'); loadList(); }, 900);
 }
@@ -997,23 +1008,27 @@ async function confirmComment() {
   const ru = document.getElementById('comment-ru').value.trim();
   const en = document.getElementById('comment-en').value.trim();
   if (!ru && !en) return showMsg('comment-msg', 'Введи хотя бы один комментарий', 'err');
-  const { error } = await sb.from('active_positions')
-    .update({ comment_ru: ru || null, comment_en: en || null })
-    .eq('id', modalCtx.id);
-  if (error) return showMsg('comment-msg', error.message, 'err');
-
-  const pubRu = document.getElementById('comment-publish-ru').checked;
-  const pubEn = document.getElementById('comment-publish-en').checked;
-  if (pubRu || pubEn) {
-    // Temporarily set publish flags so the publisher pushes to right channels
-    await sb.from('active_positions')
-      .update({ publish_to_ru: pubRu, publish_to_en: pubEn })
-      .eq('id', modalCtx.id);
-    const r = await callPublisher('comment', modalCtx.id);
-    if (r.ok) showMsg('comment-msg', '✓ Сохранено и опубликовано', 'ok');
-    else showMsg('comment-msg', `Сохранено. Публикация не прошла (${r.status}).`, 'info');
+  const publish_to_ru = document.getElementById('comment-publish-ru').checked;
+  const publish_to_en = document.getElementById('comment-publish-en').checked;
+  // Атомарно: BD (оба языка) + Sheet столбец N (для ru) + опциональный publish.
+  const r = await adminAction({
+    action: 'comment_change',
+    position_id: modalCtx.id,
+    comment_ru: ru,
+    comment_en: en,
+    publish_to_ru,
+    publish_to_en,
+  });
+  if (!r.ok) {
+    return showMsg('comment-msg', `Ошибка: ${r.data?.error || r.status || r.error}`, 'err');
+  }
+  const sheetNote = (r.data?.sheet_result === 'updated' || r.data?.sheet_result === 'skipped_no_ru')
+    ? ''
+    : ` (sheet: ${r.data?.sheet_result || 'unknown'})`;
+  if (publish_to_ru || publish_to_en) {
+    showMsg('comment-msg', `✓ Сохранено и опубликовано${sheetNote}`, 'ok');
   } else {
-    showMsg('comment-msg', '✓ Сохранено', 'ok');
+    showMsg('comment-msg', `✓ Сохранено${sheetNote}`, 'ok');
   }
   setTimeout(() => { hideModal('modal-comment'); loadList(); }, 900);
 }
