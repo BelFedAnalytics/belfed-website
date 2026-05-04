@@ -34,6 +34,7 @@ header.topbar h1{font-size:18px;letter-spacing:3px;font-weight:bold}
 .section-chart{margin:18px 0;border:1px solid #000;background:#fff}
 .section-chart img{width:100%;display:block}
 .section-chart-caption{font-size:11px;padding:10px 14px;border-top:1px dashed #999;opacity:0.7;letter-spacing:1px;font-style:italic}
+.section-charts{display:flex;flex-direction:column;gap:14px;margin:18px 0}
 .section-body{font-size:14px;line-height:1.75;white-space:pre-wrap}
 .section.conclusion{background:#fff;border:1px solid #000;padding:22px 24px}
 .section.conclusion .section-label{color:#000}
@@ -172,18 +173,27 @@ function renderReport() {
     const label = (state.lang === 'ru' ? s.section_label_ru : s.section_label_en) || '';
     const headline = (state.lang === 'ru' ? s.headline_ru : s.headline_en) || '';
     const body = (state.lang === 'ru' ? s.body_ru : s.body_en) || '';
-    const chartCap = (state.lang === 'ru' ? s.chart_caption_ru : s.chart_caption_en) || '';
     const isConc = !!s.is_conclusion;
     const labelText = isConc ? (label || t.conclusion) : (label || `// ${String(s.position).padStart(2,'0')}`);
+    // Build charts list: prefer chart_images jsonb, fallback to legacy single chart_image_url.
+    let charts = Array.isArray(s.chart_images) ? s.chart_images.filter(c => c && c.url) : [];
+    if (charts.length === 0 && s.chart_image_url) {
+      charts = [{ url: s.chart_image_url, caption_ru: s.chart_caption_ru || '', caption_en: s.chart_caption_en || '' }];
+    }
+    const chartsHtml = charts.length > 0
+      ? `<div class="section-charts">${charts.map(c => {
+          const cap = (state.lang === 'ru' ? c.caption_ru : c.caption_en) || '';
+          return `<div class="section-chart">
+            <img src="${escapeHtml(c.url)}" alt="">
+            ${cap ? `<div class="section-chart-caption">${escapeHtml(cap)}</div>` : ''}
+          </div>`;
+        }).join('')}</div>`
+      : '';
     return `
       <div class="section${isConc ? ' conclusion' : ''}">
         ${labelText ? `<div class="section-label">${escapeHtml(labelText)}</div>` : ''}
         ${headline ? `<div class="section-headline">${escapeHtml(headline)}</div>` : ''}
-        ${s.chart_image_url ? `
-          <div class="section-chart">
-            <img src="${escapeHtml(s.chart_image_url)}" alt="">
-            ${chartCap ? `<div class="section-chart-caption">${escapeHtml(chartCap)}</div>` : ''}
-          </div>` : ''}
+        ${chartsHtml}
         ${body ? `<div class="section-body">${escapeHtml(body)}</div>` : ''}
       </div>
     `;
