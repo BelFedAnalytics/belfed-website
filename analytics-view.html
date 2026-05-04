@@ -46,6 +46,7 @@ header.topbar h1{font-size:18px;letter-spacing:3px;font-weight:bold}
 .tg-cta{margin:36px 0;text-align:center;border:1px dashed #000;padding:22px;background:#fff}
 .tg-cta a{display:inline-block;margin-top:10px;padding:10px 22px;background:#000;color:#f5f2eb;text-decoration:none;font-size:12px;letter-spacing:2px}
 .tg-cta a:hover{background:#222}
+.draft-banner{margin-bottom:18px;padding:10px 14px;border:1px dashed #c00;background:#fff5f5;color:#900;font-size:11px;letter-spacing:2px;text-transform:uppercase;text-align:center}
 
 @media (max-width:600px){
   .report-title{font-size:18px;letter-spacing:1px}
@@ -68,6 +69,7 @@ header.topbar h1{font-size:18px;letter-spacing:3px;font-weight:bold}
 
 <a href="/analytics.html" class="back-link" data-i18n="back">← К ЛЕНТЕ</a>
 
+<div id="draft-banner" style="display:none" class="draft-banner"></div>
 <div id="content"><div class="loading">// ЗАГРУЗКА…</div></div>
 
 <div class="disclaimer">
@@ -77,16 +79,20 @@ header.topbar h1{font-size:18px;letter-spacing:3px;font-weight:bold}
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL = 'https://obujqvqqmyfcfflhqvud.supabase.co';
 const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9idWpxdnFxbXlmY2ZmbGhxdnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDgxNjYsImV4cCI6MjA4OTkyNDE2Nn0.syl4YBLbf8aBitxyK3gCL51pPYxWjEW99mMTXJaQQ8w';
 const GET_URL = SUPABASE_URL + '/functions/v1/analytics-get';
+const ADMIN_URL = SUPABASE_URL + '/functions/v1/analytics-admin-action';
+const sb = supabase.createClient(SUPABASE_URL, ANON_KEY);
 
 const I18N = {
   ru: {
     title: '— BELFED ANALYTICS —',
     back: '← К ЛЕНТЕ',
     notFound: 'ОТЧЁТ НЕ НАЙДЕН',
+    draftBanner: 'ПРЕДПРОСМОТР ЧЕРНОВИКА — ВИДИМО ТОЛЬКО АДМИНАМ',
     loading: 'ЗАГРУЗКА…',
     conclusion: 'ГЛАВНЫЙ ВЫВОД',
     tgTitle: 'ПОДПИСАТЬСЯ В TELEGRAM',
@@ -99,6 +105,7 @@ const I18N = {
     title: '— BELFED ANALYTICS —',
     back: '← BACK TO FEED',
     notFound: 'REPORT NOT FOUND',
+    draftBanner: 'DRAFT PREVIEW — VISIBLE TO ADMINS ONLY',
     loading: 'LOADING…',
     conclusion: 'KEY TAKEAWAY',
     tgTitle: 'SUBSCRIBE ON TELEGRAM',
@@ -134,7 +141,7 @@ function applyI18n() {
 }
 
 function setLang(lang) {
-  // Cross-domain switch: stay on belfed.ru for RU, redirect to belfed.com for EN (preserve slug/id)
+  // Cross-domain switch: stay on belfed.com for EN, redirect to belfed.ru for RU (preserve slug/id)
   const host = location.hostname;
   const params = new URLSearchParams(location.search);
   if (lang === 'en' && host !== 'belfed.com' && host !== 'www.belfed.com') {
@@ -224,19 +231,59 @@ async function loadReport() {
     document.getElementById('content').innerHTML = `<div class="empty">// ${t.notFound}</div>`;
     return;
   }
-  const url = GET_URL + '?' + (slug ? `slug=${encodeURIComponent(slug)}` : `id=${encodeURIComponent(id)}`);
+
+  // 1) Try public path first (works for published reports without sign-in).
+  const publicUrl = GET_URL + '?' + (slug ? `slug=${encodeURIComponent(slug)}` : `id=${encodeURIComponent(id)}`);
   try {
-    const res = await fetch(url, {
+    const res = await fetch(publicUrl, {
       headers: { 'apikey': ANON_KEY, 'authorization': 'Bearer ' + ANON_KEY }
     });
-    const json = await res.json();
-    if (!json.ok) throw new Error(json.error || 'unknown');
-    state.report = json.report;
-    state.sections = json.sections || [];
-    renderReport();
-  } catch (e) {
-    document.getElementById('content').innerHTML = `<div class="empty">// ${t.notFound}<br>${escapeHtml(String(e.message||e))}</div>`;
+    if (res.ok) {
+      const json = await res.json();
+      if (json.ok) {
+        applyLoaded(json);
+        return;
+      }
+    }
+  } catch (_) { /* fall through to admin path */ }
+
+  // 2) Public path failed (likely a draft). If a Supabase session exists, try the
+  //    admin-action proxy which validates JWT + admin role server-side.
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session && session.access_token) {
+      const r = await fetch(ADMIN_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + session.access_token,
+        },
+        body: JSON.stringify(slug ? { action:'get', slug } : { action:'get', id }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (r.ok && data && data.ok) {
+        applyLoaded(data);
+        return;
+      }
+    }
+  } catch (_) { /* fall through to not_found */ }
+
+  document.getElementById('content').innerHTML = `<div class="empty">// ${t.notFound}</div>`;
+}
+
+function applyLoaded(json) {
+  state.report = json.report;
+  state.sections = json.sections || [];
+  const banner = document.getElementById('draft-banner');
+  if (banner) {
+    if (json.report && json.report.status && json.report.status !== 'published') {
+      banner.textContent = '// ' + I18N[state.lang].draftBanner + ' — ' + String(json.report.status).toUpperCase();
+      banner.style.display = 'block';
+    } else {
+      banner.style.display = 'none';
+    }
   }
+  renderReport();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
