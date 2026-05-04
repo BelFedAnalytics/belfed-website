@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BELFED ANALYTICS — Аналитика</title>
+<meta name="description" content="Профессиональная аналитика финансовых рынков от BelFed">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background-color:#f5f2eb;font-family:'Courier New',Courier,monospace;color:#000;padding:24px 20px;line-height:1.6;font-size:14px;visibility:hidden}
+.container{max-width:1200px;margin:0 auto}
+header{position:relative;text-align:center;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid #000}
+header h2{font-size:14px;letter-spacing:4px;font-weight:bold;margin-bottom:8px}
+header h1{font-size:18px;letter-spacing:3px;font-weight:bold}
+.lang-switch{position:absolute;right:0;top:50%;transform:translateY(-50%);display:flex;gap:0;border:1px solid #000}
+.lang-switch button{font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;padding:5px 10px;background:none;border:none;cursor:pointer;color:#000}
+.lang-switch button.active{background:#000;color:#f5f2eb}
+
+.sub-nav{display:flex;gap:0;margin-bottom:30px;border-bottom:1px solid #000;flex-wrap:wrap}
+.sub-nav a{font-family:'Courier New',monospace;font-size:13px;font-weight:bold;letter-spacing:2px;padding:10px 24px;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px;color:#999}
+.sub-nav a:hover{color:#000}
+.sub-nav a.active{color:#000;border-bottom-color:#000}
+
+.filters{background:#fff;border:1px solid #000;padding:18px 20px;margin-bottom:24px}
+.filters-row{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start}
+.filter-group{display:flex;flex-direction:column;gap:6px}
+.filter-group label{font-size:10px;letter-spacing:2px;opacity:0.7}
+.filter-group input,.filter-group select{font-family:'Courier New',monospace;padding:7px 12px;font-size:12px;border:1px solid #000;background:#fff;outline:none;min-width:180px}
+.filter-group input:focus,.filter-group select:focus{background:#fffef8}
+
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.tag-chip{font-size:10px;letter-spacing:1px;padding:4px 10px;border:1px solid #000;background:#fff;cursor:pointer;text-transform:uppercase}
+.tag-chip:hover{background:#f0ede4}
+.tag-chip.active{background:#000;color:#f5f2eb}
+
+.results-count{font-size:11px;letter-spacing:1px;opacity:0.6;margin-bottom:14px}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:18px}
+a.card{text-decoration:none;color:#000}
+.card{background:#fff;border:1px solid #000;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;display:flex;flex-direction:column}
+.card:hover{transform:translateY(-2px);box-shadow:4px 4px 0 #000}
+.card-cover{width:100%;aspect-ratio:16/9;background:#0a0a0a;border-bottom:1px solid #000;position:relative;overflow:hidden}
+.card-cover img{width:100%;height:100%;object-fit:cover;display:block}
+.card-cover-fallback{width:100%;height:100%;background:linear-gradient(135deg,#1a1a1a 0%,#0a0a0a 100%);display:flex;align-items:center;justify-content:center;color:#f5f2eb;font-size:11px;letter-spacing:3px;text-align:center;padding:14px}
+.card-body{padding:16px 18px;flex:1;display:flex;flex-direction:column;gap:10px}
+.card-meta{display:flex;justify-content:space-between;align-items:center;font-size:10px;letter-spacing:2px;opacity:0.7}
+.card-meta .read-time{font-weight:bold}
+.card-title{font-size:14px;font-weight:bold;letter-spacing:1px;line-height:1.4;text-transform:uppercase}
+.card-subtitle{font-size:12px;opacity:0.8;line-height:1.5}
+.card-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:auto;padding-top:6px}
+.card-tag{font-size:9px;letter-spacing:1px;padding:2px 7px;background:#f5f2eb;border:1px solid #000;text-transform:uppercase}
+.card-cta{display:flex;justify-content:space-between;align-items:center;padding:10px 18px;border-top:1px dashed #999;font-size:10px;letter-spacing:2px}
+.card-cta .arrow{font-weight:bold}
+
+.empty,.loading{text-align:center;padding:60px 20px;font-size:12px;letter-spacing:2px;opacity:0.6}
+.disclaimer{margin-top:40px;padding:18px 20px;border:1px dashed #999;background:#fff;font-size:11px;line-height:1.7;opacity:0.85}
+.disclaimer b{letter-spacing:2px}
+.pager{display:flex;justify-content:center;gap:10px;margin-top:24px}
+.pager button{font-family:'Courier New',monospace;font-size:11px;letter-spacing:2px;padding:8px 18px;background:#fff;border:1px solid #000;cursor:pointer}
+.pager button:disabled{opacity:0.4;cursor:not-allowed}
+
+@media (max-width:600px){
+  .filter-group input,.filter-group select{min-width:100%;width:100%}
+  .filter-group{width:100%}
+  header h1{font-size:14px;letter-spacing:2px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+<h2><a href="/" style="color:#000;text-decoration:none">— BELFED_ —</a></h2>
+<h1 data-i18n="title">— BELFED ANALYTICS —</h1>
+<div class="lang-switch">
+  <button id="langRu" class="active" onclick="setLang('ru')">RU</button>
+  <button id="langEn" onclick="setLang('en')">EN</button>
+</div>
+</header>
+
+<nav class="sub-nav">
+<a href="https://belfed.com/dashboard.html" data-i18n="navPositions">[ ПОЗИЦИИ ]</a>
+<a href="/analytics.html" class="active" data-i18n="navAnalytics">[ АНАЛИТИКА ]</a>
+<a href="/trades.html" data-i18n="navArchive">[ АРХИВ ]</a>
+</nav>
+
+<div class="filters">
+  <div class="filters-row">
+    <div class="filter-group">
+      <label data-i18n="fSearch">// ПОИСК</label>
+      <input id="fSearch" type="text" placeholder="ключевые слова, тикер...">
+    </div>
+    <div class="filter-group">
+      <label data-i18n="fAsset">// КЛАСС АКТИВОВ</label>
+      <select id="fAsset">
+        <option value="" data-i18n="all">Все</option>
+        <option value="equities">Equities</option>
+        <option value="bonds">Bonds</option>
+        <option value="commodities">Commodities</option>
+        <option value="crypto">Crypto</option>
+        <option value="fx">FX</option>
+        <option value="macro">Macro</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label data-i18n="fSector">// СЕКТОР</label>
+      <select id="fSector">
+        <option value="" data-i18n="all">Все</option>
+        <option value="tech">Tech</option>
+        <option value="energy">Energy</option>
+        <option value="financials">Financials</option>
+        <option value="industrials">Industrials</option>
+        <option value="healthcare">Healthcare</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label data-i18n="fType">// ТИП</label>
+      <select id="fType">
+        <option value="" data-i18n="all">Все</option>
+        <option value="daily" data-i18n="tDaily">DAILY</option>
+        <option value="weekly" data-i18n="tWeekly">WEEKLY</option>
+        <option value="flash" data-i18n="tFlash">FLASH</option>
+      </select>
+    </div>
+  </div>
+  <div class="tag-row" id="tagRow"></div>
+</div>
+
+<div class="results-count" id="resultsCount">// ЗАГРУЗКА…</div>
+<div class="cards-grid" id="cardsGrid"></div>
+<div class="pager">
+  <button id="prevBtn" onclick="changePage(-1)" disabled>← НАЗАД</button>
+  <button id="nextBtn" onclick="changePage(1)" disabled>ВПЕРЁД →</button>
+</div>
+
+<div class="disclaimer">
+<b data-i18n="disclaimerTitle">// DISCLAIMER</b><br>
+<span data-i18n="disclaimerText">Материалы носят информационно-аналитический характер и не являются индивидуальной инвестиционной рекомендацией. BelFed не несёт ответственности за решения, принятые на основании этих данных. Прошлые результаты не гарантируют будущих.</span>
+</div>
+
+</div>
+
+<script>
+const SUPABASE_URL = 'https://obujqvqqmyfcfflhqvud.supabase.co';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9idWpxdnFxbXlmY2ZmbGhxdnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDgxNjYsImV4cCI6MjA4OTkyNDE2Nn0.syl4YBLbf8aBitxyK3gCL51pPYxWjEW99mMTXJaQQ8w';
+const LIST_URL = SUPABASE_URL + '/functions/v1/analytics-list';
+
+const PAGE_SIZE = 12;
+let state = {
+  lang: 'ru',
+  offset: 0,
+  total: 0,
+  search: '',
+  asset_class: '',
+  sector: '',
+  type: '',
+  tag: '',
+};
+
+const I18N = {
+  ru: {
+    title: '— BELFED ANALYTICS —',
+    navPositions: '[ ПОЗИЦИИ ]',
+    navAnalytics: '[ АНАЛИТИКА ]',
+    navArchive: '[ АРХИВ ]',
+    fSearch: '// ПОИСК',
+    fAsset: '// КЛАСС АКТИВОВ',
+    fSector: '// СЕКТОР',
+    fType: '// ТИП',
+    all: 'Все',
+    tDaily: 'DAILY', tWeekly: 'WEEKLY', tFlash: 'FLASH',
+    found: 'НАЙДЕНО',
+    reports: 'ОТЧЁТОВ',
+    showing: 'ПОКАЗАНО',
+    empty: 'НЕТ ОТЧЁТОВ',
+    loading: 'ЗАГРУЗКА…',
+    read: '[ ЧИТАТЬ ]',
+    minRead: 'МИН',
+    sectionsLabel: 'СЕКЦИЙ',
+    disclaimerTitle: '// DISCLAIMER',
+    disclaimerText: 'Материалы носят информационно-аналитический характер и не являются индивидуальной инвестиционной рекомендацией. BelFed не несёт ответственности за решения, принятые на основании этих данных. Прошлые результаты не гарантируют будущих.',
+    placeholderSearch: 'ключевые слова, тикер...',
+    prev: '← НАЗАД', next: 'ВПЕРЁД →',
+  },
+  en: {
+    title: '— BELFED ANALYTICS —',
+    navPositions: '[ POSITIONS ]',
+    navAnalytics: '[ ANALYTICS ]',
+    navArchive: '[ ARCHIVE ]',
+    fSearch: '// SEARCH',
+    fAsset: '// ASSET CLASS',
+    fSector: '// SECTOR',
+    fType: '// TYPE',
+    all: 'All',
+    tDaily: 'DAILY', tWeekly: 'WEEKLY', tFlash: 'FLASH',
+    found: 'FOUND',
+    reports: 'REPORTS',
+    showing: 'SHOWING',
+    empty: 'NO REPORTS',
+    loading: 'LOADING…',
+    read: '[ READ ]',
+    minRead: 'MIN',
+    sectionsLabel: 'SECTIONS',
+    disclaimerTitle: '// DISCLAIMER',
+    disclaimerText: 'Materials are informational and analytical in nature and do not constitute individual investment advice. BelFed is not responsible for decisions made on the basis of this data. Past performance does not guarantee future results.',
+    placeholderSearch: 'keywords, ticker...',
+    prev: '← PREV', next: 'NEXT →',
+  }
+};
+
+const POPULAR_TAGS = ['CTA','Positioning','Inflation','Bonds','Commodities','Sentiment','Volatility','Earnings','Fed','Geopolitics'];
+
+function setLang(lang) {
+  // Cross-domain switch: stay on belfed.ru for RU, redirect to belfed.com for EN
+  const host = location.hostname;
+  if (lang === 'en' && host !== 'belfed.com' && host !== 'www.belfed.com') {
+    location.href = 'https://belfed.com/analytics.html?lang=en';
+    return;
+  }
+  if (lang === 'ru' && host !== 'belfed.ru' && host !== 'www.belfed.ru') {
+    location.href = 'https://belfed.ru/analytics.html?lang=ru';
+    return;
+  }
+  state.lang = lang;
+  document.documentElement.lang = lang;
+  document.getElementById('langRu').classList.toggle('active', lang === 'ru');
+  document.getElementById('langEn').classList.toggle('active', lang === 'en');
+  applyI18n();
+  fetchList();
+}
+
+function applyI18n() {
+  const t = I18N[state.lang];
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const k = el.getAttribute('data-i18n');
+    if (t[k] !== undefined) el.textContent = t[k];
+  });
+  const search = document.getElementById('fSearch');
+  if (search) search.placeholder = t.placeholderSearch;
+  document.getElementById('prevBtn').textContent = t.prev;
+  document.getElementById('nextBtn').textContent = t.next;
+}
+
+function buildTagRow() {
+  const row = document.getElementById('tagRow');
+  row.innerHTML = '';
+  POPULAR_TAGS.forEach(tag => {
+    const span = document.createElement('span');
+    span.className = 'tag-chip' + (state.tag === tag ? ' active' : '');
+    span.textContent = tag;
+    span.onclick = () => {
+      state.tag = (state.tag === tag) ? '' : tag;
+      state.offset = 0;
+      buildTagRow();
+      fetchList();
+    };
+    row.appendChild(span);
+  });
+}
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  const [y,m,d] = iso.split('-');
+  return `${d}.${m}.${y}`;
+}
+
+function readTimeMins(report) {
+  // simple heuristic — based on report_type
+  if (report.report_type === 'flash') return 3;
+  if (report.report_type === 'weekly') return 8;
+  return 6;
+}
+
+function renderCards(items) {
+  const grid = document.getElementById('cardsGrid');
+  grid.innerHTML = '';
+  const t = I18N[state.lang];
+  if (!items || items.length === 0) {
+    grid.innerHTML = '<div class="empty">// ' + t.empty + '</div>';
+    return;
+  }
+  items.forEach(r => {
+    const title = (state.lang === 'ru' ? r.title_ru : (r.title_en || r.title_ru)) || '';
+    const subtitle = (state.lang === 'ru' ? r.subtitle_ru : (r.subtitle_en || r.subtitle_ru)) || '';
+    const link = `/analytics-view.html?slug=${encodeURIComponent(r.slug)}&lang=${state.lang}`;
+    const tags = (r.tags || []).slice(0, 3);
+    const cover = r.cover_image_url
+      ? `<img src="${escapeHtml(r.cover_image_url)}" alt="">`
+      : `<div class="card-cover-fallback">${escapeHtml(title.slice(0, 60))}</div>`;
+    const card = document.createElement('a');
+    card.className = 'card';
+    card.href = link;
+    card.innerHTML = `
+      <div class="card-cover">${cover}</div>
+      <div class="card-body">
+        <div class="card-meta">
+          <span>${fmtDate(r.report_date)} · ${(r.report_type || '').toUpperCase()}</span>
+          <span class="read-time">~${readTimeMins(r)} ${t.minRead}</span>
+        </div>
+        <div class="card-title">${escapeHtml(title)}</div>
+        <div class="card-subtitle">${escapeHtml(subtitle)}</div>
+        <div class="card-tags">${tags.map(tg => `<span class="card-tag">${escapeHtml(tg)}</span>`).join('')}</div>
+      </div>
+      <div class="card-cta"><span>${t.read}</span><span class="arrow">→</span></div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+async function fetchList() {
+  const t = I18N[state.lang];
+  document.getElementById('resultsCount').textContent = '// ' + t.loading;
+  document.getElementById('cardsGrid').innerHTML = `<div class="loading">// ${t.loading}</div>`;
+  const params = new URLSearchParams();
+  params.set('limit', String(PAGE_SIZE));
+  params.set('offset', String(state.offset));
+  if (state.search) params.set('q', state.search);
+  if (state.asset_class) params.set('asset_class', state.asset_class);
+  if (state.sector) params.set('sector', state.sector);
+  if (state.type) params.set('type', state.type);
+  if (state.tag) params.set('tag', state.tag);
+  try {
+    const res = await fetch(LIST_URL + '?' + params.toString(), {
+      headers: { 'apikey': ANON_KEY, 'authorization': 'Bearer ' + ANON_KEY }
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'unknown');
+    state.total = json.total || 0;
+    renderCards(json.items);
+    const from = json.items.length ? state.offset + 1 : 0;
+    const to = state.offset + json.items.length;
+    document.getElementById('resultsCount').textContent = `// ${t.found}: ${state.total} ${t.reports} · ${t.showing} ${from}–${to}`;
+    document.getElementById('prevBtn').disabled = state.offset <= 0;
+    document.getElementById('nextBtn').disabled = state.offset + PAGE_SIZE >= state.total;
+  } catch (e) {
+    document.getElementById('cardsGrid').innerHTML = `<div class="empty">// ERROR: ${escapeHtml(String(e.message || e))}</div>`;
+    document.getElementById('resultsCount').textContent = '';
+  }
+}
+
+function changePage(dir) {
+  state.offset = Math.max(0, state.offset + dir * PAGE_SIZE);
+  fetchList();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function debounce(fn, wait) {
+  let t = null;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // restore lang from URL
+  const urlLang = new URLSearchParams(location.search).get('lang');
+  if (urlLang === 'en') state.lang = 'en';
+  document.getElementById('langRu').classList.toggle('active', state.lang === 'ru');
+  document.getElementById('langEn').classList.toggle('active', state.lang === 'en');
+  document.documentElement.lang = state.lang;
+
+  applyI18n();
+  buildTagRow();
+
+  document.getElementById('fSearch').addEventListener('input', debounce(e => {
+    state.search = e.target.value.trim();
+    state.offset = 0;
+    fetchList();
+  }, 350));
+  document.getElementById('fAsset').addEventListener('change', e => {
+    state.asset_class = e.target.value;
+    state.offset = 0;
+    fetchList();
+  });
+  document.getElementById('fSector').addEventListener('change', e => {
+    state.sector = e.target.value;
+    state.offset = 0;
+    fetchList();
+  });
+  document.getElementById('fType').addEventListener('change', e => {
+    state.type = e.target.value;
+    state.offset = 0;
+    fetchList();
+  });
+
+  document.body.style.visibility = 'visible';
+  fetchList();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BELFED ANALYTICS — Отчёт</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background-color:#f5f2eb;font-family:'Courier New',Courier,monospace;color:#000;padding:24px 20px;line-height:1.65;font-size:14px;visibility:hidden}
+.container{max-width:880px;margin:0 auto}
+header.topbar{position:relative;text-align:center;margin-bottom:24px;padding-bottom:14px;border-bottom:1px solid #000}
+header.topbar h2{font-size:14px;letter-spacing:4px;font-weight:bold;margin-bottom:8px}
+header.topbar h1{font-size:18px;letter-spacing:3px;font-weight:bold}
+.lang-switch{position:absolute;right:0;top:50%;transform:translateY(-50%);display:flex;gap:0;border:1px solid #000}
+.lang-switch button{font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;padding:5px 10px;background:none;border:none;cursor:pointer;color:#000}
+.lang-switch button.active{background:#000;color:#f5f2eb}
+
+.back-link{display:inline-block;margin-bottom:18px;font-size:11px;letter-spacing:2px;text-decoration:none;color:#000;border:1px solid #000;padding:6px 14px;background:#fff}
+.back-link:hover{background:#000;color:#f5f2eb}
+
+.report-meta{font-size:11px;letter-spacing:2px;opacity:0.7;margin-bottom:8px;text-transform:uppercase}
+.report-title{font-size:24px;letter-spacing:2px;font-weight:bold;line-height:1.3;margin-bottom:14px;text-transform:uppercase}
+.report-subtitle{font-size:15px;line-height:1.6;margin-bottom:18px;opacity:0.85}
+.report-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:24px}
+.report-tag{font-size:10px;letter-spacing:1px;padding:3px 9px;background:#fff;border:1px solid #000;text-transform:uppercase}
+
+.cover-image{width:100%;aspect-ratio:16/9;background:#0a0a0a;margin-bottom:30px;border:1px solid #000;overflow:hidden}
+.cover-image img{width:100%;height:100%;object-fit:cover;display:block}
+.cover-fallback{width:100%;height:100%;background:linear-gradient(135deg,#1a1a1a 0%,#0a0a0a 100%);color:#f5f2eb;display:flex;align-items:center;justify-content:center;letter-spacing:4px;font-size:14px;text-align:center;padding:20px}
+
+.section{margin-bottom:42px}
+.section-label{font-size:10px;letter-spacing:3px;font-weight:bold;color:#999;margin-bottom:10px;text-transform:uppercase}
+.section-headline{font-size:20px;letter-spacing:1px;font-weight:bold;line-height:1.4;margin-bottom:16px}
+.section-chart{margin:18px 0;border:1px solid #000;background:#fff}
+.section-chart img{width:100%;display:block}
+.section-chart-caption{font-size:11px;padding:10px 14px;border-top:1px dashed #999;opacity:0.7;letter-spacing:1px;font-style:italic}
+.section-body{font-size:14px;line-height:1.75;white-space:pre-wrap}
+.section.conclusion{background:#fff;border:1px solid #000;padding:22px 24px}
+.section.conclusion .section-label{color:#000}
+
+.empty,.loading{text-align:center;padding:80px 20px;font-size:12px;letter-spacing:2px;opacity:0.6}
+.disclaimer{margin-top:48px;padding:18px 20px;border:1px dashed #999;background:#fff;font-size:11px;line-height:1.7;opacity:0.85}
+.disclaimer b{letter-spacing:2px}
+
+.tg-cta{margin:36px 0;text-align:center;border:1px dashed #000;padding:22px;background:#fff}
+.tg-cta a{display:inline-block;margin-top:10px;padding:10px 22px;background:#000;color:#f5f2eb;text-decoration:none;font-size:12px;letter-spacing:2px}
+.tg-cta a:hover{background:#222}
+
+@media (max-width:600px){
+  .report-title{font-size:18px;letter-spacing:1px}
+  header.topbar h1{font-size:14px;letter-spacing:2px}
+  .section-headline{font-size:16px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header class="topbar">
+<h2><a href="/" style="color:#000;text-decoration:none">— BELFED_ —</a></h2>
+<h1 data-i18n="title">— BELFED ANALYTICS —</h1>
+<div class="lang-switch">
+  <button id="langRu" class="active" onclick="setLang('ru')">RU</button>
+  <button id="langEn" onclick="setLang('en')">EN</button>
+</div>
+</header>
+
+<a href="/analytics.html" class="back-link" data-i18n="back">← К ЛЕНТЕ</a>
+
+<div id="content"><div class="loading">// ЗАГРУЗКА…</div></div>
+
+<div class="disclaimer">
+<b data-i18n="disclaimerTitle">// DISCLAIMER</b><br>
+<span data-i18n="disclaimerText">Материалы носят информационно-аналитический характер и не являются индивидуальной инвестиционной рекомендацией. BelFed не несёт ответственности за решения, принятые на основании этих данных. Прошлые результаты не гарантируют будущих.</span>
+</div>
+
+</div>
+
+<script>
+const SUPABASE_URL = 'https://obujqvqqmyfcfflhqvud.supabase.co';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9idWpxdnFxbXlmY2ZmbGhxdnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDgxNjYsImV4cCI6MjA4OTkyNDE2Nn0.syl4YBLbf8aBitxyK3gCL51pPYxWjEW99mMTXJaQQ8w';
+const GET_URL = SUPABASE_URL + '/functions/v1/analytics-get';
+
+const I18N = {
+  ru: {
+    title: '— BELFED ANALYTICS —',
+    back: '← К ЛЕНТЕ',
+    notFound: 'ОТЧЁТ НЕ НАЙДЕН',
+    loading: 'ЗАГРУЗКА…',
+    conclusion: 'ГЛАВНЫЙ ВЫВОД',
+    tgTitle: 'ПОДПИСАТЬСЯ В TELEGRAM',
+    tgBody: 'Получайте отчёты сериями постов в день публикации',
+    tgBtn: 'ОТКРЫТЬ В TELEGRAM',
+    disclaimerTitle: '// DISCLAIMER',
+    disclaimerText: 'Материалы носят информационно-аналитический характер и не являются индивидуальной инвестиционной рекомендацией. BelFed не несёт ответственности за решения, принятые на основании этих данных. Прошлые результаты не гарантируют будущих.',
+  },
+  en: {
+    title: '— BELFED ANALYTICS —',
+    back: '← BACK TO FEED',
+    notFound: 'REPORT NOT FOUND',
+    loading: 'LOADING…',
+    conclusion: 'KEY TAKEAWAY',
+    tgTitle: 'SUBSCRIBE ON TELEGRAM',
+    tgBody: 'Get reports as a post series on publication day',
+    tgBtn: 'OPEN IN TELEGRAM',
+    disclaimerTitle: '// DISCLAIMER',
+    disclaimerText: 'Materials are informational and analytical in nature and do not constitute individual investment advice. BelFed is not responsible for decisions made on the basis of this data. Past performance does not guarantee future results.',
+  }
+};
+
+let state = { lang: 'ru', report: null, sections: [] };
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmtDate(iso) {
+  if (!iso) return '';
+  const [y,m,d] = iso.split('-');
+  const monthsRu = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+  const monthsEn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const months = state.lang === 'ru' ? monthsRu : monthsEn;
+  return `${parseInt(d,10)} ${months[parseInt(m,10)-1]} ${y}`;
+}
+
+function applyI18n() {
+  const t = I18N[state.lang];
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const k = el.getAttribute('data-i18n');
+    if (t[k] !== undefined) el.textContent = t[k];
+  });
+  document.documentElement.lang = state.lang;
+}
+
+function setLang(lang) {
+  // Cross-domain switch: stay on belfed.ru for RU, redirect to belfed.com for EN (preserve slug/id)
+  const host = location.hostname;
+  const params = new URLSearchParams(location.search);
+  if (lang === 'en' && host !== 'belfed.com' && host !== 'www.belfed.com') {
+    params.set('lang', 'en');
+    location.href = 'https://belfed.com/analytics-view.html?' + params.toString();
+    return;
+  }
+  if (lang === 'ru' && host !== 'belfed.ru' && host !== 'www.belfed.ru') {
+    params.set('lang', 'ru');
+    location.href = 'https://belfed.ru/analytics-view.html?' + params.toString();
+    return;
+  }
+  state.lang = lang;
+  document.getElementById('langRu').classList.toggle('active', lang === 'ru');
+  document.getElementById('langEn').classList.toggle('active', lang === 'en');
+  applyI18n();
+  if (state.report) renderReport();
+  const u = new URL(location.href); u.searchParams.set('lang', lang); history.replaceState({}, '', u);
+}
+
+function renderReport() {
+  const t = I18N[state.lang];
+  const r = state.report;
+  const sections = state.sections;
+  const title = (state.lang === 'ru' ? r.title_ru : (r.title_en || r.title_ru)) || '';
+  const subtitle = (state.lang === 'ru' ? r.subtitle_ru : (r.subtitle_en || r.subtitle_ru)) || '';
+  const dateStr = fmtDate(r.report_date);
+  const typeStr = (r.report_type || '').toUpperCase();
+  const tags = (r.tags || []).map(tg => `<span class="report-tag">${escapeHtml(tg)}</span>`).join('');
+
+  const coverHtml = r.cover_image_url
+    ? `<div class="cover-image"><img src="${escapeHtml(r.cover_image_url)}" alt=""></div>`
+    : '';
+
+  const sectionHtml = sections.map((s, i) => {
+    const label = (state.lang === 'ru' ? s.section_label_ru : s.section_label_en) || '';
+    const headline = (state.lang === 'ru' ? s.headline_ru : s.headline_en) || '';
+    const body = (state.lang === 'ru' ? s.body_ru : s.body_en) || '';
+    const chartCap = (state.lang === 'ru' ? s.chart_caption_ru : s.chart_caption_en) || '';
+    const isConc = !!s.is_conclusion;
+    const labelText = isConc ? (label || t.conclusion) : (label || `// ${String(s.position).padStart(2,'0')}`);
+    return `
+      <div class="section${isConc ? ' conclusion' : ''}">
+        ${labelText ? `<div class="section-label">${escapeHtml(labelText)}</div>` : ''}
+        ${headline ? `<div class="section-headline">${escapeHtml(headline)}</div>` : ''}
+        ${s.chart_image_url ? `
+          <div class="section-chart">
+            <img src="${escapeHtml(s.chart_image_url)}" alt="">
+            ${chartCap ? `<div class="section-chart-caption">${escapeHtml(chartCap)}</div>` : ''}
+          </div>` : ''}
+        ${body ? `<div class="section-body">${escapeHtml(body)}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('content').innerHTML = `
+    <div class="report-meta">${escapeHtml(dateStr)} · ${escapeHtml(typeStr)}</div>
+    <div class="report-title">${escapeHtml(title)}</div>
+    ${subtitle ? `<div class="report-subtitle">${escapeHtml(subtitle)}</div>` : ''}
+    ${tags ? `<div class="report-tags">${tags}</div>` : ''}
+    ${coverHtml}
+    ${sectionHtml}
+    <div class="tg-cta">
+      <div style="font-size:13px;letter-spacing:2px;font-weight:bold;margin-bottom:6px">// ${escapeHtml(t.tgTitle)}</div>
+      <div style="font-size:12px;opacity:0.8">${escapeHtml(t.tgBody)}</div>
+      <a href="https://t.me/BelfedBot?start=auth" target="_blank">${escapeHtml(t.tgBtn)} →</a>
+    </div>
+  `;
+  document.title = title + ' — BelFed Analytics';
+}
+
+async function loadReport() {
+  const params = new URLSearchParams(location.search);
+  const slug = params.get('slug');
+  const id = params.get('id');
+  const t = I18N[state.lang];
+  if (!slug && !id) {
+    document.getElementById('content').innerHTML = `<div class="empty">// ${t.notFound}</div>`;
+    return;
+  }
+  const url = GET_URL + '?' + (slug ? `slug=${encodeURIComponent(slug)}` : `id=${encodeURIComponent(id)}`);
+  try {
+    const res = await fetch(url, {
+      headers: { 'apikey': ANON_KEY, 'authorization': 'Bearer ' + ANON_KEY }
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'unknown');
+    state.report = json.report;
+    state.sections = json.sections || [];
+    renderReport();
+  } catch (e) {
+    document.getElementById('content').innerHTML = `<div class="empty">// ${t.notFound}<br>${escapeHtml(String(e.message||e))}</div>`;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Default lang based on host
+  const host = location.hostname;
+  if (host === 'belfed.com' || host === 'www.belfed.com') state.lang = 'en';
+  if (host === 'belfed.ru' || host === 'www.belfed.ru') state.lang = 'ru';
+  // URL param overrides
+  const urlLang = new URLSearchParams(location.search).get('lang');
+  if (urlLang === 'ru') state.lang = 'ru';
+  if (urlLang === 'en') state.lang = 'en';
+  document.getElementById('langRu').classList.toggle('active', state.lang === 'ru');
+  document.getElementById('langEn').classList.toggle('active', state.lang === 'en');
+  applyI18n();
+  document.body.style.visibility = 'visible';
+  loadReport();
+});
+</script>
+</body>
+</html>
