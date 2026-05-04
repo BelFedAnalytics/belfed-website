@@ -85,6 +85,7 @@ const SUPABASE_URL = 'https://obujqvqqmyfcfflhqvud.supabase.co';
 const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9idWpxdnFxbXlmY2ZmbGhxdnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDgxNjYsImV4cCI6MjA4OTkyNDE2Nn0.syl4YBLbf8aBitxyK3gCL51pPYxWjEW99mMTXJaQQ8w';
 const GET_URL = SUPABASE_URL + '/functions/v1/analytics-get';
 const ADMIN_URL = SUPABASE_URL + '/functions/v1/analytics-admin-action';
+const PREVIEW_URL = SUPABASE_URL + '/functions/v1/analytics-preview';
 const sb = supabase.createClient(SUPABASE_URL, ANON_KEY);
 
 const I18N = {
@@ -141,7 +142,7 @@ function applyI18n() {
 }
 
 function setLang(lang) {
-  // Cross-domain switch: stay on belfed.com for EN, redirect to belfed.ru for RU (preserve slug/id)
+  // Cross-domain switch: stay on belfed.com for EN, redirect to belfed.ru for RU (preserve slug/id and preview_token)
   const host = location.hostname;
   const params = new URLSearchParams(location.search);
   if (lang === 'en' && host !== 'belfed.com' && host !== 'www.belfed.com') {
@@ -226,13 +227,30 @@ async function loadReport() {
   const params = new URLSearchParams(location.search);
   const slug = params.get('slug');
   const id = params.get('id');
+  const previewToken = params.get('preview_token');
   const t = I18N[state.lang];
   if (!slug && !id) {
     document.getElementById('content').innerHTML = `<div class="empty">// ${t.notFound}</div>`;
     return;
   }
 
-  // 1) Try public path first (works for published reports without sign-in).
+  // 1) Cross-domain admin draft preview via short-lived HMAC token (preferred).
+  if (previewToken) {
+    const qs = new URLSearchParams();
+    qs.set('token', previewToken);
+    if (slug) qs.set('slug', slug);
+    if (id)   qs.set('id', id);
+    try {
+      const r = await fetch(PREVIEW_URL + '?' + qs.toString());
+      const data = await r.json().catch(() => ({}));
+      if (r.ok && data && data.ok) {
+        applyLoaded(data);
+        return;
+      }
+    } catch (_) { /* fall through */ }
+  }
+
+  // 2) Try public path (works for published reports without sign-in).
   const publicUrl = GET_URL + '?' + (slug ? `slug=${encodeURIComponent(slug)}` : `id=${encodeURIComponent(id)}`);
   try {
     const res = await fetch(publicUrl, {
@@ -247,8 +265,8 @@ async function loadReport() {
     }
   } catch (_) { /* fall through to admin path */ }
 
-  // 2) Public path failed (likely a draft). If a Supabase session exists, try the
-  //    admin-action proxy which validates JWT + admin role server-side.
+  // 3) Same-origin admin (Supabase session) fallback — works only if logged-in admin
+  //    is on this exact domain.
   try {
     const { data: { session } } = await sb.auth.getSession();
     if (session && session.access_token) {
