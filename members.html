@@ -322,6 +322,19 @@
         <div class="account-info" id="acctTrialRow" style="display:none"><span>Триал до:</span> <span id="acctTrialEnd">&mdash;</span></div>
         <div class="account-info" id="acctTelegramRow"><span>Telegram:</span> <span id="acctTelegram">Не привязан</span></div>
       </div>
+
+      <!-- Email preferences -->
+      <div class="account-section">
+        <h2>// Настройки email</h2>
+        <div class="account-info" style="flex-wrap:wrap;gap:12px;align-items:center">
+          <span style="flex:1;min-width:240px">Получать аналитику на email <span id="emailPrefStatus" style="color:var(--gray);font-size:13px;display:block;margin-top:4px">Загрузка…</span></span>
+          <label class="bf-toggle" style="display:inline-flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="emailPrefToggle" disabled style="width:18px;height:18px;cursor:pointer">
+            <span id="emailPrefLabel" style="font-size:13px;color:var(--gray)">—</span>
+          </label>
+        </div>
+        <p style="color:var(--gray);font-size:13px;margin-top:10px">Дневная и еженедельная аналитика будет приходить на ваш email примерно через 30 минут после публикации. Отписаться можно в любое время.</p>
+      </div>
     </main>
 
     <footer>
@@ -338,6 +351,68 @@
   <script src="belfed-subscription.js"></script>
   <script>
     // --- Members page callbacks ---
+    // ===== Email preferences =====
+    var emailPrefBusy = false;
+    async function loadEmailPref() {
+      try {
+        var s = await supaClient.auth.getSession();
+        var token = s.data.session && s.data.session.access_token;
+        if (!token) return;
+        var r = await fetch(SUPABASE_URL + '/functions/v1/email-preferences', {
+          method: 'GET',
+          headers: { 'Authorization': 'Bearer ' + token, 'apikey': SUPABASE_KEY }
+        });
+        var j = await r.json();
+        if (!r.ok || j.error) {
+          document.getElementById('emailPrefStatus').textContent = 'Email-рассылка настраивается автоматически после оформления подписки.';
+          return;
+        }
+        var cb = document.getElementById('emailPrefToggle');
+        cb.disabled = false;
+        cb.checked = !!j.enabled;
+        renderEmailPrefLabel(!!j.enabled);
+        document.getElementById('emailPrefStatus').textContent = j.enabled
+          ? 'Отправляется на ' + (j.email || 'ваш email')
+          : 'Сейчас выключено';
+        cb.onchange = onEmailPrefToggle;
+      } catch (e) {
+        console.warn('loadEmailPref failed', e);
+      }
+    }
+    function renderEmailPrefLabel(on) {
+      var lbl = document.getElementById('emailPrefLabel');
+      if (lbl) { lbl.textContent = on ? 'Вкл' : 'Выкл'; lbl.style.color = on ? '#1a7a1a' : 'var(--gray)'; }
+    }
+    async function onEmailPrefToggle(e) {
+      if (emailPrefBusy) return;
+      var cb = e.target;
+      var enabled = cb.checked;
+      emailPrefBusy = true; cb.disabled = true;
+      try {
+        var s = await supaClient.auth.getSession();
+        var token = s.data.session && s.data.session.access_token;
+        var r = await fetch(SUPABASE_URL + '/functions/v1/email-preferences', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled: enabled })
+        });
+        var j = await r.json();
+        if (!r.ok || j.error) {
+          cb.checked = !enabled;
+          alert('Не удалось обновить настройки: ' + (j.error || r.status));
+        } else {
+          renderEmailPrefLabel(enabled);
+          var st = document.getElementById('emailPrefStatus');
+          if (st) st.textContent = enabled ? 'Отправляется на ваш email' : 'Сейчас выключено';
+        }
+      } catch (err) {
+        cb.checked = !enabled;
+        alert('Сетевая ошибка: ' + err.message);
+      } finally {
+        emailPrefBusy = false; cb.disabled = false;
+      }
+    }
+
     function onAuthReady(profile, session, entitlement) {
       try {
         document.getElementById('loginScreen').style.display = 'none';
@@ -349,6 +424,7 @@
           var created = new Date(session.user.created_at);
           document.getElementById('acctSince').textContent = created.toLocaleDateString('ru-RU', { year: 'numeric', month: 'short', day: 'numeric' });
         }
+        loadEmailPref();
         if (profile) {
           var st = entitlement.status;
           var badge = document.getElementById('acctStatus');
