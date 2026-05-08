@@ -212,6 +212,11 @@ td.col-rem-partial{background:#fff4e0;color:#ff9500;font-weight:bold}
           <div><label>Цель 3</label><input id="f-target_3" type="number" step="any" placeholder="опционально"></div>
         </div>
         <div class="row">
+          <div><label data-tooltip="Какой % позиции фиксировать на Цели 1">Фикс % @ T1</label><input id="f-close_pct_1" type="number" step="1" min="0" max="100" placeholder="33"></div>
+          <div><label data-tooltip="Какой % позиции фиксировать на Цели 2">Фикс % @ T2</label><input id="f-close_pct_2" type="number" step="1" min="0" max="100" placeholder="33"></div>
+          <div><label data-tooltip="Какой % позиции фиксировать на Цели 3 (сумма ≤ 100)">Фикс % @ T3</label><input id="f-close_pct_3" type="number" step="1" min="0" max="100" placeholder="34"></div>
+        </div>
+        <div class="row">
           <div>
             <label data-tooltip="Качество сетапа от 1 до 5, 5 — максимальная уверенность">Грейд (вес позиции)</label>
             <select id="f-grade">
@@ -704,6 +709,9 @@ function getFormPayload() {
     target_1: num('f-target_1'),
     target_2: num('f-target_2'),
     target_3: num('f-target_3'),
+    close_pct_1: num('f-close_pct_1'),
+    close_pct_2: num('f-close_pct_2'),
+    close_pct_3: num('f-close_pct_3'),
     grade,
     risk_r,
     tradingview_url: str('f-tradingview_url'),
@@ -720,6 +728,13 @@ function validate(p) {
   if (!p.stop_price || p.stop_price <= 0) return 'Стоп должен быть положительным';
   if (p.direction === 'long' && p.stop_price >= p.entry_price) return 'Для long: стоп должен быть НИЖЕ цены входа';
   if (p.direction === 'short' && p.stop_price <= p.entry_price) return 'Для short: стоп должен быть ВЫШЕ цены входа';
+  // Валидация % частичных фиксаций: каждый [0..100], сумма ≤ 100
+  const pcts = [p.close_pct_1, p.close_pct_2, p.close_pct_3].map(v => v == null ? 0 : v);
+  for (const v of pcts) {
+    if (v < 0 || v > 100) return '% фиксации должен быть в диапазоне 0-100';
+  }
+  const sum = pcts.reduce((a, b) => a + b, 0);
+  if (sum > 100.001) return `Сумма % фиксаций не должна превышать 100 (получилось ${sum})`;
   return null;
 }
 
@@ -822,6 +837,7 @@ function changeAssetType() {
 
 function resetForm() {
   ['f-ticker','f-entry_price','f-stop_price','f-target_1','f-target_2','f-target_3',
+   'f-close_pct_1','f-close_pct_2','f-close_pct_3',
    'f-risk_r','f-tradingview_url','f-comment_ru','f-comment_en'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('f-grade').value = '';
   document.getElementById('f-asset_class').value = 'stock';
@@ -887,6 +903,9 @@ async function editPosition(id) {
   document.getElementById('f-target_1').value = data.target_1 ?? '';
   document.getElementById('f-target_2').value = data.target_2 ?? '';
   document.getElementById('f-target_3').value = data.target_3 ?? '';
+  document.getElementById('f-close_pct_1').value = data.close_pct_1 ?? '';
+  document.getElementById('f-close_pct_2').value = data.close_pct_2 ?? '';
+  document.getElementById('f-close_pct_3').value = data.close_pct_3 ?? '';
   document.getElementById('f-grade').value = data.grade ?? '';
   document.getElementById('f-risk_r').value = (data.risk_r !== null && data.risk_r !== undefined) ? data.risk_r : '';
   document.getElementById('f-tradingview_url').value = data.tradingview_url ?? '';
