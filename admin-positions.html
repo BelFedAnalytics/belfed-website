@@ -282,6 +282,10 @@ td.col-rem-partial{background:#fff4e0;color:#ff9500;font-weight:bold}
     <div id="close-info" class="muted" style="margin-bottom:10px"></div>
     <label>Цена выхода</label>
     <input id="close-exit_price" type="number" step="any">
+    <label>Комментарий RU <span class="muted" style="font-weight:normal">(опционально, появится в сигнале о закрытии)</span></label>
+    <textarea id="close-comment_ru" rows="2" placeholder="пусто — комментария не будет"></textarea>
+    <label>Комментарий EN <span class="muted" style="font-weight:normal">(опционально, появится в сигнале о закрытии)</span></label>
+    <textarea id="close-comment_en" rows="2" placeholder="empty — no comment will be shown"></textarea>
     <div class="checkbox-row"><input type="checkbox" id="close-publish-ru"><label for="close-publish-ru" style="margin:0">Опубликовать RU</label></div>
     <div class="checkbox-row"><input type="checkbox" id="close-publish-en"><label for="close-publish-en" style="margin:0">Опубликовать EN</label></div>
     <div class="btn-row">
@@ -929,6 +933,8 @@ function openClose(id, ticker, entry) {
   modalCtx = { id, ticker, entry };
   document.getElementById('close-info').textContent = `#${id} ${ticker} (entry ${fmt(entry)})`;
   document.getElementById('close-exit_price').value = '';
+  document.getElementById('close-comment_ru').value = '';
+  document.getElementById('close-comment_en').value = '';
   document.getElementById('close-publish-ru').checked = true;
   document.getElementById('close-publish-en').checked = true;
   document.getElementById('close-msg').innerHTML = '';
@@ -949,11 +955,17 @@ async function confirmClose() {
     ? (exit - parseFloat(pos.entry_price)) / risk
     : (parseFloat(pos.entry_price) - exit) / risk;
 
+  // Опциональный комментарий при закрытии (отдельный от открывающего).
+  // Пустое поле = комментария в сигнале не будет (без fallback на comment_ru/en).
+  const closeCommentRu = document.getElementById('close-comment_ru').value.trim() || null;
+  const closeCommentEn = document.getElementById('close-comment_en').value.trim() || null;
   const updates = {
     status: 'closed',
     closed_at: new Date().toISOString(),
     exit_price: exit,
     result_rr: Math.round(rr * 100) / 100,
+    close_comment_ru: closeCommentRu,
+    close_comment_en: closeCommentEn,
     publish_to_ru: document.getElementById('close-publish-ru').checked,
     publish_to_en: document.getElementById('close-publish-en').checked,
   };
