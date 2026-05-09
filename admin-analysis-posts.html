@@ -15,6 +15,11 @@ header h2{font-size:14px;letter-spacing:4px;font-weight:bold;margin-bottom:8px}
 header h2 a{color:#000;text-decoration:none}
 header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 .admin-badge{display:inline-block;background:#c50000;color:#fff;padding:2px 10px;font-size:10px;letter-spacing:2px;margin-left:8px}
+.admin-nav{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;background:#000;padding:10px 14px;margin:-24px -20px 24px}
+.admin-nav a{font-family:'Courier New',monospace;font-size:11px;letter-spacing:2px;padding:6px 14px;color:#f5f2eb;text-decoration:none;border:1px solid transparent}
+.admin-nav a:hover{border-color:#f5f2eb}
+.admin-nav a.active{background:#f5f2eb;color:#000;border-color:#f5f2eb}
+.admin-nav .sep{color:#666;padding:6px 0}
 
 #loginScreen{position:fixed;inset:0;background:#f5f2eb;display:flex;align-items:center;justify-content:center;z-index:10}
 .login-box{background:#fff;border:1px solid #000;padding:30px;width:340px}
@@ -146,10 +151,19 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 </div>
 
 <div id="app" style="display:none">
+
+<nav class="admin-nav">
+  <a href="/admin.html">[ HUB ]</a>
+  <span class="sep">|</span>
+  <a href="/admin-positions.html">[ ПОЗИЦИИ ]</a>
+  <a href="https://belfed.com/admin-analytics-list.html">[ АНАЛИТИКА ]</a>
+  <a href="/admin-analysis-posts.html" class="active">[ АНАЛИЗ АКТИВОВ ]</a>
+</nav>
+
 <div class="container">
 
 <header>
-  <h2><a href="/">— BELFED_ ADMIN <span class="admin-badge">ADMIN</span> —</a></h2>
+  <h2><a href="/admin.html">— BELFED_ ADMIN <span class="admin-badge">ADMIN</span> —</a></h2>
   <h1>— АНАЛИЗ АКТИВОВ И ЗАПРОСЫ —</h1>
 </header>
 
@@ -159,8 +173,6 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 
 <div class="toolbar">
   <div>
-    <a class="btn" href="/admin-positions.html">[ ПОЗИЦИИ ]</a>
-    <a class="btn" href="/admin-analytics-list.html">[ АНАЛИТИКА ]</a>
     <button class="btn" onclick="signOut()">[ ВЫЙТИ ]</button>
   </div>
   <div class="toolbar-right">

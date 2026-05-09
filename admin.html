@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BELFED — АДМИН ХАБ</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f2eb;--paper:#fff;--ink:#000;--muted:#999;--soft-border:#ccc;
+  --green:#1a7a1a;--red:#c50000;--amber:#e6a800;
+  --font:'Courier New',Courier,monospace;
+}
+body{background:var(--bg);font-family:var(--font);color:var(--ink);padding:24px 20px;line-height:1.6;font-size:14px;visibility:hidden}
+body.ready{visibility:visible}
+.container{max-width:1100px;margin:0 auto}
+
+header{position:relative;text-align:center;margin-bottom:36px;padding-bottom:18px;border-bottom:2px solid var(--ink)}
+header h2{font-size:14px;letter-spacing:4px;font-weight:bold;margin-bottom:8px}
+header h2 a{color:var(--ink);text-decoration:none}
+header h1{font-size:18px;letter-spacing:3px;font-weight:bold}
+.admin-badge{display:inline-block;background:var(--red);color:#fff;padding:2px 10px;font-size:10px;letter-spacing:2px;margin-left:8px}
+.subtitle{font-size:11px;opacity:0.55;letter-spacing:1px;margin-top:8px}
+
+.btn{font-family:var(--font);font-size:11px;letter-spacing:2px;padding:8px 16px;border:1px solid var(--ink);background:var(--paper);cursor:pointer;color:var(--ink);text-decoration:none;display:inline-block}
+.btn:hover{background:#f0ede4}
+
+#loginScreen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:10}
+.login-box{background:var(--paper);border:1px solid var(--ink);padding:30px;width:340px}
+.login-box h3{font-size:13px;letter-spacing:3px;margin-bottom:6px;text-align:center}
+.login-sub{font-size:10px;opacity:0.55;text-align:center;margin-bottom:20px;letter-spacing:1px}
+.login-box input{width:100%;font-family:var(--font);padding:10px;border:1px solid var(--ink);background:var(--bg);font-size:13px;margin-bottom:10px}
+.login-box button{width:100%;font-family:var(--font);padding:10px;border:1px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer;font-size:12px;letter-spacing:2px}
+.login-box button:hover{background:#222}
+
+.msg{padding:10px 12px;font-size:11px;letter-spacing:1px;border:1px solid var(--ink);margin:10px 0}
+.msg.ok{background:var(--green);color:#fff;border-color:var(--green)}
+.msg.err{background:var(--red);color:#fff;border-color:var(--red)}
+
+.hub-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-bottom:30px}
+.hub-card{background:var(--paper);border:2px solid var(--ink);padding:28px 22px;text-decoration:none;color:var(--ink);transition:all 0.15s ease;display:flex;flex-direction:column;min-height:180px}
+.hub-card:hover{background:var(--ink);color:var(--bg)}
+.hub-card .ico{font-size:36px;margin-bottom:14px;letter-spacing:0;line-height:1}
+.hub-card .label{font-size:13px;letter-spacing:3px;font-weight:bold;margin-bottom:8px}
+.hub-card .desc{font-size:11px;letter-spacing:0.5px;line-height:1.5;opacity:0.75;flex-grow:1}
+.hub-card:hover .desc{opacity:0.9}
+.hub-card .meta{margin-top:14px;font-size:10px;letter-spacing:2px;opacity:0.55;border-top:1px dashed currentColor;padding-top:10px}
+
+.section-title{font-size:11px;letter-spacing:3px;opacity:0.55;margin:30px 0 14px}
+
+.quick-links{background:var(--paper);border:1px solid var(--ink);padding:18px 22px}
+.quick-links h3{font-size:11px;letter-spacing:3px;margin-bottom:12px;font-weight:bold}
+.quick-links ul{list-style:none;display:flex;flex-wrap:wrap;gap:8px}
+.quick-links a{font-family:var(--font);font-size:11px;letter-spacing:1.5px;padding:6px 12px;border:1px solid var(--ink);background:var(--bg);color:var(--ink);text-decoration:none;display:inline-block}
+.quick-links a:hover{background:var(--ink);color:var(--bg)}
+
+footer{text-align:center;font-size:10px;opacity:0.45;letter-spacing:2px;margin-top:30px;padding-top:16px;border-top:1px dashed var(--muted)}
+.user-info{font-size:11px;opacity:0.6;letter-spacing:1px;margin-right:auto}
+.toolbar-flex{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:10px}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-box">
+    <h3>// АДМИН ХАБ</h3>
+    <div class="login-sub">ОГРАНИЧЕННЫЙ ДОСТУП</div>
+    <input type="email" id="login-email" placeholder="admin@belfed.com" autocomplete="email">
+    <input type="password" id="login-password" placeholder="пароль" autocomplete="current-password">
+    <button onclick="signIn()">[ ВОЙТИ ]</button>
+    <div id="login-msg"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+<div class="container">
+
+<header>
+  <h2>— BELFED_ <span class="admin-badge">АДМИН</span> —</h2>
+  <h1>// ХАБ УПРАВЛЕНИЯ</h1>
+  <div class="subtitle">Централизованный доступ ко всем разделам публикации</div>
+</header>
+
+<div class="toolbar-flex">
+  <div class="user-info" id="user-info"></div>
+  <div>
+    <a class="btn" href="/dashboard.html">[ ← В КАБИНЕТ ]</a>
+    <button class="btn" onclick="signOut()">[ ВЫЙТИ ]</button>
+  </div>
+</div>
+
+<div class="section-title">// АДМИН-МОДУЛИ</div>
+
+<div class="hub-grid">
+
+  <a class="hub-card" href="/admin-positions.html">
+    <div class="ico">▲</div>
+    <div class="label">ПОЗИЦИИ</div>
+    <div class="desc">Открытые / частично закрытые / завершённые сделки. Полное управление позициями, частичные фиксации, закрытие, синхронизация с Google Sheet.</div>
+    <div class="meta">→ admin-positions.html</div>
+  </a>
+
+  <a class="hub-card" href="https://belfed.com/admin-analytics-list.html">
+    <div class="ico">▣</div>
+    <div class="label">АНАЛИТИКА</div>
+    <div class="desc">Ежедневные / еженедельные / срочные обзоры рынка. Создание, планирование, публикация в Telegram и кабинет участника.</div>
+    <div class="meta">→ belfed.com/admin-analytics-list.html</div>
+  </a>
+
+  <a class="hub-card" href="/admin-analysis-posts.html">
+    <div class="ico">◆</div>
+    <div class="label">АНАЛИЗ АКТИВОВ</div>
+    <div class="desc">Обновления по активам и ответы на запросы подписчиков. Акции / крипто / сырьё / FX с графиками TradingView и изображениями.</div>
+    <div class="meta">→ admin-analysis-posts.html</div>
+  </a>
+
+</div>
+
+<div class="quick-links">
+  <h3>// КАБИНЕТ УЧАСТНИКА (LIVE)</h3>
+  <ul>
+    <li><a href="/dashboard.html" target="_blank">[ ПОЗИЦИИ ]</a></li>
+    <li><a href="/analytics.html" target="_blank">[ АНАЛИТИКА ]</a></li>
+    <li><a href="/asset-analysis.html" target="_blank">[ АНАЛИЗ АКТИВОВ ]</a></li>
+    <li><a href="/trades.html" target="_blank">[ АРХИВ ]</a></li>
+    <li><a href="https://belfed.com/dashboard.html" target="_blank">[ EN · POSITIONS ]</a></li>
+    <li><a href="https://belfed.com/analytics.html" target="_blank">[ EN · ANALYTICS ]</a></li>
+    <li><a href="https://belfed.com/asset-analysis.html" target="_blank">[ EN · ASSET ANALYSIS ]</a></li>
+  </ul>
+</div>
+
+<footer>BELFED ANALYTICS · АДМИН-ИНТЕРФЕЙС · v1.0</footer>
+
+</div>
+</div>
+
+<script>
+const SUPABASE_URL  = 'https://obujqvqqmyfcfflhqvud.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9idWpxdnFxbXlmY2ZmbGhxdnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDgxNjYsImV4cCI6MjA4OTkyNDE2Nn0.syl4YBLbf8aBitxyK3gCL51pPYxWjEW99mMTXJaQQ8w';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+async function signIn() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) { document.getElementById('login-msg').innerHTML = '<div class="msg err">' + error.message + '</div>'; return; }
+  await checkAdminAndShow();
+}
+async function signOut() { await sb.auth.signOut(); location.reload(); }
+
+async function checkAdminAndShow() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+    document.body.classList.add('ready');
+    return;
+  }
+  const { data: profile } = await sb.from('profiles').select('subscription_status,email').eq('id', session.user.id).maybeSingle();
+  if (!profile || profile.subscription_status !== 'admin') {
+    document.getElementById('login-msg').innerHTML = '<div class="msg err">Доступ запрещён — у вашего аккаунта нет прав администратора.</div>';
+    document.body.classList.add('ready');
+    return;
+  }
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('user-info').textContent = 'Вход выполнен: ' + (profile.email || session.user.email);
+  document.body.classList.add('ready');
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') signIn();
+});
+
+checkAdminAndShow();
+</script>
+
+</body>
+</html>

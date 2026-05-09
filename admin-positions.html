@@ -13,6 +13,11 @@
   --font:'Courier New',Courier,monospace;
 }
 body{background:var(--bg);font-family:var(--font);color:var(--ink);padding:24px 20px;line-height:1.6;font-size:14px}
+.admin-nav{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;background:#000;padding:10px 14px;margin:-24px -20px 24px}
+.admin-nav a{font-family:var(--font);font-size:11px;letter-spacing:2px;padding:6px 14px;color:var(--bg);text-decoration:none;border:1px solid transparent}
+.admin-nav a:hover{border-color:var(--bg)}
+.admin-nav a.active{background:var(--bg);color:var(--ink);border-color:var(--bg)}
+.admin-nav .sep{color:#666;padding:6px 0}
 .container{max-width:1400px;margin:0 auto}
 header{text-align:center;margin-bottom:32px;padding-bottom:18px;border-bottom:2px solid var(--ink)}
 h1{font-size:22px;font-weight:bold;letter-spacing:3px;margin-bottom:8px}
@@ -122,14 +127,22 @@ td.col-rem-partial{background:#fff4e0;color:#ff9500;font-weight:bold}
 </div>
 
 <div id="app" style="display:none">
+
+  <nav class="admin-nav">
+    <a href="/admin.html">[ HUB ]</a>
+    <span class="sep">|</span>
+    <a href="/admin-positions.html" class="active">[ ПОЗИЦИИ ]</a>
+    <a href="https://belfed.com/admin-analytics-list.html">[ АНАЛИТИКА ]</a>
+    <a href="/admin-analysis-posts.html">[ АНАЛИЗ АКТИВОВ ]</a>
+  </nav>
+
   <div class="container">
     <header>
       <h1>BELFED · ПОЗИЦИИ</h1>
       <div class="subtitle">Активные сделки — полный CRUD</div>
       <div class="nav">
-        <a href="/dashboard.html">Дашборд</a>
-        <a href="/admin-analysis.html">Админ анализа</a>
-        <a href="/admin-analysis-posts.html">Анализ активов и запросы</a>
+        <a href="/admin.html">← Админ-хаб</a>
+        <a href="/dashboard.html">Кабинет участника</a>
         <a href="#" onclick="signOut();return false;">Выйти</a>
       </div>
     </header>
