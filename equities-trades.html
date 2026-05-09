@@ -324,8 +324,9 @@ var tvLink=(r[10]||'').trim();
 if(!ticker)return;
 var rVal=parseFloat(result.replace(',','.'));
 var isClosed=status.toLowerCase()==='closed';
-  if(!isClosed)return;
-if(isClosed&&!isNaN(rVal)){totalR+=rVal;closed++;if(rVal>0){wins++;winSum+=rVal;}else{losses++;lossSum+=rVal;}}
+var isFullyClosed=isClosed&&!isNaN(rVal)&&result!==''&&exitP!=='';
+  if(!isFullyClosed)return;
+totalR+=rVal;closed++;if(rVal>0){wins++;winSum+=rVal;}else{losses++;lossSum+=rVal;}
 var dirClass=dir.toLowerCase()==='long'?'badge-long':'badge-short';
 var rClass=makeRClass(result);
 var rDisplay=formatR(result);
