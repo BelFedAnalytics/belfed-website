@@ -74,9 +74,10 @@
     }
     .members-grid {
       padding: 0 40px 60px;
-      max-width: 1100px;
+      max-width: 1280px;
+      margin: 0 auto;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 20px;
     }
     .member-card {
@@ -288,9 +289,16 @@
 
         <a href="/analytics.html" class="member-card">
           <div class="card-label">// Аналитика</div>
-          <h3>Аналитические обзоры</h3>
+          <h3>Аналитика</h3>
           <p>Еженедельные обзоры рынка, графики, ключевые выводы и тематические разборы.</p>
           <div class="card-arrow">&rarr; Открыть обзоры</div>
+        </a>
+
+        <a href="/asset-analysis.html" class="member-card">
+          <div class="card-label">// Анализ активов</div>
+          <h3>Анализ активов и запросы</h3>
+          <p>Обновления по отдельным тикерам в акциях, крипто, сырье и FX. Фильтрация по тикеру и классу актива, графики TradingView и ответы на запросы подписчиков.</p>
+          <div class="card-arrow">&rarr; Открыть анализ активов</div>
         </a>
 
         <div class="member-card" onclick="alert('Раздел «Настройки» скоро будет доступен.')">
