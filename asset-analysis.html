@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co; img-src 'self' data: https://*.supabase.co; frame-src 'none';">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BELFED ANALYTICS — Анализ активов и запросы</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#f5f2eb;font-family:'Courier New',Courier,monospace;color:#000;padding:24px 20px;line-height:1.6;font-size:14px;visibility:hidden}
+.container{max-width:1200px;margin:0 auto}
+header{position:relative;text-align:center;margin-bottom:14px;padding-bottom:14px;border-bottom:2px solid #000}
+header h2{font-size:14px;letter-spacing:4px;font-weight:bold;margin-bottom:8px}
+header h1{font-size:18px;letter-spacing:3px;font-weight:bold}
+.header-sub{font-size:11px;letter-spacing:2px;opacity:0.55;margin-top:8px}
+.members-link{position:absolute;left:0;top:50%;transform:translateY(-50%);font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;color:#000;text-decoration:none;border:1px solid #000;padding:5px 12px}
+.logout-btn{position:absolute;right:0;top:50%;transform:translateY(-50%);font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;padding:6px 16px;background:none;border:1px solid #000;cursor:pointer;color:#000}
+.logout-btn:hover{background:#000;color:#f5f2eb}
+
+.sub-nav{display:flex;gap:0;margin-bottom:30px;border-bottom:1px solid #000;flex-wrap:wrap}
+.sub-nav a{font-family:'Courier New',monospace;font-size:13px;font-weight:bold;letter-spacing:2px;padding:10px 24px;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px;color:#999}
+.sub-nav a:hover{color:#000}
+.sub-nav a.active{color:#000;border-bottom-color:#000}
+
+/* Layout: filters sidebar + feed */
+.layout{display:grid;grid-template-columns:240px 1fr;gap:24px}
+.filters{position:sticky;top:24px;align-self:start;background:#fff;border:1px solid #000;padding:18px}
+.filter-section{margin-bottom:20px}
+.filter-section:last-child{margin-bottom:0}
+.filter-title{font-size:11px;font-weight:bold;letter-spacing:2px;margin-bottom:10px;border-bottom:1px solid #000;padding-bottom:6px}
+.filter-search{width:100%;font-family:'Courier New',monospace;padding:7px 10px;font-size:12px;border:1px solid #000;background:#f5f2eb;outline:none;text-transform:uppercase}
+.filter-search:focus{background:#fff}
+.prefix-hint{font-size:10px;letter-spacing:1px;opacity:0.55;margin-top:6px}
+.chip-row{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;padding:5px 10px;border:1px solid #000;background:#fff;cursor:pointer;color:#000;text-transform:uppercase}
+.chip:hover{background:#f0ede4}
+.chip.active{background:#000;color:#f5f2eb}
+
+.feed-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;font-size:11px;letter-spacing:1px}
+.feed-count{opacity:0.65}
+
+.card{background:#fff;border:1px solid #000;margin-bottom:24px}
+.card-head{padding:14px 18px;border-bottom:1px solid #000;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.card-head .left{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.ticker-badge{font-size:18px;font-weight:bold;letter-spacing:1px}
+.ticker-badge::before{content:'$'}
+.company{font-size:13px;opacity:0.65}
+.type-pill{font-size:10px;font-weight:bold;letter-spacing:2px;padding:3px 8px;border:1px solid #000;background:#f5f2eb;text-transform:uppercase}
+.type-pill.update{background:#000;color:#f5f2eb}
+.type-pill.request{background:#fffbe5;border-color:#000}
+.class-pill{font-size:10px;letter-spacing:2px;padding:3px 8px;border:1px solid #000;background:#fff;text-transform:uppercase;opacity:0.85}
+.class-pill.crypto{background:#fff4e8}
+.class-pill.commodities{background:#f3f1e8}
+.class-pill.fx{background:#e8f1f3}
+.card-head .right{font-size:11px;opacity:0.7;letter-spacing:1px}
+
+.card-image{background:#0e1419;cursor:pointer;position:relative;overflow:hidden}
+.card-image img{display:block;width:100%;max-height:520px;object-fit:contain;background:#0e1419}
+.img-multi{position:absolute;top:10px;right:10px;background:#f5f2eb;color:#000;font-size:10px;font-weight:bold;letter-spacing:1px;padding:4px 8px;border:1px solid #000}
+
+.card-body{padding:16px 20px}
+.reply-quote{background:#f5f2eb;border-left:3px solid #000;padding:10px 14px;margin-bottom:14px;font-size:12px}
+.reply-quote .reply-name{font-weight:bold;letter-spacing:1px;font-size:11px;margin-bottom:4px}
+.greeting{margin-bottom:10px;font-size:13px}
+.body-text{font-size:13px;line-height:1.7;white-space:pre-wrap;word-wrap:break-word}
+.body-text a{color:#000;border-bottom:1px dashed #777}
+
+.card-footer{padding:12px 20px;border-top:1px dashed #ccc;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.hashtags{display:flex;gap:8px;flex-wrap:wrap}
+.hashtag{font-size:11px;color:#666;letter-spacing:1px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.action-btn{font-family:'Courier New',monospace;font-size:11px;letter-spacing:2px;padding:6px 12px;border:1px solid #000;background:#fff;color:#000;cursor:pointer;text-decoration:none;text-transform:uppercase}
+.action-btn:hover{background:#f0ede4}
+.action-btn.primary{background:#000;color:#f5f2eb}
+.action-btn.primary:hover{background:#222}
+
+.empty,.loading{text-align:center;padding:60px 20px;font-size:12px;letter-spacing:2px;opacity:0.6;background:#fff;border:1px solid #000}
+.error-box{background:#fff0f0;border:1px solid #c50000;padding:20px;margin:0 0 20px;text-align:center;color:#c50000;font-size:13px}
+
+/* Lightbox */
+.lightbox{display:none;position:fixed;inset:0;background:rgba(14,20,25,0.96);z-index:9999;justify-content:center;align-items:center;cursor:pointer;flex-direction:column;gap:16px}
+.lightbox.active{display:flex}
+.lightbox img{max-width:92vw;max-height:80vh;object-fit:contain;border:1px solid #f5f2eb}
+.lightbox-nav{display:flex;gap:18px;align-items:center;color:#f5f2eb;font-family:'Courier New',monospace;font-size:12px;letter-spacing:2px}
+.lightbox-nav button{background:none;border:1px solid #f5f2eb;color:#f5f2eb;padding:6px 14px;font-family:inherit;font-size:11px;letter-spacing:2px;cursor:pointer}
+.lightbox-nav button:hover{background:#f5f2eb;color:#0e1419}
+.lightbox-close{position:absolute;top:18px;right:24px;color:#f5f2eb;font-size:22px;cursor:pointer;border:1px solid #f5f2eb;width:36px;height:36px;display:flex;align-items:center;justify-content:center}
+
+footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #000;font-size:12px;opacity:0.5}
+
+/* Login + Expired screens (match dashboard) */
+#loginScreen{display:flex;justify-content:center;align-items:center;min-height:80vh}
+.login-box{background:#fff;border:2px solid #000;padding:40px;max-width:420px;width:100%;text-align:center}
+.login-box h2{font-size:18px;letter-spacing:3px;margin-bottom:8px}
+.login-box .login-sub{font-size:11px;opacity:0.5;margin-bottom:24px;letter-spacing:1px}
+.auth-tabs{display:flex;margin-bottom:24px;border-bottom:1px solid #000}
+.auth-tab{flex:1;font-family:'Courier New',monospace;font-size:12px;font-weight:bold;letter-spacing:2px;padding:8px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;color:#999}
+.auth-tab.active{color:#000;border-bottom-color:#000}
+.auth-tab:hover{color:#000}
+.login-box input{font-family:'Courier New',monospace;width:100%;padding:10px 14px;font-size:13px;border:1px solid #000;background:#f5f2eb;margin-bottom:12px;outline:none}
+.login-box input:focus{background:#fff}
+.login-box .login-btn{font-family:'Courier New',monospace;width:100%;padding:12px;font-size:13px;font-weight:bold;letter-spacing:2px;background:#000;color:#f5f2eb;border:none;cursor:pointer;margin-top:6px}
+.login-box .login-btn:hover{background:#222}
+.login-box .login-error{color:#c50000;font-size:12px;margin-top:12px;display:none}
+.login-box .login-msg{color:#1a7a1a;font-size:12px;margin-top:12px;display:none}
+.trial-note{font-size:10px;opacity:0.5;margin-top:14px;letter-spacing:0.5px}
+#expiredScreen{display:none;justify-content:center;align-items:center;min-height:80vh}
+.expired-box{background:#fff;border:2px solid #c50000;padding:40px;max-width:460px;width:100%;text-align:center}
+.expired-box h2{font-size:16px;letter-spacing:2px;color:#c50000;margin-bottom:12px}
+.expired-box p{font-size:13px;line-height:1.8;margin-bottom:16px}
+.expired-box .login-btn{font-family:'Courier New',monospace;width:100%;padding:12px;font-size:13px;font-weight:bold;letter-spacing:2px;background:#000;color:#f5f2eb;border:none;cursor:pointer;margin-top:6px;text-decoration:none;display:block}
+
+@media(max-width:900px){
+  body{padding:14px 12px}
+  .layout{grid-template-columns:1fr;gap:16px}
+  .filters{position:static}
+  header h1{font-size:14px;letter-spacing:2px}
+  .ticker-badge{font-size:16px}
+  .card-head{padding:12px 14px}
+  .card-body{padding:14px 16px}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <h2><a href="/" style="color:#000;text-decoration:none">— BELFED_ —</a></h2>
+    <div class="login-sub">MEMBER ACCESS</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="showAuthTab('signin')">ВХОД</button>
+      <button class="auth-tab" onclick="showAuthTab('signup')">РЕГИСТРАЦИЯ</button>
+      <button class="auth-tab" onclick="showAuthTab('magiclink')">MAGIC LINK</button>
+    </div>
+    <div id="signinForm">
+      <input type="email" id="siEmail" placeholder="Email">
+      <input type="password" id="siPassword" placeholder="Пароль">
+      <button class="login-btn" onclick="handleSignIn()">ВОЙТИ</button>
+      <a href="#" id="forgotPasswordLink" style="display:block;margin-top:10px;font-size:11px;color:#999;letter-spacing:1px;text-decoration:none" onclick="document.getElementById('forgotPasswordBlock').style.display='block';this.style.display='none';return false;">Забыли пароль?</a>
+      <div id="forgotPasswordBlock" style="display:none;margin-top:10px">
+        <input type="email" id="resetEmail" placeholder="Введите email">
+        <button class="login-btn" onclick="handleForgotPassword()">ОТПРАВИТЬ ССЫЛКУ</button>
+        <div id="resetStatus" style="font-size:11px;margin-top:8px;display:none"></div>
+      </div>
+    </div>
+    <div id="signupForm" style="display:none">
+      <input type="email" id="suEmail" placeholder="Email">
+      <input type="password" id="suPassword" placeholder="Пароль (мин. 6 символов)">
+      <input type="password" id="suPassword2" placeholder="Повторите пароль">
+      <button class="login-btn" onclick="handleSignUp()">НАЧАТЬ БЕСПЛАТНЫЙ ПРОБНЫЙ ПЕРИОД</button>
+      <div class="trial-note">30 дней бесплатного доступа &bull; Без привязки карты</div>
+    </div>
+    <div id="magiclinkForm" style="display:none">
+      <input type="email" id="mlEmail" placeholder="Email">
+      <button class="login-btn" onclick="handleMagicLink()">ОТПРАВИТЬ MAGIC LINK</button>
+      <div class="trial-note">Ссылка для входа будет отправлена на email. Пароль не нужен.</div>
+    </div>
+    <div class="login-error" id="loginError"></div>
+    <div class="login-msg" id="loginMsg"></div>
+  </div>
+</div>
+
+<!-- EXPIRED SCREEN -->
+<div id="expiredScreen">
+  <div class="expired-box">
+    <h2>ПРОБНЫЙ ПЕРИОД ИСТЁК</h2>
+    <p>Ваш 30-дневный пробный период завершён.<br>Оформите подписку, чтобы продолжить получать торговые сигналы и аналитику.</p>
+    <a href="https://belfed.ru/#subscribe" class="login-btn">ТАРИФЫ</a>
+    <button class="login-btn" style="background:none;color:#000;border:1px solid #000;margin-top:10px" onclick="handleLogout()">ВЫЙТИ</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="container" id="mainContainer" style="display:none">
+
+  <header>
+    <h2><a href="/" style="color:#000;text-decoration:none">— BELFED_ —</a></h2>
+    <h1>— АНАЛИЗ АКТИВОВ И ЗАПРОСЫ —</h1>
+    <div class="header-sub">ОБНОВЛЕНИЯ ОТ АНАЛИТИКА · СИНХРОНИЗАЦИЯ С TELEGRAM</div>
+    <a href="/members.html" class="members-link">&larr; КАБИНЕТ</a>
+    <button class="logout-btn" onclick="handleLogout()">ВЫЙТИ</button>
+  </header>
+
+  <nav class="sub-nav">
+    <a href="/dashboard.html">[ ПОЗИЦИИ ]</a>
+    <a href="/analytics.html">[ АНАЛИТИКА ]</a>
+    <a href="/asset-analysis.html" class="active">[ АНАЛИЗ АКТИВОВ ]</a>
+    <a href="/trades.html">[ АРХИВ ]</a>
+  </nav>
+
+  <div class="layout">
+
+    <!-- FILTERS -->
+    <aside class="filters">
+      <div class="filter-section">
+        <div class="filter-title">// ТИКЕР</div>
+        <input type="text" id="fTicker" class="filter-search" placeholder="напр. TS…" maxlength="10" autocomplete="off">
+        <div class="prefix-hint">ПОИСК ПО НАЧАЛУ</div>
+      </div>
+      <div class="filter-section">
+        <div class="filter-title">// КЛАСС АКТИВА</div>
+        <div class="chip-row" id="classChips">
+          <button class="chip active" data-class="">ВСЕ</button>
+          <button class="chip" data-class="stocks">АКЦИИ</button>
+          <button class="chip" data-class="crypto">КРИПТО</button>
+          <button class="chip" data-class="commodities">СЫРЬЕ</button>
+          <button class="chip" data-class="fx">FX</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- FEED -->
+    <main>
+      <div class="feed-meta">
+        <div class="feed-count" id="feedCount">// ЗАГРУЗКА…</div>
+      </div>
+      <div id="errorBox" class="error-box" style="display:none"></div>
+      <div id="feed">
+        <div class="loading">// ЗАГРУЗКА…</div>
+      </div>
+    </main>
+
+  </div>
+
+  <footer>
+    Материалы в информационных целях. belfed.ru
+  </footer>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox">
+  <div class="lightbox-close" onclick="closeLightbox()">&times;</div>
+  <img id="lightboxImg" alt="">
+  <div class="lightbox-nav" id="lightboxNav"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="belfed-auth.js"></script>
+<script>
+// Page callbacks expected by belfed-auth.js
+function onAuthReady(profile, session, entitlement) {
+  if (entitlement && entitlement.access) showMain();
+  else showExpired();
+}
+function onAuthSignedOut() {
+  document.getElementById('mainContainer').style.display = 'none';
+  document.getElementById('expiredScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.body.style.visibility = 'visible';
+}
+function showExpired() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('mainContainer').style.display = 'none';
+  document.getElementById('expiredScreen').style.display = 'flex';
+  document.body.style.visibility = 'visible';
+}
+function showMain() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('expiredScreen').style.display = 'none';
+  document.getElementById('mainContainer').style.display = 'block';
+  document.body.style.visibility = 'visible';
+  initFeed();
+}
+
+// ============== FEED ==============
+var SUPA_URL_PUB = SUPABASE_URL + '/storage/v1/object/public/analysis-images/';
+var TG_GROUP_RU_ID = '3773738299';
+var TG_THREAD_RU = 2;
+
+var state = {
+  ticker: '',
+  asset_class: '',
+  posts: [],
+  filtered: []
+};
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDateTime(iso) {
+  if (!iso) return '';
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  var months = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+  var dd = String(d.getDate()).padStart(2, '0');
+  var mm = months[d.getMonth()];
+  var yy = d.getFullYear();
+  var hh = String(d.getHours()).padStart(2, '0');
+  var mn = String(d.getMinutes()).padStart(2, '0');
+  return dd + ' ' + mm + ' ' + yy + ' · ' + hh + ':' + mn;
+}
+
+function classLabel(cls) {
+  if (cls === 'crypto') return 'КРИПТО';
+  if (cls === 'commodities') return 'СЫРЬЕ';
+  if (cls === 'fx') return 'FX';
+  return 'АКЦИИ';
+}
+
+function tgLink(post) {
+  var msgId = post.message_id_ru || post.message_id_en;
+  if (!msgId) return null;
+  // RU channel preferred for .ru
+  var groupId = post.message_id_ru ? TG_GROUP_RU_ID : '3869302680';
+  var thread = post.message_id_ru ? TG_THREAD_RU : 4;
+  return 'https://t.me/c/' + groupId + '/' + thread + '/' + msgId;
+}
+
+function bodyToHtml(text) {
+  if (!text) return '';
+  var safe = escapeHtml(text);
+  // Auto-link http(s) URLs
+  safe = safe.replace(/(https?:\/\/[^\s<]+)/g, function(u) {
+    return '<a href="' + u + '" target="_blank" rel="noopener">' + u.replace(/^https?:\/\//,'').replace(/\/$/, '') + '</a>';
+  });
+  return safe;
+}
+
+function renderCard(p) {
+  var imgs = (p.image_paths || []).map(function(path) { return SUPA_URL_PUB + path; });
+  var imgHtml = '';
+  if (imgs.length === 1) {
+    imgHtml = '<div class="card-image" data-images=\'' + JSON.stringify(imgs).replace(/'/g, '&#39;') + '\'>' +
+              '<img src="' + escapeHtml(imgs[0]) + '" alt="" loading="lazy">' +
+              '</div>';
+  } else if (imgs.length > 1) {
+    imgHtml = '<div class="card-image" data-images=\'' + JSON.stringify(imgs).replace(/'/g, '&#39;') + '\'>' +
+              '<img src="' + escapeHtml(imgs[0]) + '" alt="" loading="lazy">' +
+              '<div class="img-multi">1 / ' + imgs.length + ' · ОТКРЫТЬ ВСЕ</div>' +
+              '</div>';
+  }
+
+  var typePill = p.post_type === 'request'
+    ? '<span class="type-pill request">ОТВЕТ</span>'
+    : '<span class="type-pill update">ОБНОВЛЕНИЕ</span>';
+
+  var cls = p.asset_class || 'stocks';
+  var classPillExtra = (cls === 'stocks') ? '' : ' ' + cls;
+  var classPill = '<span class="class-pill' + classPillExtra + '">' + classLabel(cls) + '</span>';
+
+  var company = p.company_name ? '<span class="company">' + escapeHtml(p.company_name) + '</span>' : '';
+
+  var replyQuote = '';
+  if (p.post_type === 'request' && (p.reply_name || p.reply_text)) {
+    replyQuote = '<div class="reply-quote">' +
+                 (p.reply_name ? '<div class="reply-name">' + escapeHtml(p.reply_name) + ' спрашивает:</div>' : '') +
+                 (p.reply_text ? escapeHtml(p.reply_text) : '') +
+                 '</div>';
+  }
+
+  var greeting = (p.greeting_ru || p.greeting_en) ? '<div class="greeting">' + escapeHtml(p.greeting_ru || p.greeting_en) + '</div>' : '';
+  var body = (p.body_ru || p.body_en) ? '<div class="body-text">' + bodyToHtml(p.body_ru || p.body_en) + '</div>' : '';
+
+  var tagHtml = '';
+  if (p.hashtags) {
+    tagHtml = p.hashtags.split(/\s+/).filter(Boolean).map(function(t) {
+      return '<span class="hashtag">' + escapeHtml(t) + '</span>';
+    }).join('');
+  }
+
+  var actions = '';
+  if (p.tradingview_url) {
+    actions += '<a class="action-btn" href="' + escapeHtml(p.tradingview_url) + '" target="_blank" rel="noopener">[ ГРАФИК TV ]</a>';
+  }
+  var tg = tgLink(p);
+  if (tg) {
+    actions += '<a class="action-btn primary" href="' + escapeHtml(tg) + '" target="_blank" rel="noopener">[ ОТКРЫТЬ В TG ]</a>';
+  }
+
+  var hasFooter = tagHtml || actions;
+
+  return '<article class="card">' +
+    '<div class="card-head">' +
+      '<div class="left">' +
+        '<span class="ticker-badge">' + escapeHtml(p.ticker || '') + '</span>' +
+        company +
+        classPill +
+        typePill +
+      '</div>' +
+      '<div class="right">' + escapeHtml(fmtDateTime(p.published_at || p.created_at)) + '</div>' +
+    '</div>' +
+    imgHtml +
+    '<div class="card-body">' +
+      replyQuote + greeting + body +
+    '</div>' +
+    (hasFooter ?
+      '<div class="card-footer">' +
+        '<div class="hashtags">' + tagHtml + '</div>' +
+        '<div class="actions">' + actions + '</div>' +
+      '</div>'
+    : '') +
+  '</article>';
+}
+
+function applyFilters() {
+  var ticker = (state.ticker || '').toUpperCase();
+  var cls = state.asset_class || '';
+  state.filtered = state.posts.filter(function(p) {
+    if (cls && (p.asset_class || 'stocks') !== cls) return false;
+    if (ticker && (p.ticker || '').toUpperCase().indexOf(ticker) !== 0) return false;
+    return true;
+  });
+  renderFeed();
+}
+
+function renderFeed() {
+  var feed = document.getElementById('feed');
+  var count = document.getElementById('feedCount');
+  if (!state.filtered.length) {
+    feed.innerHTML = '<div class="empty">// НЕТ ПОСТОВ ПО ФИЛЬТРАМ</div>';
+    count.textContent = '// 0 постов · всего ' + state.posts.length;
+    return;
+  }
+  feed.innerHTML = state.filtered.map(renderCard).join('');
+  count.textContent = '// ' + state.filtered.length + (state.filtered.length === state.posts.length ? ' постов' : (' из ' + state.posts.length + ' постов'));
+  bindLightboxes();
+}
+
+async function loadPosts() {
+  var feed = document.getElementById('feed');
+  var errorBox = document.getElementById('errorBox');
+  errorBox.style.display = 'none';
+  try {
+    var res = await supaClient.from('analysis_posts')
+      .select('id,ticker,company_name,asset_class,post_type,reply_name,reply_text,greeting_ru,greeting_en,body_ru,body_en,tradingview_url,hashtags,image_paths,published_at,created_at,message_id_ru,message_id_en')
+      .eq('status', 'published')
+      .order('published_at', { ascending: false, nullsLast: true })
+      .order('created_at', { ascending: false })
+      .limit(200);
+    if (res.error) throw res.error;
+    state.posts = res.data || [];
+    applyFilters();
+  } catch (e) {
+    errorBox.textContent = 'Ошибка загрузки: ' + (e.message || e);
+    errorBox.style.display = 'block';
+    feed.innerHTML = '';
+    document.getElementById('feedCount').textContent = '';
+  }
+}
+
+// ============== LIGHTBOX ==============
+var lbState = { images: [], idx: 0 };
+
+function openLightbox(images, idx) {
+  if (!images || !images.length) return;
+  lbState.images = images;
+  lbState.idx = idx || 0;
+  var lb = document.getElementById('lightbox');
+  document.getElementById('lightboxImg').src = images[lbState.idx];
+  updateLightboxNav();
+  lb.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+function updateLightboxNav() {
+  var nav = document.getElementById('lightboxNav');
+  if (lbState.images.length <= 1) { nav.innerHTML = ''; return; }
+  nav.innerHTML = '<button onclick="lightboxPrev(event)">← НАЗАД</button>' +
+                  '<span>' + (lbState.idx + 1) + ' / ' + lbState.images.length + '</span>' +
+                  '<button onclick="lightboxNext(event)">ВПЕРЁД →</button>';
+}
+function lightboxPrev(e) { e.stopPropagation(); lbState.idx = (lbState.idx - 1 + lbState.images.length) % lbState.images.length; document.getElementById('lightboxImg').src = lbState.images[lbState.idx]; updateLightboxNav(); }
+function lightboxNext(e) { e.stopPropagation(); lbState.idx = (lbState.idx + 1) % lbState.images.length; document.getElementById('lightboxImg').src = lbState.images[lbState.idx]; updateLightboxNav(); }
+
+document.getElementById('lightbox').addEventListener('click', function(e) { if (e.target.id === 'lightbox' || e.target.tagName === 'IMG') { /* keep open on img click */ if (e.target.tagName === 'IMG') return; closeLightbox(); } });
+document.addEventListener('keydown', function(e) {
+  if (!document.getElementById('lightbox').classList.contains('active')) return;
+  if (e.key === 'Escape') closeLightbox();
+  if (e.key === 'ArrowLeft') lightboxPrev(e);
+  if (e.key === 'ArrowRight') lightboxNext(e);
+});
+
+function bindLightboxes() {
+  document.querySelectorAll('.card-image').forEach(function(el) {
+    el.addEventListener('click', function() {
+      try { var imgs = JSON.parse(el.getAttribute('data-images')); openLightbox(imgs, 0); } catch (e) {}
+    });
+  });
+}
+
+// ============== INIT ==============
+function debounce(fn, wait) {
+  var t = null;
+  return function() { var ctx = this, args = arguments; clearTimeout(t); t = setTimeout(function() { fn.apply(ctx, args); }, wait); };
+}
+
+function initFeed() {
+  document.getElementById('fTicker').addEventListener('input', debounce(function(e) {
+    state.ticker = e.target.value.trim();
+    applyFilters();
+  }, 200));
+  document.querySelectorAll('#classChips .chip').forEach(function(b) {
+    b.addEventListener('click', function() {
+      document.querySelectorAll('#classChips .chip').forEach(function(x) { x.classList.remove('active'); });
+      b.classList.add('active');
+      state.asset_class = b.getAttribute('data-class') || '';
+      applyFilters();
+    });
+  });
+  loadPosts();
+}
+</script>
+</body>
+</html>
