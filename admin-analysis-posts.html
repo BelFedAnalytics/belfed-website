@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BELFED ANALYTICS — АДМИН: АНАЛИЗ АКТИВОВ И ЗАПРОСЫ</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background-color:#f5f2eb;font-family:'Courier New',Courier,monospace;color:#000;padding:24px 20px;line-height:1.6;font-size:14px;visibility:hidden}
+body.ready{visibility:visible}
+.container{max-width:1280px;margin:0 auto}
+
+header{position:relative;text-align:center;margin-bottom:24px;padding-bottom:14px;border-bottom:1px solid #000}
+header h2{font-size:14px;letter-spacing:4px;font-weight:bold;margin-bottom:8px}
+header h2 a{color:#000;text-decoration:none}
+header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
+.admin-badge{display:inline-block;background:#c50000;color:#fff;padding:2px 10px;font-size:10px;letter-spacing:2px;margin-left:8px}
+
+#loginScreen{position:fixed;inset:0;background:#f5f2eb;display:flex;align-items:center;justify-content:center;z-index:10}
+.login-box{background:#fff;border:1px solid #000;padding:30px;width:340px}
+.login-box h3{font-size:13px;letter-spacing:3px;margin-bottom:20px;text-align:center}
+.login-box input{width:100%;font-family:'Courier New',monospace;padding:10px;border:1px solid #000;background:#f5f2eb;font-size:13px;margin-bottom:10px}
+.login-box button{width:100%;font-family:'Courier New',monospace;padding:10px;border:1px solid #000;background:#000;color:#f5f2eb;cursor:pointer;font-size:12px;letter-spacing:2px}
+
+.notice{background:#fffbe5;border:1px solid #000;padding:10px 14px;margin-bottom:14px;font-size:11px;letter-spacing:1px;line-height:1.55}
+
+.toolbar{display:flex;gap:8px;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.toolbar-right{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font-family:'Courier New',monospace;font-size:11px;letter-spacing:2px;padding:8px 16px;border:1px solid #000;background:#fff;cursor:pointer;color:#000;text-decoration:none;display:inline-block}
+.btn:hover{background:#f0ede4}
+.btn.primary{background:#000;color:#f5f2eb}
+.btn.primary:hover{background:#222}
+.btn.danger{background:#c50000;color:#fff;border-color:#c50000}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+
+.layout{display:grid;grid-template-columns:1fr 380px;gap:20px}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+
+.editor{background:#fff;border:1px solid #000;padding:20px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:10px;letter-spacing:2px;opacity:0.7;margin-bottom:4px}
+.field label .hint{opacity:0.55;margin-left:6px;font-size:9px}
+.field input,.field textarea,.field select{font-family:'Courier New',monospace;width:100%;padding:8px 12px;font-size:13px;border:1px solid #000;background:#f5f2eb;outline:none}
+.field input:focus,.field textarea:focus,.field select:focus{background:#fff}
+.field textarea{resize:vertical;min-height:120px;line-height:1.55}
+
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+@media(max-width:700px){.row-2,.row-3{grid-template-columns:1fr}}
+
+.channels-box{border:1px solid #000;padding:12px;background:#f5f2eb}
+.chk{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:2px;cursor:pointer;padding:4px 0}
+.chk input{transform:scale(1.2)}
+
+.dropzone{border:2px dashed #000;background:#f5f2eb;padding:24px 18px;text-align:center;cursor:pointer;transition:background 0.15s;position:relative}
+.dropzone:hover{background:#fff}
+.dropzone.dragover{background:#fff;border-color:#1a7a1a}
+.dropzone .dz-icon{font-size:24px;margin-bottom:6px;opacity:0.5}
+.dropzone .dz-text{font-size:11px;letter-spacing:2px;opacity:0.7}
+.dropzone .dz-sub{font-size:10px;letter-spacing:1px;opacity:0.5;margin-top:4px}
+.thumbs{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+.thumb{position:relative;width:120px;height:80px;border:1px solid #000;background:#000;overflow:hidden}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .ix{position:absolute;left:4px;bottom:4px;background:#000;color:#f5f2eb;padding:1px 6px;font-size:10px;letter-spacing:1px}
+.thumb .x{position:absolute;top:4px;right:4px;background:#c50000;color:#fff;border:none;width:20px;height:20px;cursor:pointer;font-size:11px;font-family:'Courier New',monospace;line-height:1}
+
+.char-counter{font-size:10px;letter-spacing:1px;opacity:0.6;text-align:right;margin-top:2px}
+.char-counter.warn{color:#e6a800}
+.char-counter.over{color:#c50000;font-weight:bold}
+
+.section-block{border-top:1px dashed #999;padding-top:18px;margin-top:18px}
+.section-head{font-size:11px;letter-spacing:3px;opacity:0.6;font-weight:bold;margin-bottom:10px}
+
+.bodies-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:700px){.bodies-grid{grid-template-columns:1fr}}
+.body-col{border:1px solid #000;background:#f5f2eb;padding:14px}
+.body-col-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.body-col-head .lang{font-size:11px;letter-spacing:3px;font-weight:bold;background:#000;color:#f5f2eb;padding:3px 10px}
+.body-col .field input,.body-col .field textarea{background:#fff}
+
+.sidebar{position:sticky;top:24px;align-self:start;display:flex;flex-direction:column;gap:14px}
+@media(max-width:900px){.sidebar{position:static}}
+.sidebar-card{background:#fff;border:1px solid #000;padding:0}
+.sidebar-card h3{font-size:11px;letter-spacing:3px;padding:12px 16px;border-bottom:1px solid #000;font-weight:bold}
+
+.preview-tabs{display:flex;border-bottom:1px solid #000}
+.preview-tabs button{flex:1;font-family:'Courier New',monospace;font-size:11px;letter-spacing:2px;padding:9px 4px;background:none;border:none;border-right:1px solid #000;cursor:pointer;font-weight:bold}
+.preview-tabs button:last-child{border-right:none}
+.preview-tabs button.active{background:#000;color:#f5f2eb}
+
+.tg-frame{background:#0e1419;padding:14px;min-height:520px}
+.topic-bar{color:#7d96ad;font-size:11px;font-family:'Courier New',monospace;margin-bottom:10px;letter-spacing:1px}
+.reply-quote{background:rgba(165,214,255,0.1);border-left:3px solid #6fa8dc;padding:6px 10px;margin-bottom:6px;font-size:12px;color:#cfd9e2;max-width:88%;font-family:-apple-system,sans-serif;border-radius:4px 4px 4px 0}
+.reply-quote .who{color:#ff7a8c;font-weight:600;display:block;font-size:11px}
+.bubble{background:#2b6cb0;color:#fff;border-radius:14px;padding:10px 12px 12px;max-width:88%;margin-left:auto;font-size:13.5px;line-height:1.42;word-wrap:break-word;font-family:-apple-system,sans-serif}
+.bubble .arow{display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:6px}
+.bubble .author{color:#a5c8ee;font-weight:600}
+.bubble .marker{color:#9ce28a;font-size:10px;letter-spacing:.04em}
+.bubble .img{margin:0 -12px 8px;background:#0a0d10;height:160px;display:flex;align-items:center;justify-content:center;color:#465464;font-size:10px;letter-spacing:1px;font-family:'Courier New',monospace;overflow:hidden}
+.bubble .img img{width:100%;height:100%;object-fit:cover;display:block}
+.bubble .ticker{color:#a5d6ff;font-weight:600}
+.bubble .body-text{white-space:pre-wrap;margin-top:4px}
+.bubble .body-text a{color:#a5d6ff}
+.bubble .hashtags{color:#a5d6ff;margin-top:8px}
+.bubble .meta{display:flex;justify-content:flex-end;color:rgba(255,255,255,.7);font-size:10px;margin-top:6px;gap:4px}
+.empty-tg{color:#7d96ad;font-size:11px;text-align:center;padding:60px 20px;border:1px dashed #2a3540;font-family:'Courier New',monospace;letter-spacing:1px}
+
+.history-list{font-size:11px;max-height:420px;overflow-y:auto}
+.hi-item{display:grid;grid-template-columns:60px 1fr auto;gap:10px;padding:10px 16px;border-bottom:1px solid #ddd;align-items:center}
+.hi-item:last-child{border-bottom:none}
+.hi-item .tk{font-weight:bold;letter-spacing:1px}
+.hi-item .ti{font-size:10px;letter-spacing:1px}
+.hi-item .ex{font-size:9px;opacity:0.6;letter-spacing:1px;margin-top:2px}
+.hi-item .ax{display:flex;gap:4px}
+.icon-btn{font-family:'Courier New',monospace;font-size:10px;padding:4px 8px;border:1px solid #000;background:#fff;cursor:pointer}
+.icon-btn:hover{background:#f0ede4}
+.icon-btn.danger{background:#c50000;color:#fff;border-color:#c50000}
+
+.schedule-row{display:grid;grid-template-columns:160px 1fr;gap:8px;align-items:center}
+@media(max-width:500px){.schedule-row{grid-template-columns:1fr}}
+
+.msg{padding:10px 12px;font-size:11px;letter-spacing:1px;border:1px solid #000;margin:10px 0}
+.msg.ok{background:#1a7a1a;color:#fff;border-color:#1a7a1a}
+.msg.err{background:#c50000;color:#fff;border-color:#c50000}
+.msg.info{background:#fffbe5;color:#000}
+
+.status-pill{display:inline-block;font-size:9px;letter-spacing:1px;padding:1px 6px;border:1px solid #000;margin-right:4px}
+.status-pill.draft{background:#f5f2eb}
+.status-pill.published{background:#1a7a1a;color:#fff;border-color:#1a7a1a}
+.status-pill.deleted{background:#999;color:#fff;border-color:#999}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-box">
+    <h3>// ВХОД АДМИН</h3>
+    <input type="email" id="login-email" placeholder="admin@belfed.com">
+    <input type="password" id="login-password" placeholder="пароль">
+    <button onclick="signIn()">[ ВОЙТИ ]</button>
+    <div id="login-msg"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+<div class="container">
+
+<header>
+  <h2><a href="/">— BELFED_ ADMIN <span class="admin-badge">ADMIN</span> —</a></h2>
+  <h1>— АНАЛИЗ АКТИВОВ И ЗАПРОСЫ —</h1>
+</header>
+
+<div class="notice">
+  // Публикация одновременно в обе языковые группы (RU «Анализ активов и запросы» + EN «Chart Updates and Requests»). Заголовок, ссылки, картинки и хэштеги — общие. Различается только текст сообщения.
+</div>
+
+<div class="toolbar">
+  <div>
+    <a class="btn" href="/admin-positions.html">[ ПОЗИЦИИ ]</a>
+    <a class="btn" href="/admin-analytics-list.html">[ АНАЛИТИКА ]</a>
+    <button class="btn" onclick="signOut()">[ ВЫЙТИ ]</button>
+  </div>
+  <div class="toolbar-right">
+    <button class="btn" id="btn-clear">[ ОЧИСТИТЬ ]</button>
+    <button class="btn" id="btn-draft">[ СОХРАНИТЬ ЧЕРНОВИК ]</button>
+    <button class="btn primary" id="btn-publish">[ ОПУБЛИКОВАТЬ ]</button>
+  </div>
+</div>
+
+<div id="top-msg"></div>
+
+<div class="layout">
+
+  <!-- ───── EDITOR ───── -->
+  <div class="editor">
+
+    <div class="field">
+      <label>// КАНАЛЫ ПУБЛИКАЦИИ</label>
+      <div class="channels-box">
+        <label class="chk"><input type="checkbox" id="ch-ru" checked> 🔍 RU · Анализ активов и запросы</label>
+        <label class="chk"><input type="checkbox" id="ch-en" checked> 🔍 EN · Chart Updates and Requests</label>
+      </div>
+    </div>
+
+    <div class="row-3">
+      <div class="field">
+        <label>// ТИКЕР <span class="hint">$AAAA</span></label>
+        <input type="text" id="ticker" placeholder="SNAP" maxlength="10">
+      </div>
+      <div class="field">
+        <label>// НАЗВАНИЕ КОМПАНИИ</label>
+        <input type="text" id="company" placeholder="Snap Inc.">
+      </div>
+      <div class="field">
+        <label>// ТИП</label>
+        <select id="type">
+          <option value="update">ОБНОВЛЕНИЕ АНАЛИЗА</option>
+          <option value="request">ОТВЕТ НА ЗАПРОС</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="replyto-block" style="display:none">
+      <div class="section-block">
+        <div class="section-head">// REPLY CONTEXT (общая для RU/EN)</div>
+        <div class="row-2">
+          <div class="field">
+            <label>// ИМЯ ПОЛЬЗОВАТЕЛЯ</label>
+            <input type="text" id="reply-name" placeholder="Alex S">
+          </div>
+          <div class="field">
+            <label>// ТЕКСТ ВОПРОСА</label>
+            <input type="text" id="reply-text" placeholder="Hello Artem. Any guidance on GLW?">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-block">
+      <div class="section-head">// ТЕКСТ СООБЩЕНИЯ (различается)</div>
+      <div class="bodies-grid">
+
+        <div class="body-col">
+          <div class="body-col-head"><span class="lang">RU</span></div>
+          <div class="field">
+            <label>// ОБРАЩЕНИЕ <span class="hint">опционально</span></label>
+            <input type="text" id="greet-ru" placeholder="Например: Привет, Алекс!">
+          </div>
+          <div class="field">
+            <label>// ТЕЛО</label>
+            <textarea id="body-ru" placeholder="Следим за формированием более высоких минимумов..."></textarea>
+            <div class="char-counter" id="cnt-ru">0 / 1000</div>
+          </div>
+        </div>
+
+        <div class="body-col">
+          <div class="body-col-head"><span class="lang">EN</span></div>
+          <div class="field">
+            <label>// GREETING <span class="hint">optional</span></label>
+            <input type="text" id="greet-en" placeholder="Hello Alex!">
+          </div>
+          <div class="field">
+            <label>// BODY</label>
+            <textarea id="body-en" placeholder="Price is acting constructively..."></textarea>
+            <div class="char-counter" id="cnt-en">0 / 1000</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="section-block">
+      <div class="section-head">// МЕТА И МЕДИА (общие для RU/EN)</div>
+
+      <div class="field">
+        <label>// TRADINGVIEW URL</label>
+        <input type="url" id="tv" placeholder="https://www.tradingview.com/x/4PfYzeR7/">
+      </div>
+
+      <div class="field">
+        <label>// HASHTAGS <span class="hint">через пробел</span></label>
+        <input type="text" id="tags" value="#AnalysisUpdate #equities">
+      </div>
+
+      <div class="field">
+        <label>// ГРАФИКИ <span class="hint">1–4 файла</span></label>
+        <div class="dropzone" id="dropzone">
+          <div class="dz-icon">⬆</div>
+          <div class="dz-text">DRAG &amp; DROP ИЛИ КЛИК</div>
+          <div class="dz-sub">первое изображение станет главным</div>
+          <input type="file" id="files" accept="image/*" multiple style="display:none">
+        </div>
+        <div class="thumbs" id="thumbs"></div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ───── SIDEBAR ───── -->
+  <div class="sidebar">
+
+    <div class="sidebar-card">
+      <h3>// PREVIEW</h3>
+      <div class="preview-tabs">
+        <button class="active" data-tab="ru" onclick="switchPreview('ru')">RU</button>
+        <button data-tab="en" onclick="switchPreview('en')">EN</button>
+      </div>
+      <div class="tg-frame" id="phone">
+        <div class="topic-bar">🔍 <span id="topic-name">// АНАЛИЗ АКТИВОВ И ЗАПРОСЫ</span></div>
+        <div id="bubble-host"></div>
+      </div>
+    </div>
+
+    <div class="sidebar-card">
+      <h3>// ПОСЛЕДНИЕ ПОСТЫ</h3>
+      <div class="history-list" id="history"><div style="padding:14px;opacity:0.5">Загрузка...</div></div>
+    </div>
+
+  </div>
+</div>
+
+</div>
+</div>
+
+<script>
+const SUPABASE_URL  = 'https://obujqvqqmyfcfflhqvud.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9idWpxdnFxbXlmY2ZmbGhxdnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDgxNjYsImV4cCI6MjA4OTkyNDE2Nn0.syl4YBLbf8aBitxyK3gCL51pPYxWjEW99mMTXJaQQ8w';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+const $ = (s)=>document.querySelector(s);
+const els = {};
+let editingId = null; // currently loaded post for editing
+const state = { previewLang:'ru', images:[] }; // images: {file?, url, path?, isUploaded}
+
+// =================== AUTH ===================
+async function signIn(){
+  const email = $('#login-email').value.trim();
+  const password = $('#login-password').value;
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) { $('#login-msg').innerHTML = '<div class="msg err">'+error.message+'</div>'; return; }
+  await checkAdminAndShow();
+}
+async function signOut(){ await sb.auth.signOut(); location.reload(); }
+
+async function checkAdminAndShow(){
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    $('#loginScreen').style.display='flex';
+    $('#app').style.display='none';
+    document.body.classList.add('ready');
+    return;
+  }
+  const { data: profile } = await sb.from('profiles').select('subscription_status').eq('id', session.user.id).maybeSingle();
+  if (!profile || profile.subscription_status !== 'admin') {
+    $('#login-msg').innerHTML = '<div class="msg err">Доступ запрещён — ваш аккаунт не является админом.</div>';
+    document.body.classList.add('ready');
+    return;
+  }
+  $('#loginScreen').style.display='none';
+  $('#app').style.display='block';
+  document.body.classList.add('ready');
+  initEditor();
+  loadHistory();
+}
+
+// =================== EDITOR ===================
+function initEditor(){
+  Object.assign(els, {
+    chRu:$('#ch-ru'), chEn:$('#ch-en'),
+    ticker:$('#ticker'), company:$('#company'), type:$('#type'),
+    replytoBlock:$('#replyto-block'), replyName:$('#reply-name'), replyText:$('#reply-text'),
+    greetRu:$('#greet-ru'), greetEn:$('#greet-en'),
+    bodyRu:$('#body-ru'), bodyEn:$('#body-en'),
+    tv:$('#tv'), tags:$('#tags'),
+    cntRu:$('#cnt-ru'), cntEn:$('#cnt-en'),
+    files:$('#files'), dropzone:$('#dropzone'), thumbs:$('#thumbs'),
+    btnClear:$('#btn-clear'), btnDraft:$('#btn-draft'), btnPublish:$('#btn-publish'),
+    bubbleHost:$('#bubble-host'), topicName:$('#topic-name'),
+    history:$('#history'), topMsg:$('#top-msg')
+  });
+
+  ['ticker','company','replyName','replyText','greetRu','greetEn','bodyRu','bodyEn','tv','tags']
+    .forEach(k => els[k] && els[k].addEventListener('input', ()=>{ updateCounters(); render(); }));
+  els.type.addEventListener('change', ()=>{ updateReplyVisibility(); render(); });
+
+  els.dropzone.addEventListener('click', ()=>els.files.click());
+  els.files.addEventListener('change', e => addFiles(e.target.files));
+  ;['dragenter','dragover'].forEach(ev => els.dropzone.addEventListener(ev, e=>{ e.preventDefault(); els.dropzone.classList.add('dragover'); }));
+  ;['dragleave','drop'].forEach(ev => els.dropzone.addEventListener(ev, e=>{ e.preventDefault(); els.dropzone.classList.remove('dragover'); }));
+  els.dropzone.addEventListener('drop', e=>{ if (e.dataTransfer.files) addFiles(e.dataTransfer.files); });
+
+  els.btnClear.addEventListener('click', clearForm);
+  els.btnDraft.addEventListener('click', saveDraft);
+  els.btnPublish.addEventListener('click', publish);
+
+  updateCounters(); updateReplyVisibility(); render();
+}
+
+function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function linkify(text){ return escapeHtml(text).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank">$1</a>'); }
+
+window.switchPreview = function(lang){
+  state.previewLang = lang;
+  document.querySelectorAll('.preview-tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab===lang));
+  render();
+};
+
+function render(){
+  const lang = state.previewLang;
+  const ticker = (els.ticker.value||'').trim().toUpperCase();
+  const company = (els.company.value||'').trim();
+  const type = els.type.value;
+  const greet = lang==='ru' ? els.greetRu.value.trim() : els.greetEn.value.trim();
+  const body  = lang==='ru' ? els.bodyRu.value.trim() : els.bodyEn.value.trim();
+  const tv = els.tv.value.trim();
+  const tags = els.tags.value.trim();
+  const replyName = els.replyName.value.trim();
+  const replyText = els.replyText.value.trim();
+
+  els.topicName.textContent = lang==='ru' ? '// АНАЛИЗ АКТИВОВ И ЗАПРОСЫ' : '// CHART UPDATES AND REQUESTS';
+
+  if (!ticker && !body && state.images.length===0){
+    els.bubbleHost.innerHTML = '<div class="empty-tg">// ЗАПОЛНИТЕ ФОРМУ — ПРЕВЬЮ ПОЯВИТСЯ ЗДЕСЬ</div>';
+    return;
+  }
+
+  const replyHtml = (type==='request' && (replyName||replyText)) ?
+    `<div class="reply-quote"><span class="who">${escapeHtml(replyName||'…')}</span>${escapeHtml(replyText||'…')}</div>` : '';
+  const imgHtml = state.images.length
+    ? `<div class="img"><img src="${state.images[0].url}" alt=""></div>`
+    : '<div class="img">[ CHART IMAGE ]</div>';
+  const tickerLine = ticker ? `<div><span class="ticker">$${escapeHtml(ticker)}</span>${company?` — ${escapeHtml(company)}`:''}</div>` : '';
+  const greetHtml = greet ? `<div>${escapeHtml(greet)}</div>` : '';
+  const bodyHtml = body ? `<div class="body-text">${linkify(body)}</div>` : '';
+  const chartLabel = lang==='ru' ? 'График' : 'Chart';
+  const tvHtml = tv ? `<div class="body-text" style="margin-top:10px">${chartLabel}: <a href="${escapeHtml(tv)}" target="_blank">${escapeHtml(tv)}</a></div>` : '';
+  const tagsHtml = tags ? `<div class="hashtags">${escapeHtml(tags)}</div>` : '';
+  const time = new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+
+  els.bubbleHost.innerHTML = `
+    ${replyHtml}
+    <div class="bubble">
+      <div class="arow">
+        <span class="author">BelFed | ${lang==='ru'?'Сообщество':'Community'}</span>
+        <span class="marker">${lang==='ru'?'автор темы':'topic author'}</span>
+      </div>
+      ${imgHtml}
+      ${tickerLine}
+      ${(greet||body) ? '<div style="height:8px"></div>' : ''}
+      ${greetHtml}
+      ${(greet&&body) ? '<div style="height:8px"></div>' : ''}
+      ${bodyHtml}
+      ${tvHtml}
+      ${tagsHtml}
+      <div class="meta">${time} ✓✓</div>
+    </div>
+  `;
+}
+
+function updateCounters(){
+  const ru = els.bodyRu.value.length, en = els.bodyEn.value.length;
+  els.cntRu.textContent = `${ru} / 1000`; els.cntEn.textContent = `${en} / 1000`;
+  els.cntRu.classList.toggle('warn', ru>800 && ru<=1000); els.cntRu.classList.toggle('over', ru>1000);
+  els.cntEn.classList.toggle('warn', en>800 && en<=1000); els.cntEn.classList.toggle('over', en>1000);
+}
+function updateReplyVisibility(){ els.replytoBlock.style.display = els.type.value==='request' ? 'block' : 'none'; }
+
+function addFiles(list){
+  [...list].forEach(f => {
+    if (state.images.length >= 4) return;
+    const url = URL.createObjectURL(f);
+    state.images.push({ file:f, url, name:f.name, isUploaded:false });
+  });
+  renderThumbs(); render();
+}
+function renderThumbs(){
+  els.thumbs.innerHTML = state.images.map((im,i)=>`
+    <div class="thumb">
+      <img src="${im.url}" alt="">
+      <span class="ix">${i+1}</span>
+      <button class="x" data-i="${i}" title="Remove">×</button>
+    </div>
+  `).join('');
+  els.thumbs.querySelectorAll('.x').forEach(b => b.addEventListener('click', ()=>{
+    state.images.splice(+b.dataset.i, 1); renderThumbs(); render();
+  }));
+}
+
+function flash(kind, text){
+  els.topMsg.innerHTML = `<div class="msg ${kind}">// ${text.toUpperCase()}</div>`;
+  if (kind==='ok' || kind==='info') setTimeout(()=>{ els.topMsg.innerHTML=''; }, 4000);
+}
+
+function clearForm(){
+  if (!confirm('Очистить форму?')) return;
+  editingId = null;
+  document.querySelectorAll('input[type=text],input[type=url],textarea').forEach(i => i.value='');
+  els.tags.value = '#AnalysisUpdate #equities';
+  els.type.value = 'update';
+  els.chRu.checked = true; els.chEn.checked = true;
+  state.images = []; renderThumbs(); updateCounters(); updateReplyVisibility(); render();
+  history.replaceState(null,'', location.pathname);
+}
+
+// ================= UPLOAD IMAGES =================
+async function uploadPendingImages(){
+  const session = (await sb.auth.getSession()).data.session;
+  if (!session) throw new Error('no_session');
+  const userId = session.user.id;
+  const uploaded = [];
+  for (let i=0; i<state.images.length; i++){
+    const im = state.images[i];
+    if (im.isUploaded && im.path){ uploaded.push(im.path); continue; }
+    if (!im.file) continue;
+    const ext = (im.file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');
+    const path = `${userId}/${Date.now()}_${i}.${ext||'jpg'}`;
+    const { error } = await sb.storage.from('analysis-images').upload(path, im.file, {
+      cacheControl: '3600', upsert: false, contentType: im.file.type || 'image/jpeg'
+    });
+    if (error) throw new Error('upload_failed: '+error.message);
+    im.isUploaded = true; im.path = path;
+    uploaded.push(path);
+  }
+  return uploaded;
+}
+
+// ================= COLLECT FORM DATA =================
+function collectFormData(){
+  return {
+    ticker: (els.ticker.value||'').trim().toUpperCase(),
+    company_name: els.company.value.trim() || null,
+    post_type: els.type.value,
+    reply_name: els.type.value==='request' ? (els.replyName.value.trim() || null) : null,
+    reply_text: els.type.value==='request' ? (els.replyText.value.trim() || null) : null,
+    greeting_ru: els.greetRu.value.trim() || null,
+    greeting_en: els.greetEn.value.trim() || null,
+    body_ru: els.bodyRu.value.trim() || null,
+    body_en: els.bodyEn.value.trim() || null,
+    tradingview_url: els.tv.value.trim() || null,
+    hashtags: els.tags.value.trim() || null,
+    publish_to_ru: els.chRu.checked,
+    publish_to_en: els.chEn.checked
+  };
+}
+
+function validate(d){
+  if (!d.ticker) return 'ТИКЕР обязателен';
+  if (!d.publish_to_ru && !d.publish_to_en) return 'выберите хотя бы один канал';
+  if (d.publish_to_ru && !d.body_ru) return 'RU тело пусто';
+  if (d.publish_to_en && !d.body_en) return 'EN тело пусто';
+  if (d.post_type==='request' && !d.reply_name && !d.reply_text) return 'reply контекст пуст';
+  return null;
+}
+
+// ================= SAVE / PUBLISH =================
+async function saveDraft(){
+  const data = collectFormData();
+  if (!data.ticker){ flash('err','ТИКЕР обязателен'); return; }
+  els.btnDraft.disabled = true;
+  try {
+    flash('info','загрузка изображений...');
+    const paths = await uploadPendingImages();
+    const payload = { ...data, image_paths: paths, status: 'draft' };
+    const session = (await sb.auth.getSession()).data.session;
+    payload.created_by = session.user.id;
+
+    let row;
+    if (editingId){
+      const { data: r, error } = await sb.from('analysis_posts').update(payload).eq('id', editingId).select('id').maybeSingle();
+      if (error) throw error;
+      row = r;
+    } else {
+      const { data: r, error } = await sb.from('analysis_posts').insert(payload).select('id').maybeSingle();
+      if (error) throw error;
+      row = r;
+      editingId = row.id;
+    }
+    flash('ok','Черновик сохранён');
+    loadHistory();
+  } catch (e){
+    flash('err','ошибка сохранения: '+(e.message||e));
+  } finally {
+    els.btnDraft.disabled = false;
+  }
+}
+
+async function publish(){
+  const data = collectFormData();
+  const err = validate(data);
+  if (err){ flash('err', err); return; }
+  if (!confirm('Опубликовать в выбранные каналы сейчас?')) return;
+  els.btnPublish.disabled = true;
+  try {
+    flash('info','uploading images...');
+    const paths = await uploadPendingImages();
+    const payload = { ...data, image_paths: paths, status: 'draft' };
+    const session = (await sb.auth.getSession()).data.session;
+    payload.created_by = session.user.id;
+
+    let row;
+    if (editingId){
+      const { data: r, error } = await sb.from('analysis_posts').update(payload).eq('id', editingId).select('id').maybeSingle();
+      if (error) throw error;
+      row = r;
+    } else {
+      const { data: r, error } = await sb.from('analysis_posts').insert(payload).select('id').maybeSingle();
+      if (error) throw error;
+      row = r;
+      editingId = row.id;
+    }
+
+    flash('info','публикация в telegram...');
+    const action = editingId && (await isAlreadyPublished(editingId)) ? 'edit' : 'publish';
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/analysis-publish`, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}` },
+      body: JSON.stringify({ action, post_id: editingId })
+    });
+    const j = await res.json().catch(()=>({}));
+    if (!res.ok || j.error){
+      flash('err', `ошибка публикации: ${j.error||res.status}`);
+    } else {
+      flash('ok', `Опубликовано: ${[data.publish_to_ru?'RU':'',data.publish_to_en?'EN':''].filter(Boolean).join(' + ')}`);
+      // reset to fresh form
+      editingId = null;
+      document.querySelectorAll('input[type=text],input[type=url],textarea').forEach(i => i.value='');
+      els.tags.value = '#AnalysisUpdate #equities'; els.type.value='update';
+      state.images=[]; renderThumbs(); updateCounters(); updateReplyVisibility(); render();
+    }
+    loadHistory();
+  } catch (e){
+    flash('err','ошибка публикации: '+(e.message||e));
+  } finally {
+    els.btnPublish.disabled = false;
+  }
+}
+
+async function isAlreadyPublished(id){
+  const { data } = await sb.from('analysis_posts').select('status').eq('id', id).maybeSingle();
+  return data && data.status === 'published';
+}
+
+// ================= HISTORY =================
+async function loadHistory(){
+  const { data, error } = await sb.from('analysis_posts')
+    .select('id,ticker,company_name,post_type,reply_name,status,published_at,created_at,publish_to_ru,publish_to_en')
+    .neq('status','deleted')
+    .order('created_at',{ascending:false}).limit(20);
+  if (error){ els.history.innerHTML = `<div style="padding:14px;color:#c50000">${escapeHtml(error.message)}</div>`; return; }
+  if (!data || !data.length){ els.history.innerHTML = '<div style="padding:14px;opacity:0.5">— пока нет постов —</div>'; return; }
+  els.history.innerHTML = data.map(p => {
+    const d = new Date(p.published_at || p.created_at);
+    const dStr = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getFullYear()).slice(-2)} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const channels = [p.publish_to_ru?'RU':'', p.publish_to_en?'EN':''].filter(Boolean).join('+');
+    const ti = p.post_type==='request' ? `reply to ${p.reply_name||'…'}` : (p.company_name || '');
+    return `
+      <div class="hi-item">
+        <div class="tk">$${escapeHtml(p.ticker)}</div>
+        <div>
+          <div class="ti"><span class="status-pill ${p.status}">${p.status}</span>${escapeHtml(ti)}</div>
+          <div class="ex">${dStr} · ${channels}</div>
+        </div>
+        <div class="ax">
+          <button class="icon-btn" data-act="edit" data-id="${p.id}" title="Редактировать">✎</button>
+          <button class="icon-btn danger" data-act="del" data-id="${p.id}" title="Удалить">×</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+  els.history.querySelectorAll('button[data-act]').forEach(b => b.addEventListener('click', ()=>{
+    const id = b.dataset.id;
+    if (b.dataset.act==='edit') loadIntoEditor(id);
+    else if (b.dataset.act==='del') deletePost(id);
+  }));
+}
+
+async function loadIntoEditor(id){
+  const { data, error } = await sb.from('analysis_posts').select('*').eq('id', id).maybeSingle();
+  if (error || !data){ flash('err','ошибка загрузки'); return; }
+  editingId = id;
+  els.ticker.value = data.ticker || '';
+  els.company.value = data.company_name || '';
+  els.type.value = data.post_type || 'update';
+  els.replyName.value = data.reply_name || '';
+  els.replyText.value = data.reply_text || '';
+  els.greetRu.value = data.greeting_ru || '';
+  els.greetEn.value = data.greeting_en || '';
+  els.bodyRu.value = data.body_ru || '';
+  els.bodyEn.value = data.body_en || '';
+  els.tv.value = data.tradingview_url || '';
+  els.tags.value = data.hashtags || '';
+  els.chRu.checked = !!data.publish_to_ru;
+  els.chEn.checked = !!data.publish_to_en;
+  state.images = (data.image_paths||[]).map(path => ({
+    path, isUploaded:true,
+    url: `${SUPABASE_URL}/storage/v1/object/public/analysis-images/${path}`
+  }));
+  renderThumbs(); updateCounters(); updateReplyVisibility(); render();
+  flash('info', `Пост ${data.ticker} загружен для редактирования`);
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+async function deletePost(id){
+  if (!confirm('Удалить этот пост (и из Telegram, если опубликован)?')) return;
+  const session = (await sb.auth.getSession()).data.session;
+  const { data } = await sb.from('analysis_posts').select('status').eq('id', id).maybeSingle();
+  if (data && data.status==='published'){
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/analysis-publish`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`},
+      body: JSON.stringify({ action:'delete', post_id:id })
+    });
+    const j = await res.json().catch(()=>({}));
+    if (!res.ok || j.error){ flash('err','ошибка удаления в TG: '+(j.error||res.status)); return; }
+  } else {
+    await sb.from('analysis_posts').update({status:'deleted'}).eq('id', id);
+  }
+  flash('ok','Удалено');
+  if (editingId===id){ editingId=null; clearFormSilent(); }
+  loadHistory();
+}
+
+function clearFormSilent(){
+  document.querySelectorAll('input[type=text],input[type=url],textarea').forEach(i => i.value='');
+  els.tags.value='#AnalysisUpdate #equities'; els.type.value='update';
+  state.images=[]; renderThumbs(); updateCounters(); updateReplyVisibility(); render();
+}
+
+checkAdminAndShow();
+</script>
+</body>
+</html>
