@@ -62,9 +62,61 @@
     return Math.max(0, Math.ceil((new Date(d) - new Date()) / 86400000));
   }
 
+  // Показать промежуточный «обрабатываем платёж» баннер.
+  function renderProcessing(box) {
+    box.innerHTML =
+      '<div class="bf-card">' +
+        '<div class="bf-status bf-status--trial">⏳ Подтверждаем оплату…</div>' +
+        '<div class="bf-row">Это занимает 5–20 секунд. Страница обновится автоматически.</div>' +
+      '</div>';
+  }
+
+  // Дождаться, пока подписка станет active (после ?payment=success).
+  // Опрашивает loadStatus до ~30 секунд, возвращает свежий state как только status=active.
+  async function waitUntilActive(maxMs) {
+    const deadline = Date.now() + (maxMs || 30000);
+    while (Date.now() < deadline) {
+      try {
+        const st = await loadStatus();
+        if (st && st.subscription && st.subscription.status === 'active') return st;
+      } catch (_) {}
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+    return null;
+  }
+
   async function render() {
     const box = document.getElementById('belfedSubscriptionBox');
     if (!box) return;
+
+    // Возврат с YooKassa: ?payment=success → ждём активации.
+    let paymentSuccess = false;
+    try {
+      const url = new URL(window.location.href);
+      paymentSuccess = url.searchParams.get('payment') === 'success';
+    } catch (_) {}
+
+    if (paymentSuccess) {
+      renderProcessing(box);
+      const fresh = await waitUntilActive(30000);
+      // Очищаем флаг из URL чтобы при перезагрузке не зацикливаться.
+      try {
+        const u = new URL(window.location.href);
+        u.searchParams.delete('payment');
+        window.history.replaceState({}, '', u.toString());
+      } catch (_) {}
+      if (fresh) {
+        // Покажем зелёный тост поверх стандартного рендера ниже.
+        setTimeout(() => {
+          const msg = document.getElementById('bfMsg');
+          if (msg) {
+            msg.style.color = '#2e7d32';
+            msg.textContent = '✅ Оплата прошла. Подписка активна.';
+          }
+        }, 50);
+      }
+      // ниже идёт обычный рендер актуального состояния
+    }
 
     let state;
     try { state = await loadStatus(); } catch { box.textContent = ''; return; }
