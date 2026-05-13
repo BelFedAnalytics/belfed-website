@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BELFED — АДМИН · ПОДПИСЧИКИ</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f2eb;--paper:#fff;--ink:#000;--border:#000;--soft-border:#ccc;
+  --green:#1a7a1a;--red:#c50000;--amber:#e6a800;--muted:#999;
+  --font:'Courier New',Courier,monospace;
+}
+body{background:var(--bg);font-family:var(--font);color:var(--ink);padding:24px 20px;line-height:1.6;font-size:14px;visibility:hidden}
+body.ready{visibility:visible}
+
+.admin-nav{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;background:#000;padding:10px 14px;margin:-24px -20px 24px}
+.admin-nav a{font-family:var(--font);font-size:11px;letter-spacing:2px;padding:6px 14px;color:var(--bg);text-decoration:none;border:1px solid transparent}
+.admin-nav a:hover{border-color:var(--bg)}
+.admin-nav a.active{background:var(--bg);color:var(--ink);border-color:var(--bg)}
+.admin-nav .sep{color:#666;padding:6px 0}
+
+.container{max-width:1500px;margin:0 auto}
+
+header{text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid var(--ink)}
+header h2{font-size:13px;letter-spacing:4px;margin-bottom:8px}
+header h1{font-size:20px;font-weight:bold;letter-spacing:3px;margin-bottom:6px}
+.subtitle{font-size:11px;opacity:0.6;letter-spacing:1px}
+
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px}
+.user-info{font-size:11px;opacity:0.6;letter-spacing:1px}
+.btn{font-family:var(--font);font-size:11px;letter-spacing:2px;padding:8px 16px;border:1px solid var(--ink);background:var(--paper);cursor:pointer;color:var(--ink);text-decoration:none;display:inline-block}
+.btn:hover{background:#f0ede4}
+.btn.primary{background:var(--ink);color:var(--bg)}
+.btn.primary:hover{background:#222}
+
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px}
+.stat-card{background:var(--paper);border:1px solid var(--ink);padding:14px 16px}
+.stat-card .label{font-size:10px;letter-spacing:2px;opacity:0.6;margin-bottom:6px;text-transform:uppercase}
+.stat-card .value{font-size:22px;font-weight:bold;letter-spacing:1px}
+.stat-card .sub{font-size:10px;opacity:0.55;letter-spacing:1px;margin-top:4px}
+.stat-card.green .value{color:var(--green)}
+.stat-card.amber .value{color:var(--amber)}
+.stat-card.red .value{color:var(--red)}
+
+.section{background:var(--paper);border:1px solid var(--ink);padding:18px 20px;margin-bottom:18px}
+.filters-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.filters-row .label{font-size:10px;letter-spacing:2px;opacity:0.6;margin-right:6px;text-transform:uppercase}
+.chip{font-family:var(--font);font-size:11px;letter-spacing:1.5px;padding:6px 12px;border:1px solid var(--ink);background:var(--bg);color:var(--ink);cursor:pointer;text-decoration:none}
+.chip:hover{background:#f0ede4}
+.chip.active{background:var(--ink);color:var(--bg)}
+.search-input{font-family:var(--font);padding:7px 10px;font-size:12px;border:1px solid var(--ink);background:var(--bg);outline:none;min-width:240px;flex:1}
+.search-input:focus{background:var(--paper)}
+
+.table-wrap{overflow-x:auto;background:var(--paper);border:1px solid var(--ink)}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th,td{padding:7px 8px;text-align:left;border:1px solid var(--soft-border);vertical-align:top}
+th{background:var(--ink);color:var(--bg);font-weight:bold;font-size:10px;letter-spacing:1px;white-space:nowrap;text-transform:uppercase;cursor:pointer;user-select:none}
+th:hover{background:#222}
+th .sort-ind{opacity:0.5;margin-left:4px;font-size:9px}
+tr:nth-child(even) td{background:#fafaf5}
+tr:hover td{background:#f0ede4}
+
+.tag{display:inline-block;padding:1px 6px;font-size:9px;letter-spacing:1px;border:1px solid;text-transform:uppercase}
+.tag-active{background:var(--green);color:#fff;border-color:var(--green)}
+.tag-trial{background:var(--amber);color:#fff;border-color:var(--amber)}
+.tag-expired{background:var(--red);color:#fff;border-color:var(--red)}
+.tag-admin{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tag-en{background:#fff;color:var(--ink);border:1px dashed var(--ink)}
+.tag-ru{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+.email-cell{font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis}
+.email-cell.ghost{opacity:0.4;font-style:italic}
+.tg-cell a{color:var(--ink);text-decoration:underline}
+.notes-cell{max-width:200px;font-size:10px;opacity:0.7;white-space:normal;word-break:break-word}
+
+.action-btn{font-family:var(--font);font-size:10px;letter-spacing:1px;padding:4px 8px;border:1px solid var(--ink);background:var(--paper);cursor:pointer;color:var(--ink);margin-right:3px;margin-bottom:3px;text-decoration:none;display:inline-block}
+.action-btn:hover{background:var(--ink);color:var(--bg)}
+.action-btn.danger{border-color:var(--red);color:var(--red)}
+.action-btn.danger:hover{background:var(--red);color:#fff}
+
+.empty-row{text-align:center;opacity:0.5;font-size:12px;padding:24px}
+
+.msg{padding:10px 12px;font-size:11px;letter-spacing:1px;border:1px solid var(--ink);margin:10px 0}
+.msg.ok{background:#e8f5e9;color:var(--green);border-color:var(--green)}
+.msg.err{background:#fff0f0;color:var(--red);border-color:var(--red)}
+.msg.info{background:#fff8e0;color:#7a5e00;border-color:var(--amber)}
+
+#loginScreen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:10}
+.login-box{background:var(--paper);border:2px solid var(--ink);padding:30px;width:340px}
+.login-box h3{font-size:13px;letter-spacing:3px;margin-bottom:6px;text-align:center}
+.login-sub{font-size:10px;opacity:0.55;text-align:center;margin-bottom:20px;letter-spacing:1px}
+.login-box input{width:100%;font-family:var(--font);padding:10px;border:1px solid var(--ink);background:var(--bg);font-size:13px;margin-bottom:10px}
+.login-box button{width:100%;font-family:var(--font);padding:10px;border:1px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer;font-size:12px;letter-spacing:2px}
+
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:20;padding:20px}
+.modal.show{display:flex}
+.modal-box{background:var(--paper);border:2px solid var(--ink);padding:24px;max-width:560px;width:100%;max-height:90vh;overflow:auto}
+.modal-box h3{font-size:13px;letter-spacing:2px;margin-bottom:14px;border-bottom:1px solid var(--ink);padding-bottom:8px}
+.modal-box label{display:block;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;opacity:0.6;margin:12px 0 4px}
+.modal-box textarea{width:100%;font-family:var(--font);padding:8px 10px;font-size:12px;border:1px solid var(--ink);background:var(--bg);min-height:90px;resize:vertical}
+.modal-buttons{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.modal-info-row{display:flex;font-size:11px;margin-bottom:4px}
+.modal-info-row .k{opacity:0.55;letter-spacing:1px;min-width:120px;text-transform:uppercase;font-size:10px}
+.modal-info-row .v{font-weight:bold}
+
+.history-table{width:100%;font-size:10px;margin-top:8px;border-collapse:collapse}
+.history-table th,.history-table td{padding:4px 6px;border:1px solid var(--soft-border);text-align:left;white-space:nowrap}
+.history-table th{background:var(--ink);color:var(--bg);font-size:9px;letter-spacing:1px}
+.history-detail{font-family:monospace;font-size:9px;opacity:0.6;max-width:260px;white-space:normal;word-break:break-all}
+
+footer{text-align:center;font-size:10px;opacity:0.45;letter-spacing:2px;margin-top:24px;padding-top:14px;border-top:1px dashed var(--muted)}
+
+.loading{text-align:center;padding:30px;font-size:12px;opacity:0.5;letter-spacing:2px}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-box">
+    <h3>// АДМИН · ПОДПИСЧИКИ</h3>
+    <div class="login-sub">ОГРАНИЧЕННЫЙ ДОСТУП</div>
+    <input type="email" id="login-email" placeholder="admin@belfed.com" autocomplete="email">
+    <input type="password" id="login-password" placeholder="пароль" autocomplete="current-password">
+    <button onclick="signIn()">[ ВОЙТИ ]</button>
+    <div id="login-msg"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+
+<div class="admin-nav">
+  <a href="/admin.html">ХАБ</a>
+  <span class="sep">|</span>
+  <a href="/admin-positions.html">ПОЗИЦИИ</a>
+  <span class="sep">|</span>
+  <a href="/admin-analysis-posts.html">АНАЛИЗ АКТИВОВ</a>
+  <span class="sep">|</span>
+  <a href="/admin-subscribers.html" class="active">ПОДПИСЧИКИ</a>
+</div>
+
+<div class="container">
+
+<header>
+  <h2>— BELFED_ · ПОДПИСЧИКИ —</h2>
+  <h1>// EN + RU PIPELINE</h1>
+  <div class="subtitle">Единая панель подписок · все каналы · все статусы</div>
+</header>
+
+<div class="toolbar">
+  <div class="user-info" id="user-info"></div>
+  <div>
+    <button class="btn" onclick="loadData()">[ ОБНОВИТЬ ]</button>
+    <button class="btn" onclick="exportCsv()">[ CSV ]</button>
+    <button class="btn" onclick="signOut()">[ ВЫЙТИ ]</button>
+  </div>
+</div>
+
+<div class="stats-grid" id="statsGrid"></div>
+
+<div class="section">
+  <div class="filters-row">
+    <span class="label">СТАТУС:</span>
+    <button class="chip active" data-filter="all">ВСЕ</button>
+    <button class="chip" data-filter="active">ACTIVE</button>
+    <button class="chip" data-filter="trial">TRIAL</button>
+    <button class="chip" data-filter="expired">EXPIRED</button>
+    <span class="label" style="margin-left:18px">ЯЗЫК:</span>
+    <button class="chip active" data-lang="all">ВСЕ</button>
+    <button class="chip" data-lang="ru">RU</button>
+    <button class="chip" data-lang="en">EN</button>
+    <input type="text" class="search-input" id="searchInput" placeholder="поиск: email / @username / id…">
+  </div>
+</div>
+
+<div id="msgBox"></div>
+
+<div class="table-wrap">
+  <table id="subsTable">
+    <thead>
+      <tr>
+        <th data-sort="email">EMAIL <span class="sort-ind"></span></th>
+        <th data-sort="telegram_username">TELEGRAM <span class="sort-ind"></span></th>
+        <th data-sort="lang">LANG <span class="sort-ind"></span></th>
+        <th data-sort="subscription_status">STATUS <span class="sort-ind"></span></th>
+        <th data-sort="subscription_plan">PLAN <span class="sort-ind"></span></th>
+        <th data-sort="subscription_expires_at">EXPIRES <span class="sort-ind"></span></th>
+        <th data-sort="last_payment_at">LAST PAY <span class="sort-ind"></span></th>
+        <th data-sort="total_payments_count">PAYS <span class="sort-ind">▾</span></th>
+        <th data-sort="last_sign_in_at">LAST LOGIN <span class="sort-ind"></span></th>
+        <th data-sort="created_at">CREATED <span class="sort-ind"></span></th>
+        <th>NOTES</th>
+        <th>ДЕЙСТВИЯ</th>
+      </tr>
+    </thead>
+    <tbody id="tbody">
+      <tr><td colspan="12" class="loading">// ЗАГРУЗКА…</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<footer>BELFED ANALYTICS · АДМИН · ПОДПИСЧИКИ · v1.0</footer>
+
+</div>
+</div>
+
+<!-- Modal: Notes -->
+<div class="modal" id="notesModal">
+  <div class="modal-box">
+    <h3 id="notesTitle">// ЗАМЕТКА</h3>
+    <div id="notesUserInfo"></div>
+    <label>ADMIN NOTES (видны только админам)</label>
+    <textarea id="notesText"></textarea>
+    <div class="modal-buttons">
+      <button class="btn primary" onclick="saveNotes()">[ СОХРАНИТЬ ]</button>
+      <button class="btn" onclick="closeModal('notesModal')">[ ОТМЕНА ]</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: History -->
+<div class="modal" id="histModal">
+  <div class="modal-box" style="max-width:760px">
+    <h3 id="histTitle">// ИСТОРИЯ</h3>
+    <div id="histUserInfo"></div>
+    <div id="histContent"></div>
+    <div class="modal-buttons">
+      <button class="btn" onclick="closeModal('histModal')">[ ЗАКРЫТЬ ]</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Confirm -->
+<div class="modal" id="confirmModal">
+  <div class="modal-box" style="max-width:440px">
+    <h3 id="confirmTitle">// ПОДТВЕРДИТЕ ДЕЙСТВИЕ</h3>
+    <div id="confirmBody" style="font-size:12px;margin-bottom:14px"></div>
+    <div class="modal-buttons">
+      <button class="btn primary" id="confirmYes">[ ДА ]</button>
+      <button class="btn" onclick="closeModal('confirmModal')">[ ОТМЕНА ]</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL  = 'https://obujqvqqmyfcfflhqvud.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9idWpxdnFxbXlmY2ZmbGhxdnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDgxNjYsImV4cCI6MjA4OTkyNDE2Nn0.syl4YBLbf8aBitxyK3gCL51pPYxWjEW99mMTXJaQQ8w';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+let state = {
+  rows: [],
+  filter: 'all',
+  lang: 'all',
+  search: '',
+  sortKey: 'total_payments_count',
+  sortDir: 'desc',
+  currentUserId: null
+};
+
+// ---------- AUTH ----------
+async function signIn() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) {
+    document.getElementById('login-msg').innerHTML = '<div class="msg err">' + escapeHtml(error.message) + '</div>';
+    return;
+  }
+  await checkAdminAndShow();
+}
+async function signOut() { await sb.auth.signOut(); location.reload(); }
+
+async function checkAdminAndShow() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+    document.body.classList.add('ready');
+    return;
+  }
+  const { data: profile } = await sb.from('profiles').select('subscription_status,email').eq('id', session.user.id).maybeSingle();
+  if (!profile || profile.subscription_status !== 'admin') {
+    document.getElementById('login-msg').innerHTML = '<div class="msg err">Доступ запрещён — у вашего аккаунта нет прав администратора.</div>';
+    document.body.classList.add('ready');
+    return;
+  }
+  state.currentUserId = session.user.id;
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('user-info').textContent = 'Вход выполнен: ' + (profile.email || session.user.email);
+  document.body.classList.add('ready');
+  await loadData();
+}
+
+// ---------- DATA ----------
+async function loadData() {
+  setMsg('');
+  setBodyLoading();
+  const { data, error } = await sb.rpc('admin_list_subscribers', { p_filter: null });
+  if (error) { setMsg('Ошибка загрузки: ' + error.message, 'err'); return; }
+  state.rows = data || [];
+  renderStats();
+  renderTable();
+}
+
+function renderStats() {
+  const rows = state.rows;
+  const isExpiredTrial = r => r.trial_end && new Date(r.trial_end) < new Date();
+  const stats = {
+    total: rows.length,
+    active: rows.filter(r => r.subscription_status === 'active').length,
+    trial: rows.filter(r => r.subscription_status === 'trial' && !isExpiredTrial(r)).length,
+    expired: rows.filter(r => r.subscription_status === 'expired' || (r.subscription_status==='trial' && isExpiredTrial(r))).length,
+    admin: rows.filter(r => r.subscription_status === 'admin').length,
+    en_active: rows.filter(r => r.lang === 'en' && r.subscription_status === 'active').length,
+    ru_active: rows.filter(r => r.lang === 'ru' && r.subscription_status === 'active').length,
+    en_trial: rows.filter(r => r.lang === 'en' && r.subscription_status === 'trial' && !isExpiredTrial(r)).length,
+    ru_trial: rows.filter(r => r.lang === 'ru' && r.subscription_status === 'trial' && !isExpiredTrial(r)).length,
+    total_rub: rows.reduce((s,r) => s + Number(r.total_rub_paid || 0), 0),
+    total_stars: rows.reduce((s,r) => s + Number(r.total_stars_paid || 0), 0)
+  };
+  const html = `
+    <div class="stat-card"><div class="label">Всего</div><div class="value">${stats.total}</div><div class="sub">${stats.admin} админ</div></div>
+    <div class="stat-card green"><div class="label">Active</div><div class="value">${stats.active}</div><div class="sub">EN ${stats.en_active} · RU ${stats.ru_active}</div></div>
+    <div class="stat-card amber"><div class="label">Trial</div><div class="value">${stats.trial}</div><div class="sub">EN ${stats.en_trial} · RU ${stats.ru_trial}</div></div>
+    <div class="stat-card red"><div class="label">Expired</div><div class="value">${stats.expired}</div><div class="sub">истёкшие подписки</div></div>
+    <div class="stat-card"><div class="label">RUB всего</div><div class="value">${fmtMoney(stats.total_rub)}</div><div class="sub">YooKassa</div></div>
+    <div class="stat-card"><div class="label">Stars всего</div><div class="value">${fmtMoney(stats.total_stars)}</div><div class="sub">Telegram Stars</div></div>
+  `;
+  document.getElementById('statsGrid').innerHTML = html;
+}
+
+function filteredRows() {
+  let rows = state.rows.slice();
+  const isExpiredTrial = r => r.trial_end && new Date(r.trial_end) < new Date();
+  if (state.filter === 'active')  rows = rows.filter(r => r.subscription_status === 'active');
+  if (state.filter === 'trial')   rows = rows.filter(r => r.subscription_status === 'trial' && !isExpiredTrial(r));
+  if (state.filter === 'expired') rows = rows.filter(r => r.subscription_status === 'expired' || (r.subscription_status==='trial' && isExpiredTrial(r)));
+  if (state.lang !== 'all') rows = rows.filter(r => (r.lang || '').toLowerCase() === state.lang);
+  if (state.search) {
+    const q = state.search.toLowerCase();
+    rows = rows.filter(r =>
+      (r.email || '').toLowerCase().includes(q) ||
+      (r.telegram_username || '').toLowerCase().includes(q) ||
+      (r.telegram_id || '').toLowerCase().includes(q) ||
+      (r.id || '').toLowerCase().includes(q) ||
+      (r.admin_notes || '').toLowerCase().includes(q)
+    );
+  }
+  // sort
+  const k = state.sortKey;
+  const dir = state.sortDir === 'asc' ? 1 : -1;
+  rows.sort((a,b) => {
+    const va = a[k], vb = b[k];
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * dir;
+    return String(va).localeCompare(String(vb)) * dir;
+  });
+  return rows;
+}
+
+function renderTable() {
+  const rows = filteredRows();
+  const tbody = document.getElementById('tbody');
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="12" class="empty-row">— Записей нет —</td></tr>'; return; }
+  tbody.innerHTML = rows.map(r => {
+    const ghost = (r.email || '').endsWith('@belfed.local');
+    const emailDisp = r.email ? `<span class="email-cell ${ghost?'ghost':''}" title="${escapeHtml(r.email)}">${escapeHtml(r.email)}</span>` : '<span class="email-cell ghost">—</span>';
+    const tg = r.telegram_username ? `<a href="https://t.me/${escapeHtml(r.telegram_username)}" target="_blank">@${escapeHtml(r.telegram_username)}</a>` : (r.telegram_id ? `<span title="нет username">tg:${escapeHtml(r.telegram_id)}</span>` : '—');
+    const lang = r.lang ? `<span class="tag tag-${r.lang}">${escapeHtml(r.lang.toUpperCase())}</span>` : '—';
+    const status = renderStatus(r);
+    const plan = r.subscription_plan || '—';
+    const expires = fmtDateShort(r.subscription_expires_at) + (r.subscription_status === 'trial' ? ' (trial→' + fmtDateShort(r.trial_end) + ')' : '');
+    const lastPay = r.last_payment_at ? fmtDateShort(r.last_payment_at) + ' · ' + fmtPayment(r) : '—';
+    const pays = r.total_payments_count || 0;
+    const lastLogin = fmtDateShort(r.last_sign_in_at);
+    const created = fmtDateShort(r.created_at);
+    const notes = r.admin_notes ? `<div class="notes-cell" title="${escapeHtml(r.admin_notes)}">${escapeHtml(truncate(r.admin_notes, 80))}</div>` : '<span style="opacity:0.3">—</span>';
+    const actions = renderActions(r);
+    return `<tr data-id="${r.id}">
+      <td>${emailDisp}</td>
+      <td class="tg-cell">${tg}</td>
+      <td>${lang}</td>
+      <td>${status}</td>
+      <td>${escapeHtml(plan)}</td>
+      <td>${expires}</td>
+      <td>${lastPay}</td>
+      <td style="text-align:center">${pays}</td>
+      <td>${lastLogin}</td>
+      <td>${created}</td>
+      <td>${notes}</td>
+      <td>${actions}</td>
+    </tr>`;
+  }).join('');
+  updateSortIndicators();
+}
+
+function renderStatus(r) {
+  if (r.subscription_status === 'admin') return '<span class="tag tag-admin">ADMIN</span>';
+  if (r.subscription_status === 'active') return '<span class="tag tag-active">ACTIVE</span>';
+  if (r.subscription_status === 'expired') return '<span class="tag tag-expired">EXPIRED</span>';
+  if (r.subscription_status === 'trial') {
+    const isExpired = r.trial_end && new Date(r.trial_end) < new Date();
+    return isExpired ? '<span class="tag tag-expired">TRIAL OFF</span>' : '<span class="tag tag-trial">TRIAL</span>';
+  }
+  return escapeHtml(r.subscription_status || '—');
+}
+
+function renderActions(r) {
+  if (r.subscription_status === 'admin') {
+    return `<button class="action-btn" onclick="openHistory('${r.id}')">⏱ HIST</button>
+            <button class="action-btn" onclick="openNotes('${r.id}')">✎ NOTE</button>`;
+  }
+  const mail = r.email && !r.email.endsWith('@belfed.local') ? `<a class="action-btn" href="mailto:${escapeHtml(r.email)}">✉ MAIL</a>` : '';
+  return `
+    <button class="action-btn" onclick="extend('${r.id}', 1)">+1м</button>
+    <button class="action-btn" onclick="extend('${r.id}', 3)">+3м</button>
+    <button class="action-btn" onclick="openNotes('${r.id}')">✎ NOTE</button>
+    <button class="action-btn" onclick="openHistory('${r.id}')">⏱ HIST</button>
+    ${mail}
+    <button class="action-btn danger" onclick="revoke('${r.id}')">✖ REVOKE</button>
+  `;
+}
+
+function setBodyLoading() {
+  document.getElementById('tbody').innerHTML = '<tr><td colspan="12" class="loading">// ЗАГРУЗКА…</td></tr>';
+}
+
+function updateSortIndicators() {
+  document.querySelectorAll('th[data-sort]').forEach(th => {
+    const ind = th.querySelector('.sort-ind');
+    if (th.dataset.sort === state.sortKey) {
+      ind.textContent = state.sortDir === 'asc' ? '▴' : '▾';
+      ind.style.opacity = '1';
+    } else { ind.textContent = ''; }
+  });
+}
+
+// ---------- ACTIONS ----------
+async function extend(userId, months) {
+  const row = state.rows.find(r => r.id === userId);
+  const who = row ? (row.email || '@' + (row.telegram_username || row.telegram_id || '?')) : userId;
+  confirmAction(`Продлить подписку на +${months} мес.?`, `Пользователь: ${who}`, async () => {
+    const { data, error } = await sb.rpc('admin_extend_subscription', { p_user_id: userId, p_months: months });
+    if (error) return setMsg('Ошибка продления: ' + error.message, 'err');
+    setMsg(`Продлено до ${fmtDateShort(data && data.expires_at)}. Пользователь: ${who}`, 'ok');
+    await loadData();
+  });
+}
+
+async function revoke(userId) {
+  const row = state.rows.find(r => r.id === userId);
+  const who = row ? (row.email || '@' + (row.telegram_username || row.telegram_id || '?')) : userId;
+  const reason = prompt(`Причина отзыва доступа?\n\nПользователь: ${who}`, '');
+  if (reason === null) return;
+  confirmAction(`Отозвать доступ?`, `Пользователь: ${who}\nПричина: ${reason || '(не указана)'}`, async () => {
+    const { error } = await sb.rpc('admin_revoke_access', { p_user_id: userId, p_reason: reason || null });
+    if (error) return setMsg('Ошибка отзыва: ' + error.message, 'err');
+    setMsg(`Доступ отозван: ${who}`, 'ok');
+    await loadData();
+  });
+}
+
+let currentNotesUserId = null;
+function openNotes(userId) {
+  const row = state.rows.find(r => r.id === userId);
+  if (!row) return;
+  currentNotesUserId = userId;
+  document.getElementById('notesUserInfo').innerHTML = userInfoHtml(row);
+  document.getElementById('notesText').value = row.admin_notes || '';
+  document.getElementById('notesModal').classList.add('show');
+  setTimeout(() => document.getElementById('notesText').focus(), 50);
+}
+async function saveNotes() {
+  const text = document.getElementById('notesText').value;
+  const { error } = await sb.rpc('admin_update_notes', { p_user_id: currentNotesUserId, p_notes: text });
+  if (error) return setMsg('Ошибка сохранения: ' + error.message, 'err');
+  closeModal('notesModal');
+  setMsg('Заметка сохранена.', 'ok');
+  await loadData();
+}
+
+async function openHistory(userId) {
+  const row = state.rows.find(r => r.id === userId);
+  if (!row) return;
+  document.getElementById('histUserInfo').innerHTML = userInfoHtml(row);
+  document.getElementById('histContent').innerHTML = '<div class="loading">// ЗАГРУЗКА…</div>';
+  document.getElementById('histModal').classList.add('show');
+  const { data, error } = await sb.rpc('admin_subscriber_history', { p_user_id: userId });
+  if (error) { document.getElementById('histContent').innerHTML = '<div class="msg err">' + escapeHtml(error.message) + '</div>'; return; }
+  if (!data || !data.length) { document.getElementById('histContent').innerHTML = '<div style="opacity:0.5;padding:14px;text-align:center">— Событий нет —</div>'; return; }
+  const html = '<table class="history-table"><thead><tr><th>КОГДА</th><th>СОБЫТИЕ</th><th>ДЕТАЛИ</th></tr></thead><tbody>' +
+    data.map(e => `<tr>
+      <td>${fmtDateTime(e.created_at)}</td>
+      <td>${escapeHtml(e.event_type)}</td>
+      <td class="history-detail">${e.detail ? escapeHtml(JSON.stringify(e.detail)) : ''}</td>
+    </tr>`).join('') + '</tbody></table>';
+  document.getElementById('histContent').innerHTML = html;
+}
+
+function userInfoHtml(r) {
+  return `
+    <div class="modal-info-row"><div class="k">Email</div><div class="v">${escapeHtml(r.email || '—')}</div></div>
+    <div class="modal-info-row"><div class="k">Telegram</div><div class="v">${r.telegram_username ? '@'+escapeHtml(r.telegram_username) : (r.telegram_id ? 'id:'+escapeHtml(r.telegram_id) : '—')}</div></div>
+    <div class="modal-info-row"><div class="k">Статус / Язык</div><div class="v">${escapeHtml(r.subscription_status || '—')} · ${escapeHtml((r.lang||'').toUpperCase())}</div></div>
+    <div class="modal-info-row"><div class="k">Истекает</div><div class="v">${fmtDateShort(r.subscription_expires_at)}</div></div>
+  `;
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+// ---------- CONFIRM ----------
+function confirmAction(title, body, onYes) {
+  document.getElementById('confirmTitle').textContent = '// ' + title;
+  document.getElementById('confirmBody').textContent = body;
+  const yes = document.getElementById('confirmYes');
+  const newYes = yes.cloneNode(true);
+  yes.parentNode.replaceChild(newYes, yes);
+  newYes.addEventListener('click', async () => {
+    closeModal('confirmModal');
+    try { await onYes(); } catch (e) { setMsg(String(e), 'err'); }
+  });
+  document.getElementById('confirmModal').classList.add('show');
+}
+
+// ---------- HELPERS ----------
+function escapeHtml(s) { if (s == null) return ''; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function truncate(s, n) { return s.length > n ? s.slice(0, n-1) + '…' : s; }
+function fmtMoney(n) { const v = Number(n) || 0; if (v >= 1000000) return (v/1000000).toFixed(1).replace(/\.0$/,'') + 'M'; if (v >= 1000) return (v/1000).toFixed(1).replace(/\.0$/,'') + 'K'; return v.toLocaleString('ru-RU'); }
+function fmtDateShort(d) { if (!d) return '—'; const dt = new Date(d); if (isNaN(dt)) return '—'; const now = new Date(); const sameYear = dt.getFullYear() === now.getFullYear(); const opts = sameYear ? {month:'short',day:'numeric'} : {year:'2-digit',month:'short',day:'numeric'}; return dt.toLocaleDateString('ru-RU', opts); }
+function fmtDateTime(d) { if (!d) return '—'; const dt = new Date(d); if (isNaN(dt)) return '—'; return dt.toLocaleString('ru-RU', {year:'2-digit',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); }
+function fmtPayment(r) {
+  if (!r.last_payment_amount) return '';
+  const cur = (r.last_payment_currency || '').toUpperCase();
+  if (cur === 'RUB') return Number(r.last_payment_amount).toLocaleString('ru-RU') + '₽';
+  if (cur === 'XTR' || cur === 'STARS') return Number(r.last_payment_amount).toLocaleString('ru-RU') + '⭐';
+  return Number(r.last_payment_amount).toLocaleString('ru-RU') + ' ' + cur;
+}
+function setMsg(text, type) {
+  if (!text) { document.getElementById('msgBox').innerHTML = ''; return; }
+  document.getElementById('msgBox').innerHTML = `<div class="msg ${type || 'info'}">${escapeHtml(text)}</div>`;
+  if (type === 'ok') setTimeout(() => { document.getElementById('msgBox').innerHTML = ''; }, 4500);
+}
+
+function exportCsv() {
+  const rows = filteredRows();
+  if (!rows.length) return setMsg('Нет данных для экспорта', 'info');
+  const cols = ['email','telegram_username','telegram_id','lang','subscription_status','subscription_plan','subscription_expires_at','trial_end','total_payments_count','total_rub_paid','total_stars_paid','last_payment_at','last_sign_in_at','created_at','admin_notes'];
+  const esc = v => { if (v == null) return ''; const s = String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; };
+  const csv = [cols.join(',')].concat(rows.map(r => cols.map(c => esc(r[c])).join(','))).join('\n');
+  const blob = new Blob(["\ufeff" + csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'belfed-subscribers-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ---------- EVENT BINDINGS ----------
+document.addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (chip) {
+    if (chip.dataset.filter) {
+      document.querySelectorAll('.chip[data-filter]').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      state.filter = chip.dataset.filter;
+      renderTable();
+    } else if (chip.dataset.lang) {
+      document.querySelectorAll('.chip[data-lang]').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      state.lang = chip.dataset.lang;
+      renderTable();
+    }
+  }
+  const th = e.target.closest('th[data-sort]');
+  if (th) {
+    const k = th.dataset.sort;
+    if (state.sortKey === k) state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+    else { state.sortKey = k; state.sortDir = 'desc'; }
+    renderTable();
+  }
+});
+document.getElementById('searchInput').addEventListener('input', e => {
+  state.search = e.target.value.trim();
+  renderTable();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.modal.show').forEach(m => m.classList.remove('show'));
+  if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') signIn();
+});
+
+checkAdminAndShow();
+</script>
+
+</body>
+</html>
