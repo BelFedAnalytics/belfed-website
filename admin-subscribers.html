@@ -69,6 +69,9 @@ tr:hover td{background:#f0ede4}
 .tag-admin{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .tag-en{background:#fff;color:var(--ink);border:1px dashed var(--ink)}
 .tag-ru{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tag-test{background:#fff8e0;color:#7a5e00;border:1px dashed var(--amber);margin-left:4px}
+tr.is-test td{opacity:0.55}
+tr.is-test:hover td{opacity:0.85}
 
 .email-cell{font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis}
 .email-cell.ghost{opacity:0.4;font-style:italic}
@@ -170,6 +173,10 @@ footer{text-align:center;font-size:10px;opacity:0.45;letter-spacing:2px;margin-t
     <button class="chip active" data-lang="all">ВСЕ</button>
     <button class="chip" data-lang="ru">RU</button>
     <button class="chip" data-lang="en">EN</button>
+    <span class="label" style="margin-left:18px">TEST:</span>
+    <button class="chip active" data-test="hide">СКРЫТЬ</button>
+    <button class="chip" data-test="show">ПОКАЗАТЬ</button>
+    <button class="chip" data-test="only">ТОЛЬКО TEST</button>
     <input type="text" class="search-input" id="searchInput" placeholder="поиск: email / @username / id…">
   </div>
 </div>
@@ -252,6 +259,7 @@ let state = {
   rows: [],
   filter: 'all',
   lang: 'all',
+  testMode: 'hide',  // hide | show | only
   search: '',
   sortKey: 'total_payments_count',
   sortDir: 'desc',
@@ -297,7 +305,8 @@ async function checkAdminAndShow() {
 async function loadData() {
   setMsg('');
   setBodyLoading();
-  const { data, error } = await sb.rpc('admin_list_subscribers', { p_filter: null });
+  // Грузим все профили включая test — UI сам переключает hide/show/only
+  const { data, error } = await sb.rpc('admin_list_subscribers', { p_filter: null, p_include_test: true });
   if (error) { setMsg('Ошибка загрузки: ' + error.message, 'err'); return; }
   state.rows = data || [];
   renderStats();
@@ -305,7 +314,9 @@ async function loadData() {
 }
 
 function renderStats() {
-  const rows = state.rows;
+  // Сводка — без тестовых профилей (иначе цифры врут). Тестовые показываем отдельно.
+  const rows = state.rows.filter(r => !r.is_test_profile);
+  const testCount = state.rows.filter(r => r.is_test_profile).length;
   const isExpiredTrial = r => r.trial_end && new Date(r.trial_end) < new Date();
   const stats = {
     total: rows.length,
@@ -321,7 +332,7 @@ function renderStats() {
     total_stars: rows.reduce((s,r) => s + Number(r.total_stars_paid || 0), 0)
   };
   const html = `
-    <div class="stat-card"><div class="label">Всего</div><div class="value">${stats.total}</div><div class="sub">${stats.admin} админ</div></div>
+    <div class="stat-card"><div class="label">Всего</div><div class="value">${stats.total}</div><div class="sub">${stats.admin} админ · ${testCount} test</div></div>
     <div class="stat-card green"><div class="label">Active</div><div class="value">${stats.active}</div><div class="sub">EN ${stats.en_active} · RU ${stats.ru_active}</div></div>
     <div class="stat-card amber"><div class="label">Trial</div><div class="value">${stats.trial}</div><div class="sub">EN ${stats.en_trial} · RU ${stats.ru_trial}</div></div>
     <div class="stat-card red"><div class="label">Expired</div><div class="value">${stats.expired}</div><div class="sub">истёкшие подписки</div></div>
@@ -338,6 +349,8 @@ function filteredRows() {
   if (state.filter === 'trial')   rows = rows.filter(r => r.subscription_status === 'trial' && !isExpiredTrial(r));
   if (state.filter === 'expired') rows = rows.filter(r => r.subscription_status === 'expired' || (r.subscription_status==='trial' && isExpiredTrial(r)));
   if (state.lang !== 'all') rows = rows.filter(r => (r.lang || '').toLowerCase() === state.lang);
+  if (state.testMode === 'hide') rows = rows.filter(r => !r.is_test_profile);
+  else if (state.testMode === 'only') rows = rows.filter(r => r.is_test_profile);
   if (state.search) {
     const q = state.search.toLowerCase();
     rows = rows.filter(r =>
@@ -371,7 +384,7 @@ function renderTable() {
     const emailDisp = r.email ? `<span class="email-cell ${ghost?'ghost':''}" title="${escapeHtml(r.email)}">${escapeHtml(r.email)}</span>` : '<span class="email-cell ghost">—</span>';
     const tg = r.telegram_username ? `<a href="https://t.me/${escapeHtml(r.telegram_username)}" target="_blank">@${escapeHtml(r.telegram_username)}</a>` : (r.telegram_id ? `<span title="нет username">tg:${escapeHtml(r.telegram_id)}</span>` : '—');
     const lang = r.lang ? `<span class="tag tag-${r.lang}">${escapeHtml(r.lang.toUpperCase())}</span>` : '—';
-    const status = renderStatus(r);
+    const status = renderStatus(r) + (r.is_test_profile ? ' <span class="tag tag-test">TEST</span>' : '');
     const plan = r.subscription_plan || '—';
     const expires = fmtDateShort(r.subscription_expires_at) + (r.subscription_status === 'trial' ? ' (trial→' + fmtDateShort(r.trial_end) + ')' : '');
     const lastPay = r.last_payment_at ? fmtDateShort(r.last_payment_at) + ' · ' + fmtPayment(r) : '—';
@@ -380,7 +393,7 @@ function renderTable() {
     const created = fmtDateShort(r.created_at);
     const notes = r.admin_notes ? `<div class="notes-cell" title="${escapeHtml(r.admin_notes)}">${escapeHtml(truncate(r.admin_notes, 80))}</div>` : '<span style="opacity:0.3">—</span>';
     const actions = renderActions(r);
-    return `<tr data-id="${r.id}">
+    return `<tr data-id="${r.id}" class="${r.is_test_profile ? 'is-test' : ''}">
       <td>${emailDisp}</td>
       <td class="tg-cell">${tg}</td>
       <td>${lang}</td>
@@ -574,6 +587,14 @@ document.addEventListener('click', e => {
       state.lang = chip.dataset.lang;
       renderTable();
     }
+  }
+  const testChip = e.target.closest('.chip[data-test]');
+  if (testChip) {
+    document.querySelectorAll('.chip[data-test]').forEach(c => c.classList.remove('active'));
+    testChip.classList.add('active');
+    state.testMode = testChip.dataset.test;
+    renderStats();
+    renderTable();
   }
   const th = e.target.closest('th[data-sort]');
   if (th) {
