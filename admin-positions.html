@@ -318,6 +318,11 @@ td.col-rem-partial{background:#fff4e0;color:#ff9500;font-weight:bold}
     <div id="stop-info" class="muted" style="margin-bottom:10px"></div>
     <label>Новый стоп</label>
     <input id="stop-new" type="number" step="any">
+    <label>Комментарий RU <span class="muted" style="font-weight:normal">(опционально, появится в сигнале о переносе стопа)</span></label>
+    <textarea id="stop-comment_ru" rows="2" maxlength="280" placeholder="пусто — комментария не будет"></textarea>
+    <button class="secondary" type="button" onclick="translateStopComment()" style="margin-top:8px;font-size:11px;padding:7px 14px">Перевести RU → EN</button>
+    <label>Комментарий EN <span class="muted" style="font-weight:normal">(опционально, появится в сигнале о переносе стопа)</span></label>
+    <textarea id="stop-comment_en" rows="2" maxlength="280" placeholder="empty — no comment will be shown"></textarea>
     <div class="checkbox-row"><input type="checkbox" id="stop-publish-ru"><label for="stop-publish-ru" style="margin:0">Опубликовать RU</label></div>
     <div class="checkbox-row"><input type="checkbox" id="stop-publish-en"><label for="stop-publish-en" style="margin:0">Опубликовать EN</label></div>
     <div class="btn-row">
@@ -1004,24 +1009,45 @@ function openMoveStop(id, ticker, currentStop) {
   modalCtx = { id, ticker, currentStop };
   document.getElementById('stop-info').textContent = `#${id} ${ticker} — current stop ${fmt(currentStop)}`;
   document.getElementById('stop-new').value = '';
+  document.getElementById('stop-comment_ru').value = '';
+  document.getElementById('stop-comment_en').value = '';
   document.getElementById('stop-publish-ru').checked = false;
   document.getElementById('stop-publish-en').checked = false;
   document.getElementById('stop-msg').innerHTML = '';
   showModal('modal-stop');
 }
 
+async function translateStopComment() {
+  const ru = document.getElementById('stop-comment_ru').value.trim();
+  if (!ru) { return showMsg('stop-msg', 'Сначала впиши комментарий RU', 'err'); }
+  showMsg('stop-msg', 'Переводим...', 'info');
+  const r = await adminAction({ action: 'translate', text: ru, source: 'ru', target: 'en' });
+  if (r.ok && r.data?.translation) {
+    document.getElementById('stop-comment_en').value = r.data.translation;
+    showMsg('stop-msg', `✓ Переведено через ${r.data.provider || 'AI'}`, 'ok');
+  } else {
+    showMsg('stop-msg', `Перевод не удался: ${r.data?.error || r.status || r.error}`, 'err');
+  }
+}
+
 async function confirmStop() {
   const newStop = parseFloat(document.getElementById('stop-new').value);
   if (!newStop || newStop <= 0) return showMsg('stop-msg', 'Введи корректный стоп', 'err');
   const oldStop = modalCtx.currentStop;
+  const comment_ru = document.getElementById('stop-comment_ru').value.trim();
+  const comment_en = document.getElementById('stop-comment_en').value.trim();
   const publish_to_ru = document.getElementById('stop-publish-ru').checked;
   const publish_to_en = document.getElementById('stop-publish-en').checked;
   // Атомарно: обновить BD + записать в Sheet + опционально опубликовать.
   // Без Sheet write синхронизация (каждые 5 мин) вернёт старое значение.
+  // comment_ru/en добавляются к TG-сообщению 'stop_moved' (publisher v21+),
+  // чтобы можно было аннотировать, почему сдвинули стоп.
   const r = await adminAction({
     action: 'stop_change',
     position_id: modalCtx.id,
     new_stop: newStop,
+    comment_ru: comment_ru || null,
+    comment_en: comment_en || null,
     publish_to_ru,
     publish_to_en,
   });
