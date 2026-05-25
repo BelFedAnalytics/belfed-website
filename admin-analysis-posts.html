@@ -135,6 +135,14 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 .status-pill.draft{background:#f5f2eb}
 .status-pill.published{background:#1a7a1a;color:#fff;border-color:#1a7a1a}
 .status-pill.deleted{background:#999;color:#fff;border-color:#999}
+
+.parent-banner{background:#eef6ff;border:1px solid #2b6cb0;padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;font-size:11px;letter-spacing:1px}
+.parent-banner .lbl{color:#2b6cb0;font-weight:bold;margin-right:8px}
+.parent-banner .clr{background:none;border:1px solid #2b6cb0;color:#2b6cb0;font-family:'Courier New',monospace;font-size:10px;padding:3px 8px;cursor:pointer;letter-spacing:1px}
+.parent-banner .clr:hover{background:#2b6cb0;color:#fff}
+.field select:disabled{opacity:0.55;cursor:not-allowed;background:#eee}
+.hi-item .ax .icon-btn[data-act=reply]{background:#eef6ff;border-color:#2b6cb0;color:#2b6cb0;font-weight:bold}
+.hi-item .ax .icon-btn[data-act=reply]:hover{background:#2b6cb0;color:#fff}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -184,6 +192,11 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 </div>
 
 <div id="top-msg"></div>
+
+<div id="parent-banner" class="parent-banner" style="display:none">
+  <div><span class="lbl">↪ ОТВЕТ НА ПОСТ:</span><span id="parent-banner-text">…</span></div>
+  <button class="clr" id="parent-banner-clear" type="button">[ × ОТКЛЮЧИТЬ ]</button>
+</div>
 
 <div class="layout">
 
@@ -336,7 +349,12 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 const $ = (s)=>document.querySelector(s);
 const els = {};
 let editingId = null; // currently loaded post for editing
+let parentPostId = null; // when set, this post is a reply/update to parent
 const state = { previewLang:'ru', images:[] }; // images: {file?, url, path?, isUploaded}
+
+// hashtag set for asset class
+const ASSET_CLASS_TAG = { stocks:'#equities', crypto:'#crypto', commodities:'#commodities', fx:'#fx' };
+const ALL_CLASS_TAGS = new Set(Object.values(ASSET_CLASS_TAG));
 
 // =================== AUTH ===================
 async function signIn(){
@@ -389,6 +407,15 @@ function initEditor(){
     .forEach(k => els[k] && els[k].addEventListener('input', ()=>{ updateCounters(); render(); }));
   els.type.addEventListener('change', ()=>{ updateReplyVisibility(); render(); });
 
+  // hashtag automation: asset class change → swap class tag
+  els.assetClass.addEventListener('change', ()=>{ syncAssetClassTag(); render(); });
+  // hashtag automation: ticker change → ensure #TICKER present
+  els.ticker.addEventListener('input', ()=>{ syncTickerTag(); });
+
+  // parent banner clear button
+  const pbClear = document.getElementById('parent-banner-clear');
+  if (pbClear) pbClear.addEventListener('click', clearParent);
+
   els.dropzone.addEventListener('click', ()=>els.files.click());
   els.files.addEventListener('change', e => addFiles(e.target.files));
   ;['dragenter','dragover'].forEach(ev => els.dropzone.addEventListener(ev, e=>{ e.preventDefault(); els.dropzone.classList.add('dragover'); }));
@@ -400,6 +427,92 @@ function initEditor(){
   els.btnPublish.addEventListener('click', publish);
 
   updateCounters(); updateReplyVisibility(); render();
+  // Handle ?reply_to=<id> from URL
+  handleReplyToParam();
+}
+
+// =================== HASHTAG AUTOMATION ===================
+function syncAssetClassTag(){
+  const cls = els.assetClass.value || 'stocks';
+  const wantTag = ASSET_CLASS_TAG[cls] || '#equities';
+  const cur = (els.tags.value || '').trim();
+  // Tokenize, drop any existing class tag, prepend wantTag (after #AnalysisUpdate if present)
+  let tokens = cur.split(/\s+/).filter(Boolean);
+  tokens = tokens.filter(t => !ALL_CLASS_TAGS.has(t.toLowerCase()));
+  // Insert wantTag right after #AnalysisUpdate if it exists, else at start
+  const auIdx = tokens.findIndex(t => t.toLowerCase()==='#analysisupdate');
+  if (auIdx >= 0) tokens.splice(auIdx+1, 0, wantTag);
+  else tokens.unshift(wantTag);
+  els.tags.value = tokens.join(' ');
+}
+
+function syncTickerTag(){
+  const ticker = (els.ticker.value||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  let tokens = (els.tags.value||'').trim().split(/\s+/).filter(Boolean);
+  // Remove any old #XYZ tickers (heuristic: all-uppercase alnum, not in known class/system tags)
+  const systemTags = new Set(['#analysisupdate','#equities','#crypto','#commodities','#fx']);
+  tokens = tokens.filter(t => {
+    const low = t.toLowerCase();
+    if (systemTags.has(low)) return true;
+    // keep all non-ticker-looking tags as-is
+    return !/^#[A-Z0-9]{1,8}$/.test(t);
+  });
+  if (ticker) tokens.push('#'+ticker);
+  els.tags.value = tokens.join(' ');
+  render();
+}
+
+// =================== PARENT (REPLY) ===================
+async function handleReplyToParam(){
+  const params = new URLSearchParams(location.search);
+  const replyTo = params.get('reply_to');
+  if (!replyTo) return;
+  // Load parent and prefill
+  const { data, error } = await sb.from('analysis_posts').select('*').eq('id', replyTo).maybeSingle();
+  if (error || !data){ flash('err','родительский пост не найден'); return; }
+  if (data.post_type === 'request'){
+    // Allow reply to a 'request' too — but force update
+  }
+  // Prefill
+  els.ticker.value = data.ticker || '';
+  els.company.value = data.company_name || '';
+  els.assetClass.value = data.asset_class || 'stocks';
+  els.tv.value = data.tradingview_url || '';
+  els.tags.value = data.hashtags || '#AnalysisUpdate #equities';
+  // Force update mode and lock
+  els.type.value = 'update';
+  els.type.disabled = true;
+  // Re-sync hashtags based on class & ticker
+  syncAssetClassTag();
+  // Set parent
+  parentPostId = data.id;
+  showParentBanner(data);
+  updateReplyVisibility();
+  updateCounters();
+  render();
+}
+
+function showParentBanner(parent){
+  const banner = document.getElementById('parent-banner');
+  const text = document.getElementById('parent-banner-text');
+  if (!banner || !text) return;
+  const dt = new Date(parent.published_at || parent.created_at);
+  const dStr = `${String(dt.getDate()).padStart(2,'0')}.${String(dt.getMonth()+1).padStart(2,'0')}.${String(dt.getFullYear()).slice(-2)} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+  const company = parent.company_name ? ` — ${escapeHtml(parent.company_name)}` : '';
+  text.innerHTML = ` $${escapeHtml(parent.ticker||'')}${company} · ${dStr} · тип публикации зафиксирован: ОБНОВЛЕНИЕ`;
+  banner.style.display = 'flex';
+}
+
+function clearParent(){
+  parentPostId = null;
+  els.type.disabled = false;
+  const banner = document.getElementById('parent-banner');
+  if (banner) banner.style.display='none';
+  // strip ?reply_to from URL
+  const url = new URL(location.href);
+  url.searchParams.delete('reply_to');
+  history.replaceState(null,'', url.pathname + (url.search||''));
+  flash('info','режим ответа отключён');
 }
 
 function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -500,11 +613,15 @@ function flash(kind, text){
 function clearForm(){
   if (!confirm('Очистить форму?')) return;
   editingId = null;
+  parentPostId = null;
   document.querySelectorAll('input[type=text],input[type=url],textarea').forEach(i => i.value='');
   els.tags.value = '#AnalysisUpdate #equities';
   els.type.value = 'update';
+  els.type.disabled = false;
   els.assetClass.value = 'stocks';
   els.chRu.checked = true; els.chEn.checked = true;
+  const banner = document.getElementById('parent-banner');
+  if (banner) banner.style.display='none';
   state.images = []; renderThumbs(); updateCounters(); updateReplyVisibility(); render();
   history.replaceState(null,'', location.pathname);
 }
@@ -547,7 +664,8 @@ function collectFormData(){
     tradingview_url: els.tv.value.trim() || null,
     hashtags: els.tags.value.trim() || null,
     publish_to_ru: els.chRu.checked,
-    publish_to_en: els.chEn.checked
+    publish_to_en: els.chEn.checked,
+    parent_post_id: parentPostId || null
   };
 }
 
@@ -631,8 +749,15 @@ async function publish(){
       flash('ok', `Опубликовано: ${[data.publish_to_ru?'RU':'',data.publish_to_en?'EN':''].filter(Boolean).join(' + ')}`);
       // reset to fresh form
       editingId = null;
+      parentPostId = null;
       document.querySelectorAll('input[type=text],input[type=url],textarea').forEach(i => i.value='');
-      els.tags.value = '#AnalysisUpdate #equities'; els.type.value='update'; els.assetClass.value='stocks';
+      els.tags.value = '#AnalysisUpdate #equities'; els.type.value='update'; els.type.disabled=false; els.assetClass.value='stocks';
+      const banner = document.getElementById('parent-banner');
+      if (banner) banner.style.display='none';
+      // strip ?reply_to from URL
+      const url = new URL(location.href);
+      url.searchParams.delete('reply_to');
+      history.replaceState(null,'', url.pathname + (url.search||''));
       state.images=[]; renderThumbs(); updateCounters(); updateReplyVisibility(); render();
     }
     loadHistory();
@@ -669,6 +794,7 @@ async function loadHistory(){
           <div class="ex">${dStr} · ${channels}</div>
         </div>
         <div class="ax">
+          <button class="icon-btn" data-act="reply" data-id="${p.id}" title="Опубликовать обновление (ответ)">↩</button>
           <button class="icon-btn" data-act="edit" data-id="${p.id}" title="Редактировать">✎</button>
           <button class="icon-btn danger" data-act="del" data-id="${p.id}" title="Удалить">×</button>
         </div>
@@ -679,6 +805,7 @@ async function loadHistory(){
     const id = b.dataset.id;
     if (b.dataset.act==='edit') loadIntoEditor(id);
     else if (b.dataset.act==='del') deletePost(id);
+    else if (b.dataset.act==='reply') startReplyTo(id);
   }));
 }
 
@@ -686,6 +813,7 @@ async function loadIntoEditor(id){
   const { data, error } = await sb.from('analysis_posts').select('*').eq('id', id).maybeSingle();
   if (error || !data){ flash('err','ошибка загрузки'); return; }
   editingId = id;
+  parentPostId = data.parent_post_id || null;
   els.ticker.value = data.ticker || '';
   els.assetClass.value = data.asset_class || 'stocks';
   els.company.value = data.company_name || '';
@@ -704,8 +832,43 @@ async function loadIntoEditor(id){
     path, isUploaded:true,
     url: `${SUPABASE_URL}/storage/v1/object/public/analysis-images/${path}`
   }));
+  // Handle parent if present
+  if (parentPostId){
+    const { data: parent } = await sb.from('analysis_posts').select('*').eq('id', parentPostId).maybeSingle();
+    if (parent){
+      els.type.value = 'update';
+      els.type.disabled = true;
+      showParentBanner(parent);
+    } else {
+      parentPostId = null;
+      els.type.disabled = false;
+      const banner = document.getElementById('parent-banner'); if (banner) banner.style.display='none';
+    }
+  } else {
+    els.type.disabled = false;
+    const banner = document.getElementById('parent-banner'); if (banner) banner.style.display='none';
+  }
   renderThumbs(); updateCounters(); updateReplyVisibility(); render();
   flash('info', `Пост ${data.ticker} загружен для редактирования`);
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+async function startReplyTo(parentId){
+  // Redirect to same page with ?reply_to=<id> so handleReplyToParam path is canonical
+  if (editingId || (els.bodyRu.value.trim() || els.bodyEn.value.trim() || state.images.length)){
+    if (!confirm('Текущий черновик будет сброшен. Продолжить?')) return;
+  }
+  // Clear form state silently
+  editingId = null;
+  parentPostId = null;
+  document.querySelectorAll('input[type=text],input[type=url],textarea').forEach(i => i.value='');
+  state.images=[]; renderThumbs();
+  els.chRu.checked = true; els.chEn.checked = true;
+  // Navigate (uses same page; reload triggers handleReplyToParam)
+  const url = new URL(location.href);
+  url.searchParams.set('reply_to', parentId);
+  history.replaceState(null,'', url.pathname + url.search);
+  await handleReplyToParam();
   window.scrollTo({top:0, behavior:'smooth'});
 }
 
@@ -730,8 +893,10 @@ async function deletePost(id){
 }
 
 function clearFormSilent(){
+  parentPostId = null;
   document.querySelectorAll('input[type=text],input[type=url],textarea').forEach(i => i.value='');
-  els.tags.value='#AnalysisUpdate #equities'; els.type.value='update'; els.assetClass.value='stocks';
+  els.tags.value='#AnalysisUpdate #equities'; els.type.value='update'; els.type.disabled=false; els.assetClass.value='stocks';
+  const banner = document.getElementById('parent-banner'); if (banner) banner.style.display='none';
   state.images=[]; renderThumbs(); updateCounters(); updateReplyVisibility(); render();
 }
 
