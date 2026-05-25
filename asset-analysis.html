@@ -88,6 +88,44 @@ header h1{font-size:18px;letter-spacing:3px;font-weight:bold}
 
 footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #000;font-size:12px;opacity:0.5}
 
+/* Thread pill & drawer (Option B) */
+.thread-pill{display:inline-flex;align-items:center;gap:5px;font-family:'Courier New',monospace;font-size:10px;font-weight:bold;letter-spacing:1.5px;padding:3px 8px;border:1px solid #2b6cb0;background:#eef6ff;color:#2b6cb0;cursor:pointer;text-transform:uppercase}
+.thread-pill:hover{background:#2b6cb0;color:#fff}
+.thread-pill .arrow{font-size:9px;transition:transform 0.15s}
+.thread-pill.open .arrow{transform:rotate(180deg)}
+.thread-drawer{display:none;background:#f5f2eb;border-top:1px dashed #000}
+.thread-drawer.open{display:block}
+.thread-drawer-head{padding:8px 20px;font-size:10px;letter-spacing:2px;opacity:0.6;border-bottom:1px dashed #ccc}
+.thread-update{padding:14px 20px;border-bottom:1px dashed #ccc;display:grid;grid-template-columns:90px 1fr auto;gap:14px;align-items:start}
+.thread-update:last-child{border-bottom:none}
+.thread-update .tu-date{font-size:10px;letter-spacing:1px;opacity:0.7;padding-top:2px}
+.thread-update .tu-body{font-size:12px;line-height:1.6;white-space:pre-wrap;word-wrap:break-word}
+.thread-update .tu-body a{color:#000;border-bottom:1px dashed #777}
+.thread-update .tu-img{width:80px;height:60px;background:#0e1419;cursor:pointer;flex-shrink:0;overflow:hidden}
+.thread-update .tu-img img{width:100%;height:100%;object-fit:cover;display:block}
+.thread-update.highlight{background:#fffbe5;animation:flash-highlight 2s ease-out}
+@keyframes flash-highlight{0%{background:#fff3a8}100%{background:#fffbe5}}
+.thread-update .tu-actions{display:flex;gap:6px;flex-shrink:0}
+.thread-update .tu-copy{font-family:'Courier New',monospace;font-size:9px;letter-spacing:1px;padding:3px 7px;border:1px solid #000;background:#fff;cursor:pointer;color:#000;text-transform:uppercase}
+.thread-update .tu-copy:hover{background:#f0ede4}
+@media(max-width:700px){
+  .thread-update{grid-template-columns:1fr;gap:8px}
+  .thread-update .tu-date{font-size:10px}
+}
+
+/* Copy link button in card header */
+.card-head .copylink{font-family:'Courier New',monospace;font-size:10px;letter-spacing:1.5px;padding:3px 8px;border:1px solid #000;background:#fff;color:#000;cursor:pointer;text-transform:uppercase;margin-left:8px}
+.card-head .copylink:hover{background:#000;color:#f5f2eb}
+.card-head .copylink.copied{background:#1a7a1a;color:#fff;border-color:#1a7a1a}
+
+/* card highlight for permalink scroll */
+.card.permalink-target{animation:flash-card 2.5s ease-out}
+@keyframes flash-card{0%,15%{box-shadow:0 0 0 3px #2b6cb0}100%{box-shadow:none}}
+
+/* toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#000;color:#f5f2eb;padding:10px 20px;font-family:'Courier New',monospace;font-size:12px;letter-spacing:2px;border:1px solid #000;z-index:10000;opacity:0;transition:opacity 0.2s}
+.toast.show{opacity:1}
+
 /* Login + Expired screens (match dashboard) */
 #loginScreen{display:flex;justify-content:center;align-items:center;min-height:80vh}
 .login-box{background:#fff;border:2px solid #000;padding:40px;max-width:420px;width:100%;text-align:center}
@@ -271,8 +309,10 @@ var TG_THREAD_RU = 2;
 var state = {
   ticker: '',
   asset_class: '',
-  posts: [],
-  filtered: []
+  posts: [],     // all flat
+  threads: [],   // leaf posts (latest of each thread), each with ._chain
+  filtered: [],  // threads filtered by UI
+  pendingPermalink: null
 };
 
 function escapeHtml(s) {
@@ -319,7 +359,31 @@ function bodyToHtml(text) {
   return safe;
 }
 
+// Build permalink URL for a post given its ticker+slug
+function permalinkUrl(post) {
+  var ticker = (post.ticker || '').toLowerCase();
+  var slug = post.slug || '';
+  if (!ticker || !slug) return null;
+  // Use clean path; nginx must rewrite /analysis/* → /asset-analysis.html (with slug captured)
+  return location.origin + '/analysis/' + encodeURIComponent(ticker) + '/' + encodeURIComponent(slug);
+}
+
+function renderThreadUpdate(p) {
+  var imgs = (p.image_paths || []).map(function(path) { return SUPA_URL_PUB + path; });
+  var imgHtml = imgs.length ? '<div class="tu-img" data-images=\'' + JSON.stringify(imgs).replace(/'/g, '&#39;') + '\'><img src="' + escapeHtml(imgs[0]) + '" alt="" loading="lazy"></div>' : '<div></div>';
+  var bodyTxt = (p.greeting_ru || p.greeting_en) ? ((p.greeting_ru || p.greeting_en) + '\n\n' + (p.body_ru || p.body_en || '')) : (p.body_ru || p.body_en || '');
+  var permalink = permalinkUrl(p);
+  var copyBtn = permalink ? '<button class="tu-copy" data-copy="' + escapeHtml(permalink) + '" title="Копировать ссылку">[ § ]</button>' : '';
+  return '<div class="thread-update" data-slug="' + escapeHtml(p.slug||'') + '" data-post-id="' + escapeHtml(p.id) + '">' +
+    '<div class="tu-date">' + escapeHtml(fmtDateTime(p.published_at || p.created_at)) + '</div>' +
+    '<div class="tu-body">' + bodyToHtml(bodyTxt) + '</div>' +
+    '<div class="tu-actions">' + imgHtml + copyBtn + '</div>' +
+  '</div>';
+}
+
 function renderCard(p) {
+  // p is the latest post in a thread; p._chain contains earlier posts (oldest→newest, EXCLUDING p)
+  var chain = p._chain || [];
   var imgs = (p.image_paths || []).map(function(path) { return SUPA_URL_PUB + path; });
   var imgHtml = '';
   if (imgs.length === 1) {
@@ -372,15 +436,35 @@ function renderCard(p) {
 
   var hasFooter = tagHtml || actions;
 
-  return '<article class="card">' +
+  // Thread pill (Option B)
+  var threadPill = '';
+  if (chain.length > 0) {
+    threadPill = '<button class="thread-pill" data-toggle-thread="1" title="Показать ранее опубликованные обновления">↻ ' + chain.length + ' ПРЕДЫДУЩИХ <span class="arrow">▾</span></button>';
+  }
+
+  // Copy-link button
+  var permalink = permalinkUrl(p);
+  var copyLinkBtn = permalink ? '<button class="copylink" data-copy="' + escapeHtml(permalink) + '" title="Копировать ссылку на пост">[ § ССЫЛКА ]</button>' : '';
+
+  // Drawer (chain shown oldest→newest, then current post is at top of card already)
+  var drawerHtml = '';
+  if (chain.length > 0) {
+    drawerHtml = '<div class="thread-drawer">' +
+      '<div class="thread-drawer-head">// ИСТОРИЯ ПОСТОВ (' + chain.length + ' ранее)</div>' +
+      chain.slice().reverse().map(renderThreadUpdate).join('') +
+    '</div>';
+  }
+
+  return '<article class="card" data-slug="' + escapeHtml(p.slug||'') + '" data-post-id="' + escapeHtml(p.id) + '">' +
     '<div class="card-head">' +
       '<div class="left">' +
         '<span class="ticker-badge">' + escapeHtml(p.ticker || '') + '</span>' +
         company +
         classPill +
         typePill +
+        threadPill +
       '</div>' +
-      '<div class="right">' + escapeHtml(fmtDateTime(p.published_at || p.created_at)) + '</div>' +
+      '<div class="right">' + escapeHtml(fmtDateTime(p.published_at || p.created_at)) + copyLinkBtn + '</div>' +
     '</div>' +
     imgHtml +
     '<div class="card-body">' +
@@ -392,13 +476,64 @@ function renderCard(p) {
         '<div class="actions">' + actions + '</div>' +
       '</div>'
     : '') +
+    drawerHtml +
   '</article>';
+}
+
+// Build thread tree: posts → threads (each thread = chain of posts linked via parent_post_id)
+// Returns array of {leaf, chain} where leaf = latest post in chain, chain = older posts oldest→newest (excluding leaf)
+function buildThreads(posts) {
+  var byId = {};
+  posts.forEach(function(p) { byId[p.id] = p; });
+
+  // For each post, find its root
+  function rootOf(p) {
+    var cur = p;
+    var seen = {};
+    while (cur.parent_post_id && byId[cur.parent_post_id] && !seen[cur.id]) {
+      seen[cur.id] = true;
+      cur = byId[cur.parent_post_id];
+    }
+    return cur;
+  }
+
+  // Group posts by root id
+  var threadsByRoot = {};
+  posts.forEach(function(p) {
+    var r = rootOf(p);
+    if (!threadsByRoot[r.id]) threadsByRoot[r.id] = [];
+    threadsByRoot[r.id].push(p);
+  });
+
+  // For each thread, sort by published_at ASC and split into leaf (latest) + chain (older)
+  var threads = [];
+  Object.keys(threadsByRoot).forEach(function(rid) {
+    var arr = threadsByRoot[rid].slice().sort(function(a, b) {
+      var ta = new Date(a.published_at || a.created_at).getTime();
+      var tb = new Date(b.published_at || b.created_at).getTime();
+      return ta - tb;
+    });
+    var leaf = arr[arr.length - 1];
+    var chain = arr.slice(0, -1); // oldest→newest, excluding leaf
+    leaf._chain = chain;
+    threads.push(leaf);
+  });
+
+  // Sort threads by leaf published_at DESC
+  threads.sort(function(a, b) {
+    var ta = new Date(a.published_at || a.created_at).getTime();
+    var tb = new Date(b.published_at || b.created_at).getTime();
+    return tb - ta;
+  });
+
+  return threads;
 }
 
 function applyFilters() {
   var ticker = (state.ticker || '').toUpperCase();
   var cls = state.asset_class || '';
-  state.filtered = state.posts.filter(function(p) {
+  // Filter at thread level using leaf attributes (a thread is shown if leaf matches)
+  state.filtered = state.threads.filter(function(p) {
     if (cls && (p.asset_class || 'stocks') !== cls) return false;
     if (ticker && (p.ticker || '').toUpperCase().indexOf(ticker) !== 0) return false;
     return true;
@@ -411,12 +546,134 @@ function renderFeed() {
   var count = document.getElementById('feedCount');
   if (!state.filtered.length) {
     feed.innerHTML = '<div class="empty">// НЕТ ПОСТОВ ПО ФИЛЬТРАМ</div>';
-    count.textContent = '// 0 постов · всего ' + state.posts.length;
+    count.textContent = '// 0 тем · всего ' + state.posts.length + ' постов';
     return;
   }
   feed.innerHTML = state.filtered.map(renderCard).join('');
-  count.textContent = '// ' + state.filtered.length + (state.filtered.length === state.posts.length ? ' постов' : (' из ' + state.posts.length + ' постов'));
+  count.textContent = '// ' + state.filtered.length + ' тем · всего ' + state.posts.length + ' постов';
   bindLightboxes();
+  bindThreadToggles();
+  bindCopyButtons();
+  // After render, handle permalink scrolling if URL matched
+  if (state.pendingPermalink) {
+    scrollToPermalink(state.pendingPermalink);
+    state.pendingPermalink = null;
+  }
+}
+
+function bindThreadToggles() {
+  document.querySelectorAll('.thread-pill[data-toggle-thread]').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      var card = btn.closest('.card');
+      var drawer = card.querySelector('.thread-drawer');
+      if (!drawer) return;
+      var isOpen = drawer.classList.toggle('open');
+      btn.classList.toggle('open', isOpen);
+    });
+  });
+  // Image thumbs in drawer → open lightbox
+  document.querySelectorAll('.tu-img').forEach(function(el) {
+    el.addEventListener('click', function() {
+      try { var imgs = JSON.parse(el.getAttribute('data-images')); openLightbox(imgs, 0); } catch (e) {}
+    });
+  });
+}
+
+function bindCopyButtons() {
+  document.querySelectorAll('[data-copy]').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      var url = btn.getAttribute('data-copy');
+      copyToClipboard(url).then(function() {
+        btn.classList.add('copied');
+        var orig = btn.textContent;
+        btn.textContent = '[ ✓ СКОПИРОВАНО ]';
+        showToast('Ссылка скопирована');
+        setTimeout(function() {
+          btn.classList.remove('copied');
+          btn.textContent = orig;
+        }, 1500);
+      }).catch(function() {
+        showToast('Не удалось скопировать');
+      });
+    });
+  });
+}
+
+function copyToClipboard(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(text);
+  }
+  return new Promise(function(resolve, reject) {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      var ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      ok ? resolve() : reject();
+    } catch (e) { reject(e); }
+  });
+}
+
+function showToast(msg) {
+  var t = document.getElementById('belfedToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'belfedToast';
+    t.className = 'toast';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function() { t.classList.remove('show'); }, 2200);
+}
+
+// Parse current URL for permalink target (slug)
+// Supports:
+//   /analysis/<ticker>/<slug>  (path-based, requires nginx rewrite to /asset-analysis.html)
+//   #<slug>                    (hash-based fallback)
+function parsePermalink() {
+  var m = location.pathname.match(/^\/analysis\/[^\/]+\/([^\/?#]+)/i);
+  if (m) return decodeURIComponent(m[1]);
+  if (location.hash && location.hash.length > 1) return decodeURIComponent(location.hash.slice(1));
+  return null;
+}
+
+function scrollToPermalink(slug) {
+  // 1. Try main card with this slug
+  var card = document.querySelector('.card[data-slug="' + cssEscape(slug) + '"]');
+  if (card) {
+    card.classList.add('permalink-target');
+    card.scrollIntoView({behavior:'smooth', block:'start'});
+    setTimeout(function() { card.classList.remove('permalink-target'); }, 3000);
+    return;
+  }
+  // 2. Try thread-update inside any card
+  var upd = document.querySelector('.thread-update[data-slug="' + cssEscape(slug) + '"]');
+  if (upd) {
+    var pcard = upd.closest('.card');
+    if (pcard) {
+      var drawer = pcard.querySelector('.thread-drawer');
+      var pill = pcard.querySelector('.thread-pill');
+      if (drawer && !drawer.classList.contains('open')) {
+        drawer.classList.add('open');
+        if (pill) pill.classList.add('open');
+      }
+    }
+    upd.classList.add('highlight');
+    upd.scrollIntoView({behavior:'smooth', block:'center'});
+    setTimeout(function() { upd.classList.remove('highlight'); }, 3000);
+    return;
+  }
+  // Slug not found in current feed — silently ignore
+}
+
+function cssEscape(s) {
+  if (window.CSS && CSS.escape) return CSS.escape(s);
+  return String(s).replace(/[^a-zA-Z0-9_-]/g, function(c) { return '\\' + c; });
 }
 
 async function loadPosts() {
@@ -425,13 +682,15 @@ async function loadPosts() {
   errorBox.style.display = 'none';
   try {
     var res = await supaClient.from('analysis_posts')
-      .select('id,ticker,company_name,asset_class,post_type,reply_name,reply_text,greeting_ru,greeting_en,body_ru,body_en,tradingview_url,hashtags,image_paths,published_at,created_at,message_id_ru,message_id_en')
+      .select('id,ticker,company_name,asset_class,post_type,reply_name,reply_text,greeting_ru,greeting_en,body_ru,body_en,tradingview_url,hashtags,image_paths,published_at,created_at,message_id_ru,message_id_en,parent_post_id,slug')
       .eq('status', 'published')
       .order('published_at', { ascending: false, nullsLast: true })
       .order('created_at', { ascending: false })
       .limit(200);
     if (res.error) throw res.error;
     state.posts = res.data || [];
+    state.threads = buildThreads(state.posts);
+    state.pendingPermalink = parsePermalink();
     applyFilters();
   } catch (e) {
     errorBox.textContent = 'Ошибка загрузки: ' + (e.message || e);
@@ -503,8 +762,14 @@ function initFeed() {
       applyFilters();
     });
   });
+  // Listen for hash changes (in case user pastes a permalink while page is loaded)
+  window.addEventListener('hashchange', function() {
+    var slug = parsePermalink();
+    if (slug) scrollToPermalink(slug);
+  });
   loadPosts();
 }
 </script>
 </body>
 </html>
+
