@@ -1069,11 +1069,15 @@ async def _submit_chart_request(reply_target, user, profile, lang: str,
 def _request_prompt_text(lang: str) -> str:
     if lang == "en":
         return ("📈 Reply with the ticker you want analyzed (1–8 letters/digits).\n"
-                "   Examples: TSLA, BTC, RENDER, EURUSD\n"
-                "   Limit: 3 requests per 24h.")
+                "\n"
+                "Examples: TSLA, BTC, RENDER, EURUSD\n"
+                "\n"
+                "Limit: 3 requests per 24h.")
     return ("📈 Ответьте на это сообщение тикером актива (1–8 букв/цифр).\n"
-            "   Примеры: TSLA, BTC, RENDER, EURUSD\n"
-            "   Лимит: 3 запроса в сутки.")
+            "\n"
+            "Примеры: TSLA, BTC, RENDER, EURUSD\n"
+            "\n"
+            "Лимит: 3 запроса в сутки.")
 
 
 async def cmd_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
