@@ -497,6 +497,21 @@ TEXTS_EN = {
         "Fresh invite to the private channel "
         "(single-use, valid 24 hours):\n{invite}"
     ),
+    "gift7_ok": (
+        "🎁 Gift for our early community: 7 days of access unlocked.\n\n"
+        "Your personal invite to the private channel "
+        "(single-use, valid 24 hours):\n{invite}\n\n"
+        "After 7 days: subscribe whenever you wish. No auto-charges."
+    ),
+    "gift7_already_active": (
+        "✅ You already have active access — no gift needed.\n\n"
+        "Fresh invite link to the private channel "
+        "(single-use, valid 24 hours):\n{invite}"
+    ),
+    "gift7_already_used": (
+        "⚠️ You've already used your trial access in the past.\n\n"
+        "Activate a subscription from the menu below — we'll bring you back."
+    ),
     "trial_claim_used": (
         "⚠️ The trial for this Telegram account has already been used.\n\n"
         f"To continue, subscribe (${PRICE_USD} / mo): "
@@ -663,6 +678,67 @@ async def run_trial_flow(update: Update, context: ContextTypes.DEFAULT_TYPE,
             await reply_target.reply_text(T(lang, "trial_claim_error"))
     await send_main_menu(update, context, lang=lang, reply_to=reply_target)
 
+# ---------- Gift7 flow (channel re-engagement) ---------------------------
+async def run_gift7_flow(update: Update, context: ContextTypes.DEFAULT_TYPE,
+                          user_id: int, username: str | None,
+                          lang: str, source: str, reply_target):
+    """Activate a 7-day gift trial for the user.
+
+    Three cases (handled by claim_trial_by_telegram RPC):
+      1) No profile or profile without trial   -> create/activate 7-day trial + invite
+      2) Already active/admin                  -> just re-issue fresh invite link
+      3) Trial already used                    -> show "already used" message
+
+    Architectural notes:
+      * RPC creates lite profile if needed; invite is created by bot itself
+        (via Bot API) using grant_paid_invite — same machinery as paid_invite.
+      * Source label distinguishes channel-post gifts from website trials
+        for later attribution analysis.
+    """
+    status, res = await sb_post(
+        "/rest/v1/rpc/claim_trial_by_telegram",
+        {
+            "p_telegram_id":       str(user_id),
+            "p_telegram_username": username or "",
+            "p_trial_days":        7,
+            "p_source":            source,
+            "p_lang":              lang,
+        },
+    )
+    if status not in (200, 204) or not isinstance(res, dict):
+        log.error("gift7: RPC failed status=%s body=%s", status, res)
+        await reply_target.reply_text(T(lang, "trial_claim_error"))
+        await send_main_menu(update, context, lang=lang, reply_to=reply_target)
+        return
+
+    # Effective language: DB may override (existing profile with saved lang)
+    eff_lang = (res.get("lang") or lang)
+    if eff_lang not in ("ru", "en"):
+        eff_lang = lang
+
+    if res.get("ok"):
+        if res.get("already_active"):
+            invite = await grant_paid_invite(context, user_id, eff_lang)
+            await reply_target.reply_text(
+                T(eff_lang, "gift7_already_active").format(invite=invite or "—"),
+                disable_web_page_preview=True,
+            )
+        else:
+            invite = await grant_paid_invite(context, user_id, eff_lang)
+            await reply_target.reply_text(
+                T(eff_lang, "gift7_ok").format(invite=invite or "—"),
+                disable_web_page_preview=True,
+            )
+    else:
+        err = res.get("error")
+        if err == "trial_already_used":
+            await reply_target.reply_text(T(eff_lang, "gift7_already_used"))
+        else:
+            log.warning("gift7 RPC returned error [lang=%s]: %s", eff_lang, res)
+            await reply_target.reply_text(T(eff_lang, "trial_claim_error"))
+    await send_main_menu(update, context, lang=eff_lang, reply_to=reply_target)
+
+
 # ---------- Payment flow with email collection ---------------------------
 async def start_payment_with_email(query_or_message, context: ContextTypes.DEFAULT_TYPE,
                                     profile: dict, lang: str,
@@ -776,6 +852,76 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             msg,
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(btn_label, url=url)]]),
             disable_web_page_preview=True,
+        )
+        return
+
+    # Deep-link /start gift7[_ru|_en] — 7-day gift trial from channel post
+    if args and (args[0] == "gift7" or args[0].startswith("gift7_")):
+        source = args[0]
+        lang_from_src = detect_lang_from_source(source)
+        profile = await get_profile_by_telegram(user.id)
+        if lang_from_src:
+            lang = lang_from_src
+        elif profile and profile.get("lang") in ("ru", "en"):
+            lang = profile["lang"]
+        else:
+            lang = "en" if (user.language_code or "").startswith("en") else "ru"
+        await run_gift7_flow(update, context, user.id, user.username,
+                              lang=lang, source=source,
+                              reply_target=update.message)
+        return
+
+    # Deep-link /start request — jump straight into the asset-class picker
+    if args and args[0] in ("request", "req"):
+        profile = await get_profile_by_telegram(user.id)
+        lang = await get_user_lang(update, profile)
+        if not profile:
+            await update.message.reply_text(T(lang, "need_link"))
+            await send_main_menu(update, context, lang=lang)
+            return
+        if not has_access(profile):
+            text = ("⛔ Chart requests are available to paid subscribers only."
+                    if lang == "en" else
+                    "⛔ Запросы доступны только платным подписчикам.")
+            await update.message.reply_text(text)
+            await send_main_menu(update, context, lang=lang)
+            return
+        await update.message.reply_text(
+            _class_picker_text(lang),
+            reply_markup=_class_picker_keyboard(lang),
+        )
+        return
+
+    # Deep-link /start support — jump straight into the feedback flow
+    if args and args[0] in ("support", "feedback"):
+        profile = await get_profile_by_telegram(user.id)
+        lang = await get_user_lang(update, profile)
+        used = await feedback_used_24h(user.id)
+        if used >= FEEDBACK_DAILY_LIMIT:
+            text = (f"⛔ Daily limit reached ({FEEDBACK_DAILY_LIMIT} / 24h). Please try later."
+                    if lang == "en" else
+                    f"⛔ Суточный лимит исчерпан ({FEEDBACK_DAILY_LIMIT} / 24 ч). Попробуйте позже.")
+            await update.message.reply_text(text)
+            return
+        context.user_data["awaiting_feedback"] = {"lang": lang}
+        prompt = (
+            "💬 Write your message to BelFed Support in a single reply.\n"
+            "\n"
+            "It will be delivered to our team. We'll reply here in the bot.\n"
+            "\n"
+            f"Limit: {FEEDBACK_DAILY_LIMIT} messages per 24h. Send /cancel to abort."
+            if lang == "en" else
+            "💬 Напишите ваше сообщение для BelFed Support одним ответом.\n"
+            "\n"
+            "Оно придёт нам, и мы ответим вам здесь же, в боте.\n"
+            "\n"
+            f"Лимит: {FEEDBACK_DAILY_LIMIT} сообщения в сутки. Отправьте /cancel, чтобы отменить."
+        )
+        placeholder = ("Your message…" if lang == "en"
+                       else "Ваше сообщение…")
+        await update.message.reply_text(
+            prompt,
+            reply_markup=ForceReply(selective=True, input_field_placeholder=placeholder),
         )
         return
 
