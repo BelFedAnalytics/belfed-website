@@ -113,6 +113,16 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 .empty-tg{color:#7d96ad;font-size:11px;text-align:center;padding:60px 20px;border:1px dashed #2a3540;font-family:'Courier New',monospace;letter-spacing:1px}
 
 .history-list{font-size:11px;max-height:420px;overflow-y:auto}
+.search-box{padding:10px 14px;border-bottom:1px solid #000;background:#f5f2eb;display:flex;flex-direction:column;gap:6px}
+.search-row{display:flex;gap:6px;align-items:center}
+.search-row input{flex:1;font-family:'Courier New',monospace;font-size:12px;padding:6px 10px;border:1px solid #000;background:#fff;outline:none;letter-spacing:1px;text-transform:uppercase}
+.search-row input:focus{background:#fffbe5}
+.search-row .clr-btn{font-family:'Courier New',monospace;font-size:11px;padding:6px 10px;border:1px solid #000;background:#fff;cursor:pointer}
+.search-row .clr-btn:hover{background:#f0ede4}
+.search-row .clr-btn:disabled{opacity:0.3;cursor:not-allowed}
+.search-meta{font-size:9px;letter-spacing:1px;opacity:0.6;text-align:right}
+.search-meta.active{color:#1a7a1a;opacity:1;font-weight:bold}
+.hi-mark{background:#fff59d;padding:0 2px;font-weight:bold}
 .hi-item{display:grid;grid-template-columns:60px 1fr auto;gap:10px;padding:10px 16px;border-bottom:1px solid #ddd;align-items:center}
 .hi-item:last-child{border-bottom:none}
 .hi-item .tk{font-weight:bold;letter-spacing:1px}
@@ -332,7 +342,14 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
     </div>
 
     <div class="sidebar-card">
-      <h3>// ПОСЛЕДНИЕ ПОСТЫ</h3>
+      <h3 id="history-title">// ПОСЛЕДНИЕ ПОСТЫ</h3>
+      <div class="search-box">
+        <div class="search-row">
+          <input type="text" id="search-input" placeholder="// ПОИСК ПО ТИКЕРУ ИЛИ КОМПАНИИ" autocomplete="off" maxlength="40">
+          <button class="clr-btn" id="search-clear" type="button" disabled title="Очистить поиск">✕</button>
+        </div>
+        <div class="search-meta" id="search-meta">показаны 20 последних</div>
+      </div>
       <div class="history-list" id="history"><div style="padding:14px;opacity:0.5">Загрузка...</div></div>
     </div>
 
@@ -401,7 +418,9 @@ function initEditor(){
     files:$('#files'), dropzone:$('#dropzone'), thumbs:$('#thumbs'),
     btnClear:$('#btn-clear'), btnDraft:$('#btn-draft'), btnPublish:$('#btn-publish'),
     bubbleHost:$('#bubble-host'), topicName:$('#topic-name'),
-    history:$('#history'), topMsg:$('#top-msg')
+    history:$('#history'), topMsg:$('#top-msg'),
+    searchInput:$('#search-input'), searchClear:$('#search-clear'),
+    searchMeta:$('#search-meta'), historyTitle:$('#history-title')
   });
 
   ['ticker','company','replyName','replyText','greetRu','greetEn','bodyRu','bodyEn','tv','tags']
@@ -426,6 +445,22 @@ function initEditor(){
   els.btnClear.addEventListener('click', clearForm);
   els.btnDraft.addEventListener('click', saveDraft);
   els.btnPublish.addEventListener('click', publish);
+
+  // SEARCH: debounced input + clear button
+  let searchTimer = null;
+  els.searchInput.addEventListener('input', ()=>{
+    clearTimeout(searchTimer);
+    const q = els.searchInput.value.trim();
+    els.searchClear.disabled = !q;
+    searchTimer = setTimeout(()=>loadHistory(q), 300);
+  });
+  els.searchInput.addEventListener('keydown', (e)=>{
+    if (e.key === 'Escape'){ els.searchInput.value=''; els.searchClear.disabled=true; loadHistory(''); }
+    else if (e.key === 'Enter'){ e.preventDefault(); clearTimeout(searchTimer); loadHistory(els.searchInput.value.trim()); }
+  });
+  els.searchClear.addEventListener('click', ()=>{
+    els.searchInput.value=''; els.searchClear.disabled=true; els.searchInput.focus(); loadHistory('');
+  });
 
   updateCounters(); updateReplyVisibility(); render();
   // Handle ?reply_to=<id> from URL
@@ -833,23 +868,66 @@ async function isAlreadyPublished(id){
 }
 
 // ================= HISTORY =================
-async function loadHistory(){
-  const { data, error } = await sb.from('analysis_posts')
+function highlightMatch(text, query){
+  const safe = escapeHtml(text||'');
+  if (!query) return safe;
+  const q = escapeHtml(query);
+  const re = new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','ig');
+  return safe.replace(re, '<span class="hi-mark">$1</span>');
+}
+
+async function loadHistory(query){
+  const q = (query||'').trim();
+  // Update header + meta UI
+  if (q){
+    els.historyTitle.textContent = '// РЕЗУЛЬТАТЫ ПОИСКА';
+    els.searchMeta.textContent = 'поиск...';
+    els.searchMeta.classList.add('active');
+  } else {
+    els.historyTitle.textContent = '// ПОСЛЕДНИЕ ПОСТЫ';
+    els.searchMeta.textContent = 'показаны 20 последних';
+    els.searchMeta.classList.remove('active');
+  }
+
+  let req = sb.from('analysis_posts')
     .select('id,ticker,company_name,post_type,reply_name,status,published_at,created_at,publish_to_ru,publish_to_en')
     .neq('status','deleted')
-    .order('created_at',{ascending:false}).limit(20);
+    .order('created_at',{ascending:false});
+
+  if (q){
+    // case-insensitive ilike across ticker and company_name
+    const safeQ = q.replace(/[%_\\]/g, m=>'\\'+m);
+    req = req.or(`ticker.ilike.%${safeQ}%,company_name.ilike.%${safeQ}%`).limit(50);
+  } else {
+    req = req.limit(20);
+  }
+
+  const { data, error } = await req;
   if (error){ els.history.innerHTML = `<div style="padding:14px;color:#c50000">${escapeHtml(error.message)}</div>`; return; }
-  if (!data || !data.length){ els.history.innerHTML = '<div style="padding:14px;opacity:0.5">— пока нет постов —</div>'; return; }
+  if (!data || !data.length){
+    if (q){
+      els.history.innerHTML = `<div style="padding:14px;opacity:0.6">— ничего не найдено по «${escapeHtml(q)}» —</div>`;
+      els.searchMeta.textContent = 'найдено: 0';
+    } else {
+      els.history.innerHTML = '<div style="padding:14px;opacity:0.5">— пока нет постов —</div>';
+    }
+    return;
+  }
+  if (q){
+    els.searchMeta.textContent = `найдено: ${data.length}${data.length>=50?'+':''}`;
+  }
   els.history.innerHTML = data.map(p => {
     const d = new Date(p.published_at || p.created_at);
     const dStr = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getFullYear()).slice(-2)} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
     const channels = [p.publish_to_ru?'RU':'', p.publish_to_en?'EN':''].filter(Boolean).join('+');
     const ti = p.post_type==='request' ? `reply to ${p.reply_name||'…'}` : (p.company_name || '');
+    const tickerHtml = q ? highlightMatch(p.ticker, q) : escapeHtml(p.ticker);
+    const tiHtml = q ? highlightMatch(ti, q) : escapeHtml(ti);
     return `
       <div class="hi-item">
-        <div class="tk">$${escapeHtml(p.ticker)}</div>
+        <div class="tk">$${tickerHtml}</div>
         <div>
-          <div class="ti"><span class="status-pill ${p.status}">${p.status}</span>${escapeHtml(ti)}</div>
+          <div class="ti"><span class="status-pill ${p.status}">${p.status}</span>${tiHtml}</div>
           <div class="ex">${dStr} · ${channels}</div>
         </div>
         <div class="ax">
