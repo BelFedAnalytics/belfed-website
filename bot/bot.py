@@ -1096,12 +1096,8 @@ def _class_picker_keyboard(lang: str) -> InlineKeyboardMarkup:
 
 def _class_picker_text(lang: str) -> str:
     if lang == "en":
-        return ("📈 What asset class do you want analyzed?\n"
-                "\n"
-                "Pick a category — this avoids ticker collisions (e.g. BTC stock vs BTC crypto).")
-    return ("📈 К какому классу относится актив?\n"
-            "\n"
-            "Выберите категорию — это исключит пересечения тикеров (напр. акция BTC и крипта BTC).")
+        return "📈 What asset class do you want analyzed?"
+    return "📈 К какому классу относится актив?"
 
 
 def _request_prompt_text(lang: str, asset_class: str | None = None) -> str:
