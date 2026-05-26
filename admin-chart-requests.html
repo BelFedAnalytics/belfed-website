@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BELFED ANALYTICS — АДМИН: ЗАПРОСЫ НА АНАЛИЗ</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background-color:#f5f2eb;font-family:'Courier New',Courier,monospace;color:#000;padding:24px 20px;line-height:1.6;font-size:14px;visibility:hidden}
+body.ready{visibility:visible}
+.container{max-width:1280px;margin:0 auto}
+
+header{position:relative;text-align:center;margin-bottom:24px;padding-bottom:14px;border-bottom:1px solid #000}
+header h2{font-size:14px;letter-spacing:4px;font-weight:bold;margin-bottom:8px}
+header h2 a{color:#000;text-decoration:none}
+header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
+.admin-badge{display:inline-block;background:#c50000;color:#fff;padding:2px 10px;font-size:10px;letter-spacing:2px;margin-left:8px}
+.admin-nav{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;background:#000;padding:10px 14px;margin:-24px -20px 24px}
+.admin-nav a{font-family:'Courier New',monospace;font-size:11px;letter-spacing:2px;padding:6px 14px;color:#f5f2eb;text-decoration:none;border:1px solid transparent}
+.admin-nav a:hover{border-color:#f5f2eb}
+.admin-nav a.active{background:#f5f2eb;color:#000;border-color:#f5f2eb}
+.admin-nav .sep{color:#666;padding:6px 0}
+
+#loginScreen{position:fixed;inset:0;background:#f5f2eb;display:flex;align-items:center;justify-content:center;z-index:10}
+.login-box{background:#fff;border:1px solid #000;padding:30px;width:340px}
+.login-box h3{font-size:13px;letter-spacing:3px;margin-bottom:20px;text-align:center}
+.login-box input{width:100%;font-family:'Courier New',monospace;padding:10px;border:1px solid #000;background:#f5f2eb;font-size:13px;margin-bottom:10px}
+.login-box button{width:100%;font-family:'Courier New',monospace;padding:10px;border:1px solid #000;background:#000;color:#f5f2eb;cursor:pointer;font-size:12px;letter-spacing:2px}
+.msg{font-size:11px;letter-spacing:1px;padding:8px;margin-top:6px}
+.msg.err{background:#fff0f0;border:1px solid #c50000;color:#c50000}
+.msg.ok{background:#f0fff0;border:1px solid #006400;color:#006400}
+
+.notice{background:#fffbe5;border:1px solid #000;padding:10px 14px;margin-bottom:14px;font-size:11px;letter-spacing:1px;line-height:1.55}
+
+.toolbar{display:flex;gap:8px;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.toolbar-left{display:flex;gap:14px;align-items:center;font-size:11px;letter-spacing:1px}
+.toolbar-right{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font-family:'Courier New',monospace;font-size:11px;letter-spacing:2px;padding:8px 16px;border:1px solid #000;background:#fff;cursor:pointer;color:#000;text-decoration:none;display:inline-block}
+.btn:hover{background:#f0ede4}
+.btn.primary{background:#000;color:#f5f2eb}
+.btn.primary:hover{background:#222}
+.btn.danger{background:#c50000;color:#fff;border-color:#c50000}
+.btn.danger:hover{background:#a30000}
+.btn.small{padding:5px 10px;font-size:10px;letter-spacing:1px}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+
+.counter{font-weight:bold}
+.counter .num{font-size:14px}
+
+.section-title{font-size:12px;font-weight:bold;letter-spacing:2px;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #000}
+
+.group-card{background:#fff;border:1px solid #000;margin-bottom:14px}
+.group-head{padding:14px 18px;border-bottom:1px solid #000;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;background:#fffbe5}
+.group-head .left{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.group-ticker{font-size:20px;font-weight:bold;letter-spacing:1px}
+.group-ticker::before{content:'$'}
+.group-meta{font-size:11px;letter-spacing:1px;opacity:0.75}
+.class-pill{font-size:10px;letter-spacing:2px;padding:3px 8px;border:1px solid #000;background:#fff;text-transform:uppercase}
+.group-actions{display:flex;gap:6px;flex-wrap:wrap}
+.requesters{padding:10px 18px}
+.requester-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px dashed #ccc;font-size:11px;letter-spacing:1px}
+.requester-row:last-child{border-bottom:0}
+.requester-row .who{display:flex;gap:10px;align-items:center}
+.requester-row .src{font-size:9px;padding:2px 6px;border:1px solid #000;letter-spacing:1px;text-transform:uppercase}
+.requester-row .src.web{background:#fff}
+.requester-row .src.telegram{background:#e8f1f3}
+.requester-row .when{opacity:0.65}
+
+.recent-row{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border:1px solid #ddd;background:#fff;margin-bottom:6px;font-size:11px;letter-spacing:1px}
+.recent-row .left{display:flex;gap:10px;align-items:baseline}
+.recent-row .t{font-weight:bold}
+.recent-row .s{font-size:10px;padding:2px 6px;border:1px solid #000;letter-spacing:1px}
+.recent-row .s.fulfilled{background:#000;color:#f5f2eb}
+.recent-row .s.rejected{background:#ffe5e5}
+.recent-row .s.expired{background:#e8e8e8;opacity:0.7}
+
+.empty{background:#fff;border:1px dashed #999;padding:30px;text-align:center;font-size:12px;letter-spacing:2px;opacity:0.6}
+
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:20}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border:2px solid #000;padding:24px;width:420px;max-width:92vw}
+.modal h3{font-size:13px;letter-spacing:2px;margin-bottom:14px}
+.modal textarea{width:100%;font-family:'Courier New',monospace;padding:8px;border:1px solid #000;background:#f5f2eb;font-size:12px;min-height:80px;resize:vertical;margin-bottom:10px}
+.modal label{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:1px;margin-bottom:12px;cursor:pointer}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end}
+
+@media(max-width:700px){
+  body{padding:16px 12px}
+  .admin-nav{margin:-16px -12px 16px}
+  .group-head{padding:12px}
+  .requesters{padding:10px 12px}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <h3>— АДМИН: ВХОД —</h3>
+    <input id="login-email" type="email" placeholder="email">
+    <input id="login-password" type="password" placeholder="пароль">
+    <button onclick="signIn()">[ ВОЙТИ ]</button>
+    <div id="login-msg"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+<nav class="admin-nav">
+  <a href="/admin.html">[ HUB ]</a>
+  <span class="sep">|</span>
+  <a href="/admin-positions.html">[ ПОЗИЦИИ ]</a>
+  <a href="https://belfed.com/admin-analytics-list.html">[ АНАЛИТИКА ]</a>
+  <a href="/admin-analysis-posts.html">[ АНАЛИЗ АКТИВОВ ]</a>
+  <a href="/admin-chart-requests.html" class="active">[ ЗАПРОСЫ ]</a>
+  <a href="/admin-subscribers.html">[ ПОДПИСЧИКИ ]</a>
+</nav>
+
+<div class="container">
+
+<header>
+  <h2><a href="/admin.html">— BELFED_ ADMIN <span class="admin-badge">ADMIN</span> —</a></h2>
+  <h1>— ЗАПРОСЫ НА АНАЛИЗ —</h1>
+</header>
+
+<div class="notice">
+  // Очередь запросов от платных подписчиков. Группировка по тикеру. Лимит — 3 запроса в сутки на пользователя. Авто-истечение через 48 ч.
+</div>
+
+<div class="toolbar">
+  <div class="toolbar-left">
+    <div class="counter">// ОЖИДАЕТ: <span class="num" id="pendingTotal">—</span></div>
+    <div class="counter">// УНИКАЛЬНЫХ ТИКЕРОВ: <span class="num" id="groupCount">—</span></div>
+  </div>
+  <div class="toolbar-right">
+    <button class="btn" onclick="loadQueue()">[ ОБНОВИТЬ ]</button>
+    <button class="btn" onclick="signOut()">[ ВЫЙТИ ]</button>
+  </div>
+</div>
+
+<div id="errorBox"></div>
+
+<div class="section-title">// ОЧЕРЕДЬ</div>
+<div id="queue">
+  <div class="empty">// ЗАГРУЗКА…</div>
+</div>
+
+<div class="section-title">// НЕДАВНИЕ (7 ДНЕЙ)</div>
+<div id="recent">
+  <div class="empty">— ПУСТО —</div>
+</div>
+
+</div>
+</div>
+
+<!-- Reject modal -->
+<div class="modal-bg" id="rejectModal">
+  <div class="modal">
+    <h3 id="rejectTitle">— ОТКЛОНИТЬ ЗАПРОС —</h3>
+    <textarea id="rejectReason" placeholder="Причина (отправится в DM, до 200 симв.)"></textarea>
+    <label><input type="checkbox" id="rejectAll"> Отклонить все запросы по этому тикеру</label>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeReject()">[ ОТМЕНА ]</button>
+      <button class="btn danger" onclick="confirmReject()">[ ОТКЛОНИТЬ ]</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL  = 'https://obujqvqqmyfcfflhqvud.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9idWpxdnFxbXlmY2ZmbGhxdnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDgxNjYsImV4cCI6MjA4OTkyNDE2Nn0.syl4YBLbf8aBitxyK3gCL51pPYxWjEW99mMTXJaQQ8w';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const $ = (q) => document.querySelector(q);
+
+let rejectTargetId = null;
+let rejectTicker = null;
+
+async function init(){ await checkAdminAndShow(); }
+document.addEventListener('DOMContentLoaded', init);
+
+async function signIn(){
+  const email = $('#login-email').value.trim();
+  const password = $('#login-password').value;
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) { $('#login-msg').innerHTML = '<div class="msg err">'+error.message+'</div>'; return; }
+  await checkAdminAndShow();
+}
+async function signOut(){ await sb.auth.signOut(); location.reload(); }
+
+async function checkAdminAndShow(){
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    $('#loginScreen').style.display='flex';
+    $('#app').style.display='none';
+    document.body.classList.add('ready');
+    return;
+  }
+  const { data: profile } = await sb.from('profiles').select('subscription_status').eq('id', session.user.id).maybeSingle();
+  if (!profile || profile.subscription_status !== 'admin') {
+    $('#login-msg').innerHTML = '<div class="msg err">Доступ запрещён — ваш аккаунт не является админом.</div>';
+    document.body.classList.add('ready');
+    return;
+  }
+  $('#loginScreen').style.display='none';
+  $('#app').style.display='block';
+  document.body.classList.add('ready');
+  await loadQueue();
+}
+
+function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function timeAgo(iso){
+  const t = new Date(iso).getTime();
+  const dt = Date.now() - t;
+  const min = Math.floor(dt/60000);
+  if (min < 1) return 'только что';
+  if (min < 60) return min + ' мин назад';
+  const h = Math.floor(min/60);
+  if (h < 24) return h + ' ч назад';
+  const d = Math.floor(h/24);
+  return d + ' дн назад';
+}
+
+function showErr(msg){
+  $('#errorBox').innerHTML = '<div class="msg err">'+escapeHtml(msg)+'</div>';
+  setTimeout(()=>{ $('#errorBox').innerHTML=''; }, 6000);
+}
+
+async function callFn(action, extra){
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { showErr('Сессия истекла'); return null; }
+  const r = await fetch(SUPABASE_URL + '/functions/v1/chart-request', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token, 'apikey': SUPABASE_ANON },
+    body: JSON.stringify(Object.assign({ action }, extra || {})),
+  });
+  const text = await r.text();
+  let d; try { d = JSON.parse(text); } catch { d = { error: 'bad_json', raw: text }; }
+  if (!r.ok || d.error) {
+    showErr('Ошибка: ' + (d.error || r.status));
+    return null;
+  }
+  return d;
+}
+
+async function loadQueue(){
+  $('#queue').innerHTML = '<div class="empty">// ЗАГРУЗКА…</div>';
+  const d = await callFn('admin_list');
+  if (!d) return;
+  $('#pendingTotal').textContent = d.pending_total || 0;
+  $('#groupCount').textContent = (d.groups || []).length;
+  renderGroups(d.groups || []);
+  renderRecent(d.recent || []);
+}
+
+function renderGroups(groups){
+  const wrap = $('#queue');
+  if (!groups.length) {
+    wrap.innerHTML = '<div class="empty">— ОЧЕРЕДЬ ПУСТА —</div>';
+    return;
+  }
+  wrap.innerHTML = groups.map(g => {
+    const cls = g.asset_class ? '<span class="class-pill">'+escapeHtml(g.asset_class.toUpperCase())+'</span>' : '';
+    const requesters = (g.requests || []).map(r => {
+      const id = r.email || ('@' + (r.telegram_id||'tg')) || r.user_id.slice(0,8);
+      return '<div class="requester-row">' +
+        '<div class="who"><span class="src '+escapeHtml(r.source)+'">'+escapeHtml(r.source)+'</span><span>'+escapeHtml(id)+'</span></div>' +
+        '<div class="when">'+escapeHtml(timeAgo(r.created_at))+'</div>' +
+        '</div>';
+    }).join('');
+    const oldestId = (g.requests && g.requests.length) ? g.requests[0].id : '';
+    return '<div class="group-card">' +
+      '<div class="group-head">' +
+        '<div class="left">' +
+          '<span class="group-ticker">'+escapeHtml(g.ticker)+'</span>' +
+          cls +
+          '<span class="group-meta">'+g.count+' '+(g.count===1?'запрос':(g.count<5?'запроса':'запросов'))+' · самый старый '+timeAgo(g.oldest_at)+'</span>' +
+        '</div>' +
+        '<div class="group-actions">' +
+          '<a class="btn primary small" href="/admin-analysis-posts.html?fulfill_req='+encodeURIComponent(oldestId)+'&ticker='+encodeURIComponent(g.ticker)+(g.asset_class?'&asset_class='+encodeURIComponent(g.asset_class):'')+'">[ ВЫПОЛНИТЬ → РЕДАКТОР ]</a>' +
+          '<button class="btn small danger" onclick="openReject(\''+oldestId+'\', \''+escapeHtml(g.ticker)+'\')">[ ОТКЛОНИТЬ ]</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="requesters">'+requesters+'</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderRecent(recent){
+  const wrap = $('#recent');
+  if (!recent.length) { wrap.innerHTML = '<div class="empty">— ПУСТО —</div>'; return; }
+  const statusLabel = { fulfilled:'ГОТОВ', rejected:'ОТКЛОНЕН', expired:'ИСТЕК' };
+  wrap.innerHTML = recent.map(r => {
+    const link = r.fulfilled_by_post_id ? ' · <a href="/asset-analysis.html#post-'+escapeHtml(r.fulfilled_by_post_id)+'" style="color:#000">[смотреть]</a>' : '';
+    const reason = r.rejected_reason ? ' · причина: '+escapeHtml(r.rejected_reason) : '';
+    return '<div class="recent-row">' +
+      '<div class="left">' +
+        '<span class="t">'+escapeHtml(r.ticker)+'</span>' +
+        '<span class="s '+escapeHtml(r.status)+'">'+escapeHtml(statusLabel[r.status]||r.status)+'</span>' +
+        '<span style="opacity:0.65">'+escapeHtml(r.email||r.user_id.slice(0,8))+'</span>' +
+      '</div>' +
+      '<div style="opacity:0.65">'+escapeHtml(timeAgo(r.fulfilled_at||r.created_at))+reason+link+'</div>' +
+    '</div>';
+  }).join('');
+}
+
+function openReject(id, ticker){
+  rejectTargetId = id;
+  rejectTicker = ticker;
+  $('#rejectTitle').textContent = '— ОТКЛОНИТЬ ' + ticker + ' —';
+  $('#rejectReason').value = '';
+  $('#rejectAll').checked = false;
+  $('#rejectModal').classList.add('open');
+}
+function closeReject(){
+  $('#rejectModal').classList.remove('open');
+  rejectTargetId = null;
+}
+async function confirmReject(){
+  if (!rejectTargetId) return;
+  const reason = $('#rejectReason').value.trim();
+  const all = $('#rejectAll').checked;
+  const d = await callFn('admin_reject', { request_id: rejectTargetId, reason, reject_all_ticker: all });
+  if (d && d.ok) {
+    closeReject();
+    await loadQueue();
+  }
+}
+
+// Handle URL message from publish callback
+(function(){
+  const params = new URLSearchParams(location.search);
+  const msg = params.get('msg');
+  if (msg === 'fulfilled') {
+    setTimeout(()=>{ alert('Запрос успешно выполнен и пользователь уведомлён.'); }, 200);
+    const url = new URL(location.href); url.searchParams.delete('msg');
+    history.replaceState(null,'', url.pathname + (url.search||''));
+  }
+})();
+</script>
+</body>
+</html>
