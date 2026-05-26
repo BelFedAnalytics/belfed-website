@@ -8,6 +8,7 @@ BelFed Analytics — Telegram bot (production, RU + EN multilingual).
 конца триала cron telegram-enforce-access кикает неоплативших.
 
 Платная подписка: 1 500 ₽ / мес, авто-продление, карты + SBP.
+Перед оплатой бот спрашивает email — нужен для фискального чека (54-ФЗ).
 
 ENV:
   TELEGRAM_BOT_TOKEN
@@ -26,13 +27,17 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from datetime import datetime, timedelta, timezone
 
 import httpx
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ForceReply, BotCommand, BotCommandScopeDefault
 from telegram.ext import (
-    Application, CommandHandler, CallbackQueryHandler, ContextTypes,
+    Application, CommandHandler, CallbackQueryHandler, MessageHandler,
+    PreCheckoutQueryHandler, ContextTypes, filters,
 )
+
+import positions  # type: ignore  # local module — see positions.py
 
 # ---------- Config ---------------------------------------------------------
 BOT_TOKEN            = os.environ["TELEGRAM_BOT_TOKEN"]
@@ -46,7 +51,7 @@ COMMUNITY_EN_ID      = int(_en_id) if _en_id else None
 WEB_URL_RU           = os.environ.get("BELFED_WEB_URL",    "https://belfed.ru").rstrip("/")
 WEB_URL_EN           = os.environ.get("BELFED_WEB_URL_EN", "https://belfed.com").rstrip("/")
 PRICE_RUB            = os.environ.get("PRICE_MONTHLY_RUB", "1500")
-PRICE_USD            = os.environ.get("PRICE_MONTHLY_USD", "19")
+PRICE_USD            = os.environ.get("PRICE_MONTHLY_USD", "15")
 BOT_SHARED_SECRET    = os.environ.get("BOT_SHARED_SECRET", "")
 BOT_CLAIM_TRIAL_URL  = os.environ.get(
     "BOT_CLAIM_TRIAL_URL",
@@ -58,9 +63,28 @@ YOOKASSA_CREATE_URL  = os.environ.get(
 )
 PREVIEW_CHANNEL_URL  = os.environ.get("TELEGRAM_PREVIEW_CHANNEL_URL", "").strip()
 
+# Telegram Stars (EN only) ----------------------------------------------
+# 956 Stars ≈ $15 buyer pays / ~$12.43 creator earns at $0.01569/Star. Period must be 2592000 (30d).
+STARS_PRICE          = int(os.environ.get("STARS_PRICE_MONTHLY", "956"))
+STARS_PERIOD_SECONDS = 2592000  # 30 days — the only allowed value for Stars subscriptions
+TELEGRAM_API_BASE    = f"https://api.telegram.org/bot{BOT_TOKEN}"
+
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("belfed-bot")
+
+EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+
+def is_valid_email(s: str | None) -> bool:
+    if not s:
+        return False
+    s = s.strip()
+    if s.lower().endswith("@belfed.local"):
+        return False
+    return bool(EMAIL_RE.match(s))
+
+def is_ghost_email(s: str | None) -> bool:
+    return bool(s) and s.lower().endswith("@belfed.local")
 
 # ---------- Supabase REST helpers -----------------------------------------
 SB_HEADERS = {
@@ -83,6 +107,59 @@ async def sb_post(path: str, body: dict):
         try: data = r.json()
         except Exception: data = None
         return r.status_code, data
+
+# ---------- Dashboard auth (TG direct-access) -----------------------------
+AUTH_ISSUE_URL = os.environ.get(
+    "AUTH_ISSUE_URL",
+    f"{SUPABASE_URL}/functions/v1/auth-issue",
+)
+DASHBOARD_AUTH_URL = os.environ.get(
+    "DASHBOARD_AUTH_URL",
+    "https://belfed.com/auth",
+)
+
+async def check_paid_membership(user_id: int, lang: str) -> bool:
+    """Returns True if user is a member of the language-appropriate paid chat."""
+    chat_id = TRADING_CHANNEL_ID if lang == "ru" else (COMMUNITY_EN_ID or TRADING_CHANNEL_ID)
+    if not chat_id:
+        return False
+    url = f"{TELEGRAM_API_BASE}/getChatMember"
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.post(url, json={"chat_id": chat_id, "user_id": user_id})
+            j = r.json()
+        if not j.get("ok"):
+            log.info("getChatMember user=%s chat=%s -> %s", user_id, chat_id, j)
+            return False
+        status = (j.get("result") or {}).get("status")
+        return status in ("member", "administrator", "creator")
+    except Exception as e:
+        log.error("check_paid_membership failed: %s", e)
+        return False
+
+async def issue_dashboard_session(tg_id: int, lang: str) -> str | None:
+    """Calls auth-issue edge function. Returns one-time token or None."""
+    if not BOT_SHARED_SECRET:
+        log.error("BOT_SHARED_SECRET missing — cannot issue dashboard session")
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.post(
+                AUTH_ISSUE_URL,
+                headers={
+                    "x-bot-secret": BOT_SHARED_SECRET,
+                    "content-type": "application/json",
+                },
+                json={"tg_id": tg_id, "lang": lang},
+            )
+            j = r.json()
+        if r.status_code == 200 and j.get("ok"):
+            return j.get("one_time_token")
+        log.warning("auth-issue %s -> %s %s", tg_id, r.status_code, j)
+        return None
+    except Exception as e:
+        log.error("issue_dashboard_session failed: %s", e)
+        return None
 
 async def sb_patch(path: str, params: dict, body: dict) -> int:
     async with httpx.AsyncClient(timeout=10) as client:
@@ -128,8 +205,65 @@ async def claim_trial_via_edge(telegram_id: int, username: str | None,
         log.error("claim_trial_via_edge failed [lang=%s]: %s", lang, e)
         return None
 
-async def create_payment_via_edge(user_id: str, return_url: str) -> dict | None:
+async def create_stars_invoice_link(profile_id: str, telegram_id: int, lang: str) -> str | None:
+    """Создаёт invoice link для оплаты через Telegram Stars (recurring subscription).
+    Bot API: createInvoiceLink. currency=XTR + subscription_period=2592000 → включает auto-renew.
+    payload идёт обратно в SuccessfulPayment — по нему понимаем, кому выдавать доступ."""
+    payload = f"stars_sub|{profile_id}|{telegram_id}"
+    body = {
+        "title":       "BelFed Premium",
+        "description": ("Monthly subscription to BelFed | Community: trade ideas, market "
+                        "reviews and analytics from leading investment houses. Cancel anytime."),
+        "payload":     payload,
+        "currency":    "XTR",
+        "prices":      [{"label": "BelFed Premium (1 month)", "amount": STARS_PRICE}],
+        "subscription_period": STARS_PERIOD_SECONDS,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            r = await client.post(f"{TELEGRAM_API_BASE}/createInvoiceLink", json=body)
+            data = r.json()
+            if not data.get("ok"):
+                log.error("createInvoiceLink failed: %s", data)
+                return None
+            return data.get("result")
+    except Exception as e:
+        log.error("create_stars_invoice_link failed: %s", e)
+        return None
+
+async def apply_stars_payment_via_rpc(
+    telegram_charge_id: str,
+    user_id: str,
+    amount_stars: int,
+    subscription_expiration_date: int | None,
+    paid_at: datetime,
+    raw_event: dict,
+    is_recurring: bool,
+) -> bool:
+    """Вызывает RPC apply_stars_payment — обновляет profiles + subscriptions + payments."""
+    exp_iso = None
+    if subscription_expiration_date:
+        exp_iso = datetime.fromtimestamp(subscription_expiration_date, tz=timezone.utc).isoformat()
+    status, _ = await sb_post(
+        "/rest/v1/rpc/apply_stars_payment",
+        {
+            "p_telegram_charge_id":           telegram_charge_id,
+            "p_user_id":                      user_id,
+            "p_amount_stars":                 amount_stars,
+            "p_subscription_expiration_date": exp_iso,
+            "p_paid_at":                      paid_at.isoformat(),
+            "p_raw":                          raw_event,
+            "p_is_recurring":                 is_recurring,
+        },
+    )
+    if status not in (200, 204):
+        log.error("apply_stars_payment RPC failed: %s", status)
+        return False
+    return True
+
+async def create_payment_via_edge(user_id: str, email: str, return_url: str) -> dict | None:
     """Бот создаёт платёж через yookassa-create-payment (x-bot-secret авторизация).
+    Передаёт email — нужен для фискального чека.
     Возвращает dict с confirmation_url или None при ошибке."""
     if not BOT_SHARED_SECRET:
         log.error("BOT_SHARED_SECRET is not set; cannot call yookassa-create-payment")
@@ -145,6 +279,7 @@ async def create_payment_via_edge(user_id: str, return_url: str) -> dict | None:
                 json={
                     "plan":       "month",
                     "user_id":    user_id,
+                    "email":      email,
                     "return_url": return_url,
                 },
             )
@@ -165,6 +300,15 @@ async def set_user_language(telegram_id: int, lang: str) -> bool:
     status, _ = await sb_post(
         "/rest/v1/rpc/set_user_language",
         {"p_telegram_id": str(telegram_id), "p_lang": lang},
+    )
+    return status in (200, 204)
+
+async def update_profile_email(profile_id: str, email: str) -> bool:
+    """Сохраняет email в profiles.email."""
+    status = await sb_patch(
+        "/rest/v1/profiles",
+        params={"id": f"eq.{profile_id}"},
+        body={"email": email, "updated_at": datetime.now(timezone.utc).isoformat()},
     )
     return status in (200, 204)
 
@@ -221,6 +365,7 @@ TEXTS_RU = {
     "btn_paid":        "📺 Закрытый канал",
     "btn_status":      "📋 Моя подписка",
     "btn_disclaimer":  "⚠️ Disclaimer",
+    "btn_request":     "📈 Запросить актив",
     "btn_link":        "🔗 Привязать аккаунт",
     "no_access":       ("Сначала зарегистрируйтесь на " + WEB_URL_RU + " и привяжите Telegram. "
                         "Получите 14 дней бесплатного доступа — без привязки карты."),
@@ -260,6 +405,15 @@ TEXTS_RU = {
     "btn_lang_ru":     "🇷🇺 Русский",
     "btn_lang_en":     "🇬🇧 English",
     "lang_saved":      "✅ Язык: Русский",
+    "ask_email": (
+        "✉️ Укажите email для оплаты\n\n"
+        "На него придёт фискальный чек (требование 54-ФЗ).\n"
+        "Отправьте email одним сообщением, например: ivan@example.com\n\n"
+        "Чтобы отменить — нажмите /cancel_payment"
+    ),
+    "email_invalid":   "⚠️ Это не похоже на корректный email. Попробуйте ещё раз или /cancel_payment",
+    "email_saved":     "✅ Email сохранён: {email}",
+    "pay_canceled":    "Оплата отменена.",
     "pay_creating":    "⏳ Готовлю страницу оплаты…",
     "pay_link": (
         f"💳 Оплата подписки — {PRICE_RUB} ₽ / мес\n\n"
@@ -269,6 +423,30 @@ TEXTS_RU = {
     "pay_error":       "⚠️ Не удалось создать платёж. Попробуйте через минуту.",
     "pay_no_profile":  "Сначала активируйте бесплатный доступ — /start",
     "btn_open_pay":    "💳 Открыть страницу оплаты",
+    # Telegram Stars (RU-юзеры пока не используют, но переводы оставлены на будущее)
+    "btn_pay_stars":   f"💳 Оформить — ${PRICE_USD} / мес",
+    "stars_creating":  "⏳ Готовлю счёт…",
+    "stars_pay_link": (
+        f"💳 BelFed Premium — ${PRICE_USD} / мес\n\n"
+        "Нажмите кнопку ниже, чтобы оформить подписку. Оплата проходит "
+        "через Telegram, без карты и дополнительной регистрации. "
+        "Подписка автоматически продлевается каждые 30 дней — отменить "
+        "можно в любой момент в настройках Telegram.\n\n"
+        "После оплаты я пришлю персональную ссылку в закрытый канал."
+    ),
+    "btn_open_stars_pay": f"💳 Оформить — ${PRICE_USD} / мес",
+    "stars_payment_received": (
+        "✅ Оплата получена! Спасибо.\n\n"
+        "Подписка активна до: {until}\n"
+        "Автопродление: включено\n\n"
+        "Ваша персональная ссылка в закрытый канал "
+        "(одноразовая, действует 1 час):\n{invite}"
+    ),
+    "stars_payment_no_invite": (
+        "✅ Оплата получена! Подписка активна до: {until}\n\n"
+        "Не удалось автоматически создать ссылку в канал. "
+        "Нажмите «📺 Закрытый канал» в меню — я выдам её."
+    ),
 }
 
 TEXTS_EN = {
@@ -301,6 +479,7 @@ TEXTS_EN = {
     "btn_paid":        "📺 Private channel",
     "btn_status":      "📋 My subscription",
     "btn_disclaimer":  "⚠️ Disclaimer",
+    "btn_request":     "📈 Request asset",
     "btn_link":        "🔗 Link account",
     "no_access":       ("Please sign up at " + WEB_URL_EN + " and link Telegram first. "
                         "Get 14 days of free access — no card required."),
@@ -340,6 +519,15 @@ TEXTS_EN = {
     "btn_lang_ru":     "🇷🇺 Русский",
     "btn_lang_en":     "🇬🇧 English",
     "lang_saved":      "✅ Language: English",
+    "ask_email": (
+        "✉️ Please enter your email\n\n"
+        "We need it for the fiscal receipt (Russian tax law requirement).\n"
+        "Send your email in one message, e.g.: ivan@example.com\n\n"
+        "To cancel — tap /cancel_payment"
+    ),
+    "email_invalid":   "⚠️ That doesn't look like a valid email. Try again or /cancel_payment",
+    "email_saved":     "✅ Email saved: {email}",
+    "pay_canceled":    "Payment canceled.",
     "pay_creating":    "⏳ Preparing payment page…",
     "pay_link": (
         f"💳 Subscription — {PRICE_RUB} RUB / month (~${PRICE_USD})\n\n"
@@ -349,6 +537,30 @@ TEXTS_EN = {
     "pay_error":       "⚠️ Couldn't create payment. Please try again in a minute.",
     "pay_no_profile":  "Activate the free trial first — /start",
     "btn_open_pay":    "💳 Open payment page",
+    # Telegram Stars (EN users)
+    "btn_pay_stars":   f"💳 Subscribe — ${PRICE_USD} / mo",
+    "stars_creating":  "⏳ Preparing your invoice…",
+    "stars_pay_link": (
+        f"💳 BelFed Premium — ${PRICE_USD} / month\n\n"
+        "Tap the button below to subscribe. Payment is processed securely "
+        "through Telegram — no card or extra registration required. "
+        "The subscription auto-renews every 30 days and can be cancelled "
+        "anytime in your Telegram settings.\n\n"
+        "After payment I'll send your personal invite to the private channel."
+    ),
+    "btn_open_stars_pay": f"💳 Subscribe — ${PRICE_USD} / mo",
+    "stars_payment_received": (
+        "✅ Payment received. Thank you!\n\n"
+        "Subscription active until: {until}\n"
+        "Auto-renew: on\n\n"
+        "Your personal invite to the private channel "
+        "(single-use, valid 1 hour):\n{invite}"
+    ),
+    "stars_payment_no_invite": (
+        "✅ Payment received. Subscription active until: {until}\n\n"
+        "Couldn't create the channel invite automatically. "
+        "Tap “📺 Private channel” in the menu — I'll send it."
+    ),
 }
 
 def T(lang: str, key: str) -> str:
@@ -449,10 +661,121 @@ async def run_trial_flow(update: Update, context: ContextTypes.DEFAULT_TYPE,
             await reply_target.reply_text(T(lang, "trial_claim_error"))
     await send_main_menu(update, context, lang=lang, reply_to=reply_target)
 
+# ---------- Payment flow with email collection ---------------------------
+async def start_payment_with_email(query_or_message, context: ContextTypes.DEFAULT_TYPE,
+                                    profile: dict, lang: str,
+                                    provider: str = "yookassa",
+                                    telegram_id: int | None = None):
+    """Универсальный вход в оплату (YooKassa или Stars).
+    Если у юзера уже есть настоящий email — сразу создаёт платёж.
+    Иначе — переводит юзера в state 'awaiting_email' и просит email.
+
+    provider:
+      'yookassa' — карта/SBP, нужен для фискального чека (54-ФЗ)
+      'stars'    — Telegram Stars, формально не нужен, но собираем для
+                   базы подписчиков (newsletter, win-back).
+    """
+    existing_email = profile.get("email")
+    if is_valid_email(existing_email):
+        await _finalize_payment(query_or_message, context, profile,
+                                existing_email, lang, provider, telegram_id)
+        return
+
+    # Переходим в режим сбора email
+    context.user_data["awaiting_email_for_payment"] = {
+        "profile_id":   profile["id"],
+        "lang":         lang,
+        "provider":     provider,
+        "telegram_id":  telegram_id,
+    }
+    await query_or_message.reply_text(T(lang, "ask_email"))
+
+async def _finalize_payment(reply_target, context: ContextTypes.DEFAULT_TYPE,
+                             profile: dict, email: str, lang: str,
+                             provider: str, telegram_id: int | None):
+    """После получения email — создаёт счёт у выбранного провайдера."""
+    if provider == "stars":
+        await _send_stars_invoice(reply_target, profile, lang, telegram_id)
+    else:
+        await create_and_send_payment(reply_target, context, profile, email, lang)
+
+async def _send_stars_invoice(reply_target, profile: dict, lang: str,
+                               telegram_id: int | None):
+    """Готовит Stars invoice link и шлёт кнопку."""
+    await reply_target.reply_text(T(lang, "stars_creating"))
+    tg_id = telegram_id or 0
+    invoice_url = await create_stars_invoice_link(profile["id"], tg_id, lang)
+    if not invoice_url:
+        await reply_target.reply_text(T(lang, "pay_error"))
+        return
+    kb = InlineKeyboardMarkup([[InlineKeyboardButton(
+        T(lang, "btn_open_stars_pay"), url=invoice_url
+    )]])
+    await reply_target.reply_text(
+        T(lang, "stars_pay_link"),
+        reply_markup=kb,
+        disable_web_page_preview=True,
+    )
+
+async def create_and_send_payment(reply_target, context: ContextTypes.DEFAULT_TYPE,
+                                   profile: dict, email: str, lang: str):
+    """Создаёт YooKassa-платёж с email и шлёт пользователю кнопку оплаты."""
+    await reply_target.reply_text(T(lang, "pay_creating"))
+    web_url = WEB_URL_EN if lang == "en" else WEB_URL_RU
+    return_url = f"{web_url}/members.html?payment=return"
+    res = await create_payment_via_edge(profile["id"], email, return_url)
+    if not res or not res.get("confirmation_url"):
+        await reply_target.reply_text(T(lang, "pay_error"))
+        return
+    url = res["confirmation_url"]
+    kb = InlineKeyboardMarkup([[InlineKeyboardButton(T(lang, "btn_open_pay"), url=url)]])
+    await reply_target.reply_text(
+        T(lang, "pay_link").format(url=url),
+        reply_markup=kb,
+        disable_web_page_preview=True,
+    )
+
 # ---------- Handlers ------------------------------------------------------
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     args = context.args or []
+
+    # Если /start пришёл во время сбора email — выходим из режима
+    context.user_data.pop("awaiting_email_for_payment", None)
+
+    # Deep-link /start auth — direct dashboard access for paid members
+    if args and (args[0] == "auth" or args[0].startswith("auth_")):
+        profile = await get_profile_by_telegram(user.id)
+        if profile and profile.get("lang") in ("ru", "en"):
+            lang = profile["lang"]
+        else:
+            lang = "en" if (user.language_code or "").startswith("en") else "ru"
+
+        is_paid = await check_paid_membership(user.id, lang)
+        if not is_paid:
+            txt = ("⚠️ Доступ к дашборду доступен только участникам платного канала. Активируйте подписку ниже:") if lang == "ru" else \
+                  ("⚠️ Dashboard access is for paid channel members. Activate your subscription below:")
+            await update.message.reply_text(txt)
+            await send_main_menu(update, context, lang=lang)
+            return
+
+        ott = await issue_dashboard_session(user.id, lang)
+        if not ott:
+            txt = "⚠️ Не удалось создать сессию. Попробуйте через минуту." if lang == "ru" else \
+                  "⚠️ Couldn't create session. Try again in a moment."
+            await update.message.reply_text(txt)
+            return
+
+        url = f"{DASHBOARD_AUTH_URL}?t={ott}"
+        btn_label = "📊 Открыть дашборд" if lang == "ru" else "📊 Open Dashboard"
+        msg = ("Вы в платном канале — открываем дашборд.\n\nСсылка действует 5 минут.") if lang == "ru" else \
+              ("You're a paid channel member — open the dashboard.\n\nLink is valid for 5 minutes.")
+        await update.message.reply_text(
+            msg,
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(btn_label, url=url)]]),
+            disable_web_page_preview=True,
+        )
+        return
 
     # Deep-link /start trial[_xxx][_ru|_en]
     if args and (args[0] == "trial" or args[0].startswith("trial_")):
@@ -527,13 +850,20 @@ async def send_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE,
         rows.append([InlineKeyboardButton(T(lang, "btn_paid"), callback_data="paid_invite")])
 
     rows.append([InlineKeyboardButton(T(lang, "btn_status"), callback_data="sub_status")])
+    if has_access(profile):
+        rows.append([InlineKeyboardButton(T(lang, "btn_request"), callback_data="request_asset")])
 
     sub = await get_subscription(profile["id"]) if profile else None
     has_active_paid = sub and sub.get("status") == "active"
     if not has_active_paid and not is_admin(profile):
         if profile:
-            # Бот сам создаёт платёж — Telegram-only flow
-            rows.append([InlineKeyboardButton(T(lang, "btn_pay"), callback_data="start_payment")])
+            # EN-юзеры платят через Telegram Stars; RU — через YooKassa
+            if lang == "en":
+                rows.append([InlineKeyboardButton(T(lang, "btn_pay_stars"),
+                                                   callback_data="start_payment_stars")])
+            else:
+                rows.append([InlineKeyboardButton(T(lang, "btn_pay"),
+                                                   callback_data="start_payment")])
         else:
             # Нет профиля — fallback на сайт (редкий случай, юзер открыл бота без deep-link)
             rows.append([InlineKeyboardButton(T(lang, "btn_pay"), url=f"{web_url}/members.html#subscribe")])
@@ -608,6 +938,15 @@ async def cmd_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     exp = parse_ts(sub.get("current_period_end")) or datetime.now(timezone.utc)
     await update.message.reply_text(T(lang, "cancel_ok").format(until=exp.strftime("%d.%m.%Y")))
 
+async def cmd_cancel_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Выходит из режима сбора email."""
+    user = update.effective_user
+    profile = await get_profile_by_telegram(user.id)
+    lang = await get_user_lang(update, profile)
+    state = context.user_data.pop("awaiting_email_for_payment", None)
+    if state:
+        await update.message.reply_text(T(lang, "pay_canceled"))
+
 async def cmd_lang(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Команда /lang — позволяет сменить язык в любой момент."""
     await update.message.reply_text(
@@ -615,8 +954,403 @@ async def cmd_lang(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=lang_pick_keyboard("lang_menu"),
     )
 
+async def cmd_dashboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Шорткат к /start auth — одноразовая ссылка на веб-дашборд."""
+    user = update.effective_user
+    profile = await get_profile_by_telegram(user.id)
+    lang = await get_user_lang(update, profile)
+    is_paid = await check_paid_membership(user.id, lang)
+    if not is_paid:
+        txt = ("⚠️ Дашборд — только для участников платного канала. Оформите подписку:") if lang == "ru" else \
+              "⚠️ Dashboard is for paid channel members. Activate your subscription:"
+        await update.message.reply_text(txt)
+        await send_main_menu(update, context, lang=lang)
+        return
+    ott = await issue_dashboard_session(user.id, lang)
+    if not ott:
+        txt = "⚠️ Не удалось создать сессию. Попробуйте через минуту." if lang == "ru" else \
+              "⚠️ Couldn't create session. Try again in a moment."
+        await update.message.reply_text(txt)
+        return
+    url = f"{DASHBOARD_AUTH_URL}?t={ott}"
+    btn = "📊 Открыть дашборд" if lang == "ru" else "📊 Open Dashboard"
+    msg = ("📊 Личный кабинет — открытые позиции, аналитика, история сделок.\nСсылка действует 5 минут.") if lang == "ru" else \
+          "📊 Member dashboard — open positions, analytics, trade history.\nLink valid for 5 minutes."
+    await update.message.reply_text(
+        msg,
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(btn, url=url)]]),
+        disable_web_page_preview=True,
+    )
+
+# ---------- /request <TICKER> -- chart-request submission from Telegram ----------
+TICKER_RE = re.compile(r"^[A-Z0-9]{1,8}$")
+
+async def _submit_chart_request(reply_target, user, profile, lang: str,
+                                  ticker: str, asset_class):
+    """Shared implementation used by /request and the inline-button flow.
+
+    `reply_target` is any object with `.reply_text(...)` (Message or callback message).
+    Returns nothing — sends user-facing reply directly.
+    """
+    if not TICKER_RE.match(ticker):
+        err = ("❌ Invalid ticker. Use 1–8 uppercase letters/digits (e.g. TSLA, BTC, RENDER)."
+               if lang == "en" else
+               "❌ Некорректный тикер. Используйте 1–8 заглавных букв/цифр (напр. TSLA, BTC, RENDER).")
+        await reply_target.reply_text(err)
+        return
+
+    if not BOT_SHARED_SECRET:
+        log.error("chart-request: BOT_SHARED_SECRET not configured")
+        fallback = ("⚠️ Service temporarily unavailable. Please use the website."
+                    if lang == "en" else
+                    "⚠️ Сервис временно недоступен. Пожалуйста, воспользуйтесь сайтом.")
+        await reply_target.reply_text(fallback)
+        return
+
+    url = f"{SUPABASE_URL}/functions/v1/chart-request"
+    body: dict = {"telegram_id": str(user.id), "ticker": ticker}
+    if asset_class:
+        body["asset_class"] = asset_class
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            r = await client.post(
+                url,
+                headers={
+                    "Content-Type": "application/json",
+                    "x-bot-secret": BOT_SHARED_SECRET,
+                    "apikey": SUPABASE_SERVICE_KEY,
+                },
+                json=body,
+            )
+        try:
+            d = r.json()
+        except Exception:
+            d = {"error": "bad_json", "raw": r.text[:200]}
+    except Exception as e:
+        log.exception("chart-request: edge fn call failed")
+        d = {"error": str(e)}
+        r = None
+
+    if r is not None and r.status_code == 200 and d.get("ok"):
+        remaining = d.get("remaining")
+        used = d.get("used_24h")
+        if lang == "en":
+            ok_msg = (f"✅ Request submitted: ${ticker}\n"
+                      f"   We'll publish a chart update soon and DM you the link.\n"
+                      f"   Quota: {used}/3 used, {remaining} remaining (rolling 24h).")
+        else:
+            ok_msg = (f"✅ Запрос принят: ${ticker}\n"
+                      f"   Скоро опубликуем обновление и пришлём вам ссылку.\n"
+                      f"   Лимит: {used}/3 использовано, осталось {remaining} (за 24 ч).")
+        await reply_target.reply_text(ok_msg)
+        return
+
+    err_code = (d or {}).get("error", "")
+    if err_code == "quota_exceeded":
+        reset_h = d.get("reset_in_hours")
+        text = (f"⛔ Daily limit reached (3 / 24h). Try again in ~{reset_h}h."
+                if lang == "en" else
+                f"⛔ Суточный лимит исчерпан (3 / 24 ч). Попробуйте через ~{reset_h} ч.")
+    elif err_code == "duplicate_pending":
+        text = (f"ℹ️ You already have a pending request for ${ticker}. Be patient — we'll deliver it shortly."
+                if lang == "en" else
+                f"ℹ️ У вас уже есть ожидающий запрос по ${ticker}. Ожидайте — выполним.")
+    elif err_code == "not_paid" or err_code == "forbidden":
+        text = ("⛔ Chart requests are available to paid subscribers only. Use /status to check your access."
+                if lang == "en" else
+                "⛔ Запросы доступны только платным подписчикам. Проверьте доступ: /status.")
+    else:
+        text = (f"⚠️ Could not submit request: {err_code or 'unknown error'}"
+                if lang == "en" else
+                f"⚠️ Не удалось отправить запрос: {err_code or 'неизвестная ошибка'}")
+    await reply_target.reply_text(text)
+
+
+def _request_prompt_text(lang: str) -> str:
+    if lang == "en":
+        return ("📈 Reply with the ticker you want analyzed (1–8 letters/digits).\n"
+                "   Examples: TSLA, BTC, RENDER, EURUSD\n"
+                "   Limit: 3 requests per 24h.")
+    return ("📈 Ответьте на это сообщение тикером актива (1–8 букв/цифр).\n"
+            "   Примеры: TSLA, BTC, RENDER, EURUSD\n"
+            "   Лимит: 3 запроса в сутки.")
+
+
+async def cmd_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Allow paid subscribers to request a chart update via Telegram.
+
+    Usage:  /request TSLA   |   /request BTC crypto   |   /request RENDER
+    No args — enters ForceReply mode and waits for the next text message.
+    """
+    user = update.effective_user
+    profile = await get_profile_by_telegram(user.id)
+    lang = await get_user_lang(update, profile)
+    if not profile:
+        await update.message.reply_text(T(lang, "need_link"))
+        return
+
+    if not has_access(profile):
+        text = ("⛔ Chart requests are available to paid subscribers only. Use /status to check your access."
+                if lang == "en" else
+                "⛔ Запросы доступны только платным подписчикам. Проверьте доступ: /status.")
+        await update.message.reply_text(text)
+        return
+
+    args = context.args or []
+    if not args:
+        # Enter ForceReply mode — ask for the ticker as the next reply.
+        context.user_data["awaiting_chart_request_ticker"] = {"lang": lang}
+        await update.message.reply_text(
+            _request_prompt_text(lang),
+            reply_markup=ForceReply(selective=True, input_field_placeholder="TSLA"),
+        )
+        return
+
+    ticker = args[0].strip().upper().lstrip("$").lstrip("#")
+    asset_class = (args[1].strip().lower() if len(args) > 1 else "") or None
+    if asset_class and asset_class not in ("stocks", "crypto", "commodities", "fx"):
+        asset_class = None
+
+    await _submit_chart_request(update.message, user, profile, lang, ticker, asset_class)
+
+
+# Admin-only: список последних платежей в TG.
+ADMIN_TELEGRAM_IDS = {118296372}  # Артём
+
+async def cmd_payments(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if user.id not in ADMIN_TELEGRAM_IDS:
+        return  # тихо игнорируем
+    args = [a.lower() for a in (context.args or [])]
+    provider_filter = None
+    days = 90
+    for a in args:
+        if a in ("stars", "yookassa"):
+            provider_filter = a if a == "yookassa" else "telegram_stars"
+        elif a.endswith("d") and a[:-1].isdigit():
+            days = max(1, min(365, int(a[:-1])))
+    # Читаем через REST (PostgREST), join руками.
+    params = {
+        "select":  "paid_at,provider,amount,currency,plan,user_id,status",
+        "status":  "eq.succeeded",
+        "order":   "paid_at.desc",
+        "limit":   "20",
+        "paid_at": f"gte.{(datetime.now(timezone.utc) - timedelta(days=days)).isoformat()}",
+    }
+    if provider_filter:
+        params["provider"] = f"eq.{provider_filter}"
+    rows = await sb_get("/rest/v1/payments", params=params) or []
+    if not rows:
+        await update.message.reply_text("Нет платежей за период.")
+        return
+    # Дотягиваем профили одним запросом
+    ids = ",".join({r["user_id"] for r in rows if r.get("user_id")})
+    profs = {}
+    if ids:
+        prof_rows = await sb_get("/rest/v1/profiles",
+                                  params={"select": "id,email,telegram_username",
+                                          "id":     f"in.({ids})"}) or []
+        profs = {p["id"]: p for p in prof_rows}
+    lines = ["💳 Последние платежи:\n"]
+    for r in rows:
+        p = profs.get(r.get("user_id"), {})
+        un = ("@" + p["telegram_username"]) if p.get("telegram_username") else "—"
+        em = p.get("email") or "—"
+        if em.endswith("@belfed.local"):
+            em = "(ghost)"
+        dt = (r.get("paid_at") or "")[:16].replace("T", " ")
+        prov = "stars" if r.get("provider") == "telegram_stars" else (r.get("provider") or "?")
+        amt = r.get("amount")
+        cur = r.get("currency")
+        lines.append(f"{dt} • {prov} • {amt} {cur} • {un} • {em}")
+    await update.message.reply_text("\n".join(lines))
+
+# Admin-only: сводка по подписчикам в TG.
+async def cmd_subscribers(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if user.id not in ADMIN_TELEGRAM_IDS:
+        return  # тихо игнорируем
+    args = [a.lower() for a in (context.args or [])]
+    # Фильтр: active | trial | expired | en | ru | test (test — явный показ)
+    filt = None
+    include_test = False
+    for a in args:
+        if a in ("active", "trial", "expired", "en", "ru"):
+            filt = a
+        elif a == "test":
+            filt = "test"
+            include_test = True
+        elif a in ("all", "+test", "with-test"):
+            include_test = True
+
+    # Обращаемся к view напрямую — service role ключ обходит RLS,
+    # и команда и так завёрнута в ADMIN_TELEGRAM_IDS.
+    params = {"select": "*", "order": "subscription_status.asc,subscription_expires_at.desc.nullslast,created_at.desc"}
+    if filt == "active":
+        params["subscription_status"] = "in.(active,admin)"
+    elif filt == "trial":
+        params["subscription_status"] = "eq.trial"
+    elif filt == "expired":
+        params["subscription_status"] = "eq.expired"
+    elif filt == "en":
+        params["lang"] = "eq.en"
+    elif filt == "ru":
+        params["lang"] = "eq.ru"
+    elif filt == "test":
+        params["is_test_profile"] = "eq.true"
+    rows = await sb_get("/rest/v1/admin_subscribers_v1", params=params) or []
+    # По умолчанию скрываем тестовые профили из сводки и фильтрованных списков.
+    if not include_test:
+        rows = [r for r in rows if not r.get("is_test_profile")]
+    if not rows:
+        await update.message.reply_text("Нет записей.")
+        return
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    def is_active_trial(r):
+        t = r.get("trial_end")
+        return r.get("subscription_status") == "trial" and t and t > now_iso
+
+    # Если фильтра нет — выдаём сводку + топ-20 по последней оплате
+    if not filt:
+        active_en = sum(1 for r in rows if r.get("subscription_status") == "active" and r.get("lang") == "en")
+        active_ru = sum(1 for r in rows if r.get("subscription_status") == "active" and r.get("lang") == "ru")
+        trial_en  = sum(1 for r in rows if is_active_trial(r) and r.get("lang") == "en")
+        trial_ru  = sum(1 for r in rows if is_active_trial(r) and r.get("lang") == "ru")
+        expired_total = sum(1 for r in rows
+                            if r.get("subscription_status") == "expired"
+                            or (r.get("subscription_status") == "trial" and not is_active_trial(r)))
+        total_rub = sum(float(r.get("total_rub_paid") or 0) for r in rows)
+        total_stars = sum(float(r.get("total_stars_paid") or 0) for r in rows)
+
+        lines = [
+            "👥 Подписчики · сводка",
+            "",
+            f"✅ Active: {active_en + active_ru}  (EN {active_en} · RU {active_ru})",
+            f"⏳ Trial:  {trial_en + trial_ru}  (EN {trial_en} · RU {trial_ru})",
+            f"⛔ Expired: {expired_total}",
+            f"📦 Всего профилей: {len(rows)}",
+            "",
+            f"💰 Сумма оплат: {int(total_rub):,}₽ + {int(total_stars):,}⭐".replace(",", " "),
+            "",
+            "Последние оплаты (топ-10):",
+        ]
+        paid = [r for r in rows if r.get("last_payment_at")]
+        paid.sort(key=lambda r: r.get("last_payment_at") or "", reverse=True)
+        for r in paid[:10]:
+            un = ("@" + r["telegram_username"]) if r.get("telegram_username") else "—"
+            em = r.get("email") or "—"
+            if em.endswith("@belfed.local"):
+                em = "(ghost)"
+            dt = (r.get("last_payment_at") or "")[:10]
+            amt = r.get("last_payment_amount")
+            cur = (r.get("last_payment_currency") or "").upper()
+            cur_sym = "₽" if cur == "RUB" else ("⭐" if cur in ("XTR", "STARS") else " " + cur)
+            lines.append(f"{dt} • {amt}{cur_sym} • {un} • {em}")
+        lines.append("")
+        lines.append("🔍 Фильтры: /subscribers active | trial | expired | en | ru | test")
+        lines.append("🌐 Полная панель: belfed.ru/admin-subscribers.html")
+        await update.message.reply_text("\n".join(lines), disable_web_page_preview=True)
+        return
+
+    # С фильтром — список (до 30)
+    label = {
+        "active":  "✅ Активные подписки",
+        "trial":   "⏳ Триал",
+        "expired": "⛔ Истёкшие",
+        "en":      "🇬🇧 EN канал",
+        "ru":      "🇷🇺 RU канал",
+    }[filt]
+    rows.sort(key=lambda r: r.get("subscription_expires_at") or r.get("trial_end") or "", reverse=True)
+    lines = [f"{label} ({len(rows)})", ""]
+    for r in rows[:30]:
+        un = ("@" + r["telegram_username"]) if r.get("telegram_username") else ("id:" + (r.get("telegram_id") or "—"))
+        em = r.get("email") or ""
+        if em.endswith("@belfed.local"):
+            em = ""
+        em_part = (" · " + em) if em else ""
+        lng = (r.get("lang") or "--").upper()
+        st  = (r.get("subscription_status") or "").upper()
+        exp = r.get("subscription_expires_at") or r.get("trial_end")
+        exp_part = (" → " + exp[:10]) if exp else ""
+        lines.append(f"[{lng}] {st}{exp_part} • {un}{em_part}")
+    if len(rows) > 30:
+        lines.append("")
+        lines.append(f"… и ещё {len(rows) - 30}. Полный список: belfed.ru/admin-subscribers.html")
+    await update.message.reply_text("\n".join(lines), disable_web_page_preview=True)
+
+
+async def on_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обрабатывает обычный текст: positions wizards / email / chart-request ticker."""
+    # 1. Positions module (wizards, comments, close-price input) — admin only
+    if await positions.maybe_handle_text(update, context):
+        return
+
+    # 2. Chart-request ForceReply flow
+    cr_state = context.user_data.get("awaiting_chart_request_ticker")
+    if cr_state:
+        user = update.effective_user
+        text = (update.message.text or "").strip()
+        lang = cr_state.get("lang", "ru")
+        # Allow user to abort by typing /cancel or 'cancel'
+        if text.lower() in ("/cancel", "cancel", "отмена", "/отмена"):
+            context.user_data.pop("awaiting_chart_request_ticker", None)
+            await update.message.reply_text(
+                "❌ Cancelled." if lang == "en" else "❌ Отменено."
+            )
+            return
+        # Parse "TICKER" or "TICKER class"
+        parts = text.split()
+        ticker = parts[0].strip().upper().lstrip("$").lstrip("#")
+        asset_class = (parts[1].strip().lower() if len(parts) > 1 else "") or None
+        if asset_class and asset_class not in ("stocks", "crypto", "commodities", "fx"):
+            asset_class = None
+        # Clear state BEFORE network call so a second message can't double-submit
+        context.user_data.pop("awaiting_chart_request_ticker", None)
+        profile = await get_profile_by_telegram(user.id)
+        if not profile:
+            await update.message.reply_text(T(lang, "need_link"))
+            return
+        await _submit_chart_request(update.message, user, profile, lang, ticker, asset_class)
+        return
+
+    state = context.user_data.get("awaiting_email_for_payment")
+    if not state:
+        return  # текст вне известных режимов — игнорируем
+
+    user = update.effective_user
+    text = (update.message.text or "").strip()
+    lang = state.get("lang", "ru")
+    provider = state.get("provider", "yookassa")
+    telegram_id = state.get("telegram_id") or user.id
+
+    if not is_valid_email(text):
+        await update.message.reply_text(T(lang, "email_invalid"))
+        return
+
+    # Сохраняем email в БД — триггер profiles_auto_opt_in_email автоматически
+    # добавит его в email_subscribers (при активной подписке).
+    profile_id = state["profile_id"]
+    await update_profile_email(profile_id, text)
+
+    # Выходим из режима
+    context.user_data.pop("awaiting_email_for_payment", None)
+
+    await update.message.reply_text(T(lang, "email_saved").format(email=text))
+
+    # Создаём платёж у нужного провайдера
+    profile = await get_profile_by_telegram(user.id)
+    if not profile:
+        await update.message.reply_text(T(lang, "pay_no_profile"))
+        return
+    await _finalize_payment(update.message, context, profile, text, lang, provider, telegram_id)
+
 async def on_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
+    # Positions module callbacks (positions:*) handled separately
+    if (query.data or "").startswith("positions:"):
+        await positions.maybe_handle_callback(update, context)
+        return
     await query.answer()
     user = query.from_user
     data = query.data or ""
@@ -685,41 +1419,224 @@ async def on_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text(T(lang, "disclaimer"))
         return
 
+    if data == "request_asset":
+        profile = await get_profile_by_telegram(user.id)
+        lang = await get_user_lang(update, profile)
+        if not profile:
+            await query.message.reply_text(T(lang, "need_link"))
+            return
+        if not has_access(profile):
+            text = ("⛔ Chart requests are available to paid subscribers only."
+                    if lang == "en" else
+                    "⛔ Запросы доступны только платным подписчикам.")
+            await query.message.reply_text(text)
+            return
+        context.user_data["awaiting_chart_request_ticker"] = {"lang": lang}
+        await query.message.reply_text(
+            _request_prompt_text(lang),
+            reply_markup=ForceReply(selective=True, input_field_placeholder="TSLA"),
+        )
+        return
+
     if data == "start_payment":
         profile = await get_profile_by_telegram(user.id)
         lang = await get_user_lang(update, profile)
         if not profile:
             await query.message.reply_text(T(lang, "pay_no_profile"))
             return
-        # Сообщаем, что готовим платёж (синхр. вызов может занять 2-5 сек)
-        await query.message.reply_text(T(lang, "pay_creating"))
-        web_url = WEB_URL_EN if lang == "en" else WEB_URL_RU
-        return_url = f"{web_url}/members.html?payment=return"
-        res = await create_payment_via_edge(profile["id"], return_url)
-        if not res or not res.get("confirmation_url"):
-            await query.message.reply_text(T(lang, "pay_error"))
+        await start_payment_with_email(query.message, context, profile, lang)
+        return
+
+    if data == "start_payment_stars":
+        profile = await get_profile_by_telegram(user.id)
+        lang = await get_user_lang(update, profile)
+        if not profile:
+            await query.message.reply_text(T(lang, "pay_no_profile"))
             return
-        url = res["confirmation_url"]
-        kb = InlineKeyboardMarkup([[InlineKeyboardButton(T(lang, "btn_open_pay"), url=url)]])
-        await query.message.reply_text(
-            T(lang, "pay_link").format(url=url),
-            reply_markup=kb,
+        # Собираем email для базы подписчиков (newsletter, win-back, transactional).
+        await start_payment_with_email(query.message, context, profile, lang,
+                                       provider="stars", telegram_id=user.id)
+        return
+
+# ---------- Telegram Stars: pre_checkout + successful_payment ------------
+async def on_pre_checkout(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Telegram требует ответить в течение 10 секунд, иначе платёж отменяется.
+    Для Stars обычно просто auto-approve."""
+    pcq = update.pre_checkout_query
+    try:
+        # Минимальная проверка: правильная валюта и payload
+        if pcq.currency != "XTR" or not (pcq.invoice_payload or "").startswith("stars_sub|"):
+            await pcq.answer(ok=False, error_message="Invalid invoice")
+            return
+        await pcq.answer(ok=True)
+    except Exception as e:
+        log.error("on_pre_checkout failed: %s", e)
+        try:
+            await pcq.answer(ok=False, error_message="Internal error")
+        except Exception:
+            pass
+
+async def on_successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """После успешной оплаты: записываем в БД, выдаём invite в EN-group."""
+    msg = update.message
+    sp = msg.successful_payment
+    user = update.effective_user
+
+    payload = sp.invoice_payload or ""
+    parts = payload.split("|")
+    # payload format: stars_sub|<profile_id>|<telegram_id>
+    if len(parts) < 3 or parts[0] != "stars_sub":
+        log.warning("successful_payment with unexpected payload: %s", payload)
+        return
+    profile_id_from_payload = parts[1]
+
+    # Для recurring подписок Telegram присылает subscription_expiration_date (Unix timestamp)
+    sub_exp = getattr(sp, "subscription_expiration_date", None)
+    is_recurring_flag = getattr(sp, "is_recurring", False) or sub_exp is not None
+
+    # Сырой event — в jsonb для аудита
+    raw = {
+        "telegram_payment_charge_id":   sp.telegram_payment_charge_id,
+        "provider_payment_charge_id":   sp.provider_payment_charge_id,
+        "currency":                     sp.currency,
+        "total_amount":                 sp.total_amount,
+        "invoice_payload":              sp.invoice_payload,
+        "subscription_expiration_date": sub_exp,
+        "is_recurring":                 is_recurring_flag,
+        "is_first_recurring":           getattr(sp, "is_first_recurring", None),
+        "telegram_id":                  user.id,
+        "username":                     user.username,
+    }
+
+    # Проверяем профиль по telegram_id (первоисточник правды)
+    profile = await get_profile_by_telegram(user.id)
+    if not profile or profile["id"] != profile_id_from_payload:
+        # payload и telegram_id не совпали — это подозрительно, но платёж реальный:
+        # верим текущему telegram_id, если профиль есть
+        log.warning("payload profile_id mismatch: payload=%s, actual=%s (telegram_id=%s)",
+                    profile_id_from_payload, profile["id"] if profile else None, user.id)
+    if not profile:
+        log.error("successful_payment: no profile for telegram_id=%s", user.id)
+        await msg.reply_text(
+            "⚠️ Payment received but we couldn't find your account. "
+            "Please contact support@belfed.com with this code: "
+            f"{sp.telegram_payment_charge_id}"
+        )
+        return
+
+    lang = await get_user_lang(update, profile)
+
+    # Запись в БД через RPC
+    ok = await apply_stars_payment_via_rpc(
+        telegram_charge_id=sp.telegram_payment_charge_id,
+        user_id=profile["id"],
+        amount_stars=sp.total_amount,
+        subscription_expiration_date=sub_exp,
+        paid_at=datetime.now(timezone.utc),
+        raw_event=raw,
+        is_recurring=is_recurring_flag,
+    )
+    if not ok:
+        log.error("apply_stars_payment_via_rpc returned False")
+        await msg.reply_text(
+            "⚠️ Payment received but activation failed. "
+            "Please contact support@belfed.com with this code: "
+            f"{sp.telegram_payment_charge_id}"
+        )
+        return
+
+    # Генерируем invite в EN-group
+    invite = await grant_paid_invite(context, user.id, lang)
+
+    # Читаем свежий expires_at
+    profile_after = await get_profile_by_telegram(user.id)
+    exp = parse_ts(profile_after.get("subscription_expires_at")) if profile_after else None
+    until_str = exp.strftime("%d.%m.%Y") if exp else "—"
+
+    if invite:
+        await msg.reply_text(
+            T(lang, "stars_payment_received").format(until=until_str, invite=invite),
             disable_web_page_preview=True,
         )
+    else:
+        await msg.reply_text(
+            T(lang, "stars_payment_no_invite").format(until=until_str),
+            disable_web_page_preview=True,
+        )
+        await send_main_menu(update, context, lang=lang)
+
+    # Dashboard был недоступен без этого — выдаём одноразовую ссылку.
+    try:
+        ott = await issue_dashboard_session(user.id, lang)
+        if ott:
+            url = f"{DASHBOARD_AUTH_URL}?t={ott}"
+            btn_label = "📊 Открыть дашборд" if lang == "ru" else "📊 Open Dashboard"
+            txt = ("📊 Личный кабинет — открытые позиции, аналитика, история сделок.\nСсылка действует 5 минут.") if lang == "ru" else \
+                  "📊 Member dashboard — open positions, analytics, trade history.\nLink valid for 5 minutes."
+            await msg.reply_text(
+                txt,
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(btn_label, url=url)]]),
+                disable_web_page_preview=True,
+            )
+    except Exception as e:
+        log.warning("post-Stars dashboard link failed: %s", e)
 
 async def on_error(update: object, context: ContextTypes.DEFAULT_TYPE):
     log.exception("unhandled error", exc_info=context.error)
 
+async def _set_bot_commands(application: Application):
+    """Populate the Telegram client ‘/’ menu so users can discover commands.
+
+    Falls back silently on failure — must not block bot startup.
+    """
+    try:
+        ru_cmds = [
+            BotCommand("start",     "Меню и приветствие"),
+            BotCommand("request",   "📈 Запросить анализ актива"),
+            BotCommand("status",    "Моя подписка"),
+            BotCommand("dashboard", "Открыть дашборд"),
+            BotCommand("cancel",    "Отменить автопродление"),
+            BotCommand("lang",      "Язык / Language"),
+        ]
+        en_cmds = [
+            BotCommand("start",     "Menu and welcome"),
+            BotCommand("request",   "📈 Request asset analysis"),
+            BotCommand("status",    "My subscription"),
+            BotCommand("dashboard", "Open dashboard"),
+            BotCommand("cancel",    "Cancel auto-renew"),
+            BotCommand("lang",      "Language / Язык"),
+        ]
+        # Default scope = RU (primary audience); per-language overlays for EN/RU clients.
+        await application.bot.set_my_commands(ru_cmds, scope=BotCommandScopeDefault())
+        await application.bot.set_my_commands(ru_cmds, scope=BotCommandScopeDefault(), language_code="ru")
+        await application.bot.set_my_commands(en_cmds, scope=BotCommandScopeDefault(), language_code="en")
+        log.info("Bot commands menu registered (RU default + EN overlay)")
+    except Exception as e:
+        log.warning("set_my_commands failed: %s", e)
+
+
 def main():
-    app = Application.builder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start",  cmd_start))
-    app.add_handler(CommandHandler("link",   cmd_link))
-    app.add_handler(CommandHandler("status", cmd_status))
-    app.add_handler(CommandHandler("cancel", cmd_cancel))
-    app.add_handler(CommandHandler("lang",   cmd_lang))
+    app = Application.builder().token(BOT_TOKEN).post_init(_set_bot_commands).build()
+    app.add_handler(CommandHandler("start",          cmd_start))
+    app.add_handler(CommandHandler("link",           cmd_link))
+    app.add_handler(CommandHandler("status",         cmd_status))
+    app.add_handler(CommandHandler("cancel",         cmd_cancel))
+    app.add_handler(CommandHandler("cancel_payment", cmd_cancel_payment))
+    app.add_handler(CommandHandler("lang",           cmd_lang))
+    app.add_handler(CommandHandler("dashboard",      cmd_dashboard))
+    app.add_handler(CommandHandler("request",        cmd_request))
+    app.add_handler(CommandHandler("payments",       cmd_payments))
+    app.add_handler(CommandHandler("subscribers",    cmd_subscribers))
+    # Positions management commands (admin-only) — must register BEFORE the
+    # generic CallbackQueryHandler so command handlers fire first.
+    positions.register(app)
     app.add_handler(CallbackQueryHandler(on_button))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_text_message))
+    # Telegram Stars: pre-checkout + successful payment
+    app.add_handler(PreCheckoutQueryHandler(on_pre_checkout))
+    app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, on_successful_payment))
     app.add_error_handler(on_error)
-    log.info("BelFed bot (RU+EN multilingual, single plan + trial) running")
+    log.info("BelFed bot (RU YooKassa + EN Telegram Stars, multilingual) running")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
