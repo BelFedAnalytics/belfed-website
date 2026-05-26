@@ -231,6 +231,19 @@ td.col-rem-partial{background:#fff4e0;color:#ff9500;font-weight:bold}
           <div><label data-tooltip="Какой % позиции фиксировать на Цели 2">Фикс % @ T2</label><input id="f-close_pct_2" type="number" step="1" min="0" max="100" placeholder="33"></div>
           <div><label data-tooltip="Какой % позиции фиксировать на Цели 3 (сумма ≤ 100)">Фикс % @ T3</label><input id="f-close_pct_3" type="number" step="1" min="0" max="100" placeholder="34"></div>
         </div>
+        <div class="section-divider" style="opacity:0.6;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:14px 0 6px;color:#ff9500">Частичные стопы (опционально, до 3 уровней)</div>
+        <div class="row">
+          <div><label data-tooltip="Цена частичного стопа 1 (между стопом и входом для long)">PS 1 цена</label><input id="f-partial_stop_1_price" type="number" step="any" placeholder="опционально"></div>
+          <div><label data-tooltip="% позиции закрыть при срабатывании PS 1 (0-100)">PS 1 %</label><input id="f-partial_stop_1_pct" type="number" step="1" min="0" max="100" placeholder="25"></div>
+        </div>
+        <div class="row">
+          <div><label data-tooltip="Цена частичного стопа 2">PS 2 цена</label><input id="f-partial_stop_2_price" type="number" step="any" placeholder="опционально"></div>
+          <div><label data-tooltip="% позиции закрыть при срабатывании PS 2">PS 2 %</label><input id="f-partial_stop_2_pct" type="number" step="1" min="0" max="100" placeholder="25"></div>
+        </div>
+        <div class="row">
+          <div><label data-tooltip="Цена частичного стопа 3">PS 3 цена</label><input id="f-partial_stop_3_price" type="number" step="any" placeholder="опционально"></div>
+          <div><label data-tooltip="% позиции закрыть при срабатывании PS 3 (сумма PS ≤ 100)">PS 3 %</label><input id="f-partial_stop_3_pct" type="number" step="1" min="0" max="100" placeholder="25"></div>
+        </div>
         <div class="row">
           <div>
             <label data-tooltip="Качество сетапа от 1 до 5, 5 — максимальная уверенность">Грейд (вес позиции)</label>
@@ -573,6 +586,15 @@ function renderOpenList() {
     const partialBtn = canPartial
       ? `<button class="secondary" style="color:#ff9500;border-color:#ff9500" data-tooltip="Закрыть часть позиции" onclick="openPartial(${p.id},'${p.ticker}',${p.entry_price},${p.stop_price},'${p.direction}',${rem})">🔻</button>`
       : '';
+    // Бейдж частичных стопов рядом со стопом
+    const psList = [
+      { price: p.partial_stop_1_price, pct: p.partial_stop_1_pct, hit: p.partial_stop_1_hit_at },
+      { price: p.partial_stop_2_price, pct: p.partial_stop_2_pct, hit: p.partial_stop_2_hit_at },
+      { price: p.partial_stop_3_price, pct: p.partial_stop_3_pct, hit: p.partial_stop_3_hit_at },
+    ].filter(x => x.price != null && x.pct != null);
+    const psBadge = psList.length
+      ? ` <span class="badge-partial" style="background:#ff9500;color:#000;font-size:10px" data-tooltip="${psList.map((x,i)=>`PS${i+1}: ${fmt(x.price)} (${x.pct}%)${x.hit?' ✓':''}`).join(' · ')}">PS×${psList.length}</span>`
+      : '';
     return `
       <tr>
         <td>${p.id}${partialBadge}</td>
@@ -580,7 +602,7 @@ function renderOpenList() {
         <td><b>${p.ticker}</b></td>
         <td class="${dirClass}">${dirArrow} ${p.direction}</td>
         <td>${fmt(p.entry_price)}</td>
-        <td>${fmt(p.stop_price)}</td>
+        <td>${fmt(p.stop_price)}${psBadge}</td>
         <td>${fmt(p.target_1)}${tHit(p.target_1_hit_at)}</td>
         <td>${fmt(p.target_2)}${tHit(p.target_2_hit_at)}</td>
         <td>${fmt(p.target_3)}${tHit(p.target_3_hit_at)}</td>
@@ -736,6 +758,12 @@ function getFormPayload() {
     close_pct_1: num('f-close_pct_1'),
     close_pct_2: num('f-close_pct_2'),
     close_pct_3: num('f-close_pct_3'),
+    partial_stop_1_price: num('f-partial_stop_1_price'),
+    partial_stop_1_pct:   num('f-partial_stop_1_pct'),
+    partial_stop_2_price: num('f-partial_stop_2_price'),
+    partial_stop_2_pct:   num('f-partial_stop_2_pct'),
+    partial_stop_3_price: num('f-partial_stop_3_price'),
+    partial_stop_3_pct:   num('f-partial_stop_3_pct'),
     grade,
     risk_r,
     tradingview_url: str('f-tradingview_url'),
@@ -759,6 +787,32 @@ function validate(p) {
   }
   const sum = pcts.reduce((a, b) => a + b, 0);
   if (sum > 100.001) return `Сумма % фиксаций не должна превышать 100 (получилось ${sum})`;
+
+  // Валидация частичных стопов
+  const psPairs = [
+    [p.partial_stop_1_price, p.partial_stop_1_pct, 1],
+    [p.partial_stop_2_price, p.partial_stop_2_pct, 2],
+    [p.partial_stop_3_price, p.partial_stop_3_pct, 3],
+  ];
+  let psSum = 0;
+  for (const [price, pct, n] of psPairs) {
+    const hasPrice = price != null;
+    const hasPct = pct != null;
+    if (hasPrice !== hasPct) return `PS ${n}: нужно задать и цену, и % (или оба оставить пустыми)`;
+    if (!hasPrice) continue;
+    if (price <= 0) return `PS ${n}: цена должна быть положительной`;
+    if (pct <= 0 || pct > 100) return `PS ${n}: % должен быть в диапазоне (0..100]`;
+    // Сторонность: для long — цена PS между стопом и входом (или ниже стопа)
+    // — главное, не выше входа. Для short — не ниже входа.
+    if (p.direction === 'long' && price >= p.entry_price) {
+      return `PS ${n}: для long цена должна быть НИЖЕ входа`;
+    }
+    if (p.direction === 'short' && price <= p.entry_price) {
+      return `PS ${n}: для short цена должна быть ВЫШЕ входа`;
+    }
+    psSum += pct;
+  }
+  if (psSum > 100.001) return `Сумма % частичных стопов не должна превышать 100 (получилось ${psSum})`;
   return null;
 }
 
@@ -862,6 +916,9 @@ function changeAssetType() {
 function resetForm() {
   ['f-ticker','f-entry_price','f-stop_price','f-target_1','f-target_2','f-target_3',
    'f-close_pct_1','f-close_pct_2','f-close_pct_3',
+   'f-partial_stop_1_price','f-partial_stop_1_pct',
+   'f-partial_stop_2_price','f-partial_stop_2_pct',
+   'f-partial_stop_3_price','f-partial_stop_3_pct',
    'f-risk_r','f-tradingview_url','f-comment_ru','f-comment_en'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('f-grade').value = '';
   document.getElementById('f-asset_class').value = 'stock';
@@ -930,6 +987,12 @@ async function editPosition(id) {
   document.getElementById('f-close_pct_1').value = data.close_pct_1 ?? '';
   document.getElementById('f-close_pct_2').value = data.close_pct_2 ?? '';
   document.getElementById('f-close_pct_3').value = data.close_pct_3 ?? '';
+  document.getElementById('f-partial_stop_1_price').value = data.partial_stop_1_price ?? '';
+  document.getElementById('f-partial_stop_1_pct').value   = data.partial_stop_1_pct   ?? '';
+  document.getElementById('f-partial_stop_2_price').value = data.partial_stop_2_price ?? '';
+  document.getElementById('f-partial_stop_2_pct').value   = data.partial_stop_2_pct   ?? '';
+  document.getElementById('f-partial_stop_3_price').value = data.partial_stop_3_price ?? '';
+  document.getElementById('f-partial_stop_3_pct').value   = data.partial_stop_3_pct   ?? '';
   document.getElementById('f-grade').value = data.grade ?? '';
   document.getElementById('f-risk_r').value = (data.risk_r !== null && data.risk_r !== undefined) ? data.risk_r : '';
   document.getElementById('f-tradingview_url').value = data.tradingview_url ?? '';
