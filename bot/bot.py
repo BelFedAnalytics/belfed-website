@@ -1034,14 +1034,17 @@ async def _submit_chart_request(reply_target, user, profile, lang: str,
     if r is not None and r.status_code == 200 and d.get("ok"):
         remaining = d.get("remaining")
         used = d.get("used_24h")
+        m = _ASSET_CLASS_META.get(asset_class or "")
         if lang == "en":
-            ok_msg = (f"✅ Request submitted: ${ticker}\n"
+            class_suffix = f" — {m['en']}" if m else ""
+            ok_msg = (f"✅ Request submitted: ${ticker}{class_suffix}\n"
                       f"\n"
                       f"We'll publish a chart update soon and DM you the link.\n"
                       f"\n"
                       f"Quota: {used}/3 used, {remaining} remaining (rolling 24h).")
         else:
-            ok_msg = (f"✅ Запрос принят: ${ticker}\n"
+            class_suffix = f" ({m['ru']})" if m else ""
+            ok_msg = (f"✅ Запрос принят: ${ticker}{class_suffix}\n"
                       f"\n"
                       f"Скоро опубликуем обновление и пришлём вам ссылку.\n"
                       f"\n"
@@ -1070,18 +1073,54 @@ async def _submit_chart_request(reply_target, user, profile, lang: str,
     await reply_target.reply_text(text)
 
 
-def _request_prompt_text(lang: str) -> str:
+# Asset class metadata for the inline picker (labels + per-class ticker examples).
+_ASSET_CLASS_META = {
+    "stocks":      {"emoji": "📊", "ru": "Акции",  "en": "Stocks",      "examples_ru": "TSLA, NVDA, AAPL", "examples_en": "TSLA, NVDA, AAPL", "placeholder": "TSLA"},
+    "crypto":      {"emoji": "₿",  "ru": "Крипта",  "en": "Crypto",      "examples_ru": "BTC, ETH, RENDER",  "examples_en": "BTC, ETH, RENDER",  "placeholder": "BTC"},
+    "fx":          {"emoji": "💱", "ru": "FX",       "en": "FX",          "examples_ru": "EURUSD, USDJPY",    "examples_en": "EURUSD, USDJPY",    "placeholder": "EURUSD"},
+    "commodities": {"emoji": "🌾", "ru": "Сырьё",   "en": "Commodities", "examples_ru": "XAU, BRENT, NG",    "examples_en": "XAU, BRENT, NG",    "placeholder": "XAU"},
+}
+
+
+def _class_picker_keyboard(lang: str) -> InlineKeyboardMarkup:
+    """2×2 inline grid of asset-class buttons. Callback data: 'req_cls:<class>'."""
+    def btn(cls: str) -> InlineKeyboardButton:
+        m = _ASSET_CLASS_META[cls]
+        label = f"{m['emoji']} {m['ru'] if lang == 'ru' else m['en']}"
+        return InlineKeyboardButton(label, callback_data=f"req_cls:{cls}")
+    return InlineKeyboardMarkup([
+        [btn("stocks"),      btn("crypto")],
+        [btn("fx"),          btn("commodities")],
+    ])
+
+
+def _class_picker_text(lang: str) -> str:
     if lang == "en":
-        return ("📈 Reply with the ticker you want analyzed (1–8 letters/digits).\n"
+        return ("📈 What asset class do you want analyzed?\n"
                 "\n"
-                "Examples: TSLA, BTC, RENDER, EURUSD\n"
-                "\n"
-                "Limit: 3 requests per 24h.")
-    return ("📈 Ответьте на это сообщение тикером актива (1–8 букв/цифр).\n"
+                "Pick a category — this avoids ticker collisions (e.g. BTC stock vs BTC crypto).")
+    return ("📈 К какому классу относится актив?\n"
             "\n"
-            "Примеры: TSLA, BTC, RENDER, EURUSD\n"
-            "\n"
-            "Лимит: 3 запроса в сутки.")
+            "Выберите категорию — это исключит пересечения тикеров (напр. акция BTC и крипта BTC).")
+
+
+def _request_prompt_text(lang: str, asset_class: str | None = None) -> str:
+    m = _ASSET_CLASS_META.get(asset_class or "")
+    if lang == "en":
+        class_label = f" — {m['en']}" if m else ""
+        examples = m["examples_en"] if m else "TSLA, BTC, RENDER, EURUSD"
+        return (f"📈 Reply with the ticker{class_label} (1–8 letters/digits).\n"
+                f"\n"
+                f"Examples: {examples}\n"
+                f"\n"
+                f"Limit: 3 requests per 24h.")
+    class_label = f" ({m['ru']})" if m else ""
+    examples = m["examples_ru"] if m else "TSLA, BTC, RENDER, EURUSD"
+    return (f"📈 Ответьте на это сообщение тикером{class_label} (1–8 букв/цифр).\n"
+            f"\n"
+            f"Примеры: {examples}\n"
+            f"\n"
+            f"Лимит: 3 запроса в сутки.")
 
 
 async def cmd_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1106,14 +1145,14 @@ async def cmd_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     args = context.args or []
     if not args:
-        # Enter ForceReply mode — ask for the ticker as the next reply.
-        context.user_data["awaiting_chart_request_ticker"] = {"lang": lang}
+        # No args — show asset-class picker first to avoid ticker collisions.
         await update.message.reply_text(
-            _request_prompt_text(lang),
-            reply_markup=ForceReply(selective=True, input_field_placeholder="TSLA"),
+            _class_picker_text(lang),
+            reply_markup=_class_picker_keyboard(lang),
         )
         return
 
+    # Fast path for power users: /request TICKER [class]
     ticker = args[0].strip().upper().lstrip("$").lstrip("#")
     asset_class = (args[1].strip().lower() if len(args) > 1 else "") or None
     if asset_class and asset_class not in ("stocks", "crypto", "commodities", "fx"):
@@ -1294,7 +1333,7 @@ async def on_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if await positions.maybe_handle_text(update, context):
         return
 
-    # 2. Chart-request ForceReply flow
+    # 2. Chart-request ForceReply flow (after class was picked)
     cr_state = context.user_data.get("awaiting_chart_request_ticker")
     if cr_state:
         user = update.effective_user
@@ -1307,12 +1346,10 @@ async def on_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "❌ Cancelled." if lang == "en" else "❌ Отменено."
             )
             return
-        # Parse "TICKER" or "TICKER class"
+        # Ticker is the first word; asset_class comes from picker state.
         parts = text.split()
         ticker = parts[0].strip().upper().lstrip("$").lstrip("#")
-        asset_class = (parts[1].strip().lower() if len(parts) > 1 else "") or None
-        if asset_class and asset_class not in ("stocks", "crypto", "commodities", "fx"):
-            asset_class = None
+        asset_class = cr_state.get("asset_class")
         # Clear state BEFORE network call so a second message can't double-submit
         context.user_data.pop("awaiting_chart_request_ticker", None)
         profile = await get_profile_by_telegram(user.id)
@@ -1439,10 +1476,38 @@ async def on_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "⛔ Запросы доступны только платным подписчикам.")
             await query.message.reply_text(text)
             return
-        context.user_data["awaiting_chart_request_ticker"] = {"lang": lang}
+        # Show asset-class picker first — ForceReply for ticker comes after class is chosen.
         await query.message.reply_text(
-            _request_prompt_text(lang),
-            reply_markup=ForceReply(selective=True, input_field_placeholder="TSLA"),
+            _class_picker_text(lang),
+            reply_markup=_class_picker_keyboard(lang),
+        )
+        return
+
+    if data.startswith("req_cls:"):
+        asset_class = data.split(":", 1)[1]
+        if asset_class not in _ASSET_CLASS_META:
+            return
+        profile = await get_profile_by_telegram(user.id)
+        lang = await get_user_lang(update, profile)
+        if not profile or not has_access(profile):
+            text = ("⛔ Chart requests are available to paid subscribers only."
+                    if lang == "en" else
+                    "⛔ Запросы доступны только платным подписчикам.")
+            await query.message.reply_text(text)
+            return
+        # Remove the picker keyboard from the previous message so user can't pick twice.
+        try:
+            await query.edit_message_reply_markup(reply_markup=None)
+        except Exception:
+            pass
+        context.user_data["awaiting_chart_request_ticker"] = {
+            "lang": lang,
+            "asset_class": asset_class,
+        }
+        placeholder = _ASSET_CLASS_META[asset_class]["placeholder"]
+        await query.message.reply_text(
+            _request_prompt_text(lang, asset_class),
+            reply_markup=ForceReply(selective=True, input_field_placeholder=placeholder),
         )
         return
 
