@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BELFED — 404</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#f5f2eb;font-family:'Courier New',Courier,monospace;color:#000;padding:60px 24px;line-height:1.6;font-size:14px;min-height:100vh;display:flex;align-items:center;justify-content:center}
+.box{max-width:560px;text-align:center;border:2px solid #000;padding:40px 32px;background:#fff}
+h1{font-size:96px;letter-spacing:8px;font-weight:bold;margin-bottom:8px}
+h2{font-size:14px;letter-spacing:4px;font-weight:bold;margin-bottom:20px}
+p{font-size:13px;letter-spacing:1px;margin-bottom:24px;opacity:0.75}
+.actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.btn{font-family:'Courier New',monospace;font-size:12px;letter-spacing:2px;padding:10px 18px;border:1px solid #000;background:#fff;color:#000;text-decoration:none;cursor:pointer}
+.btn:hover{background:#000;color:#f5f2eb}
+.btn.primary{background:#000;color:#f5f2eb}
+.btn.primary:hover{background:#fff;color:#000}
+.spin{display:none;font-size:11px;letter-spacing:2px;margin-top:18px;opacity:0.55}
+.spin.show{display:block}
+</style>
+</head>
+<body>
+  <div class="box" id="box">
+    <h1>404</h1>
+    <h2>// СТРАНИЦА НЕ НАЙДЕНА</h2>
+    <p id="msg">Запрошенный адрес не существует или был перемещён.</p>
+    <div class="actions">
+      <a href="/" class="btn primary">[ НА ГЛАВНУЮ ]</a>
+      <a href="/asset-analysis.html" class="btn">[ ВСЕ АНАЛИЗЫ ]</a>
+    </div>
+    <div class="spin" id="spin">// перенаправление...</div>
+  </div>
+
+<script>
+// SPA-shim for clean permalinks under /analysis/<ticker>/<slug>
+// On GitHub Pages there is no rewrite rule, so 404.html catches the request,
+// parses the path, and forwards to /asset-analysis.html with query params.
+(function() {
+  try {
+    var path = window.location.pathname || '';
+    // Match /analysis/<ticker>/<slug>  (with optional trailing slash / query / hash)
+    var m = path.match(/^\/analysis\/([^\/?#]+)\/([^\/?#]+)\/?$/i);
+    if (m) {
+      var ticker = decodeURIComponent(m[1]).toUpperCase();
+      var slug = decodeURIComponent(m[2]);
+      var target = '/asset-analysis.html?ticker=' + encodeURIComponent(ticker) +
+                   '&slug=' + encodeURIComponent(slug);
+      // Show feedback briefly while redirecting
+      var msg = document.getElementById('msg');
+      var spin = document.getElementById('spin');
+      if (msg) msg.textContent = 'Открываем анализ ' + ticker + '...';
+      if (spin) spin.classList.add('show');
+      // Use replace so back-button doesn't return to 404
+      window.location.replace(target);
+      return;
+    }
+    // Match /analysis/<ticker>/  -> redirect to feed filtered by ticker
+    var m2 = path.match(/^\/analysis\/([^\/?#]+)\/?$/i);
+    if (m2) {
+      var t2 = decodeURIComponent(m2[1]).toUpperCase();
+      window.location.replace('/asset-analysis.html?ticker=' + encodeURIComponent(t2));
+      return;
+    }
+  } catch (e) {
+    // Fall through to static 404 page
+  }
+})();
+</script>
+</body>
+</html>

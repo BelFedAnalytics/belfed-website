@@ -596,7 +596,9 @@ function renderFeed() {
   bindCopyButtons();
   // After render, handle permalink scrolling if URL matched
   if (state.pendingPermalink) {
-    scrollToPermalink(state.pendingPermalink);
+    var pSlug = state.pendingPermalink;
+    // Defer to next frame so DOM is fully rendered
+    setTimeout(function(){ scrollToPermalink(pSlug); }, 50);
     state.pendingPermalink = null;
   }
 }
@@ -671,14 +673,25 @@ function showToast(msg) {
   t._timer = setTimeout(function() { t.classList.remove('show'); }, 2200);
 }
 
-// Parse current URL for permalink target (slug)
+// Parse current URL for permalink target (slug + optional ticker)
 // Supports:
-//   /analysis/<ticker>/<slug>  (path-based, requires nginx rewrite to /asset-analysis.html)
-//   #<slug>                    (hash-based fallback)
+//   /analysis/<ticker>/<slug>          (path-based, requires server-side rewrite)
+//   ?slug=<slug>&ticker=<ticker>       (query-based, used by 404.html SPA shim on GitHub Pages)
+//   #<slug>                            (hash-based fallback)
+// Returns: { slug: string, ticker: string|null } or null
 function parsePermalink() {
-  var m = location.pathname.match(/^\/analysis\/[^\/]+\/([^\/?#]+)/i);
-  if (m) return decodeURIComponent(m[1]);
-  if (location.hash && location.hash.length > 1) return decodeURIComponent(location.hash.slice(1));
+  // 1. Path-based: /analysis/<ticker>/<slug>
+  var m = location.pathname.match(/^\/analysis\/([^\/?#]+)\/([^\/?#]+)/i);
+  if (m) return { ticker: decodeURIComponent(m[1]).toUpperCase(), slug: decodeURIComponent(m[2]) };
+  // 2. Query-based: ?slug=...&ticker=...
+  var qs = new URLSearchParams(location.search);
+  if (qs.get('slug')) {
+    return { slug: qs.get('slug'), ticker: (qs.get('ticker') || '').toUpperCase() || null };
+  }
+  // 3. Hash-based: #<slug>
+  if (location.hash && location.hash.length > 1) {
+    return { slug: decodeURIComponent(location.hash.slice(1)), ticker: null };
+  }
   return null;
 }
 
@@ -730,7 +743,18 @@ async function loadPosts() {
     if (res.error) throw res.error;
     state.posts = res.data || [];
     state.threads = buildThreads(state.posts);
-    state.pendingPermalink = parsePermalink();
+    var pm = parsePermalink();
+    if (pm) {
+      state.pendingPermalink = pm.slug;
+      // If ticker came in URL, pre-fill the filter so the post is guaranteed visible
+      if (pm.ticker) {
+        state.ticker = pm.ticker;
+        var fT = document.getElementById('fTicker');
+        if (fT) fT.value = pm.ticker;
+      }
+    } else {
+      state.pendingPermalink = null;
+    }
     applyFilters();
   } catch (e) {
     errorBox.textContent = 'Ошибка загрузки: ' + (e.message || e);
@@ -804,8 +828,8 @@ function initFeed() {
   });
   // Listen for hash changes (in case user pastes a permalink while page is loaded)
   window.addEventListener('hashchange', function() {
-    var slug = parsePermalink();
-    if (slug) scrollToPermalink(slug);
+    var pm = parsePermalink();
+    if (pm && pm.slug) scrollToPermalink(pm.slug);
   });
   loadPosts();
   // Init chart-request panel
