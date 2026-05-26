@@ -1036,12 +1036,16 @@ async def _submit_chart_request(reply_target, user, profile, lang: str,
         used = d.get("used_24h")
         if lang == "en":
             ok_msg = (f"✅ Request submitted: ${ticker}\n"
-                      f"   We'll publish a chart update soon and DM you the link.\n"
-                      f"   Quota: {used}/3 used, {remaining} remaining (rolling 24h).")
+                      f"\n"
+                      f"We'll publish a chart update soon and DM you the link.\n"
+                      f"\n"
+                      f"Quota: {used}/3 used, {remaining} remaining (rolling 24h).")
         else:
             ok_msg = (f"✅ Запрос принят: ${ticker}\n"
-                      f"   Скоро опубликуем обновление и пришлём вам ссылку.\n"
-                      f"   Лимит: {used}/3 использовано, осталось {remaining} (за 24 ч).")
+                      f"\n"
+                      f"Скоро опубликуем обновление и пришлём вам ссылку.\n"
+                      f"\n"
+                      f"Лимит: {used}/3 использовано, осталось {remaining} (за 24 ч).")
         await reply_target.reply_text(ok_msg)
         return
 
