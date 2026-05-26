@@ -367,24 +367,24 @@ var cgFetched=0;var cgError=null;
 console.log('[BFD prices] yahoo got:',Object.keys(livePrices),'missing for cg:',missing);
 if(missing.length){
   try{
-    var ids=missing.map(function(t){return COINGECKO_MAP[t.toUpperCase()];}).join(',');
-    var cgUrl='https://api.coingecko.com/api/v3/simple/price?ids='+encodeURIComponent(ids)+'&vs_currencies=usd';
-    console.log('[BFD prices] coingecko url:',cgUrl);
+    // Call our Supabase edge function (CoinGecko proxy) — bypasses any geo-blocks of CoinGecko's CDN.
+    var cgUrl='https://obujqvqqmyfcfflhqvud.supabase.co/functions/v1/crypto-price?tickers='+encodeURIComponent(missing.join(','));
+    console.log('[BFD prices] crypto-price url:',cgUrl);
     var cgRes=await fetch(cgUrl,{cache:'no-store'});
-    console.log('[BFD prices] coingecko status:',cgRes.status);
+    console.log('[BFD prices] crypto-price status:',cgRes.status);
     if(cgRes.ok){
       var cgData=await cgRes.json();
-      console.log('[BFD prices] coingecko data:',cgData);
+      console.log('[BFD prices] crypto-price data:',cgData);
       missing.forEach(function(t){
-        var id=COINGECKO_MAP[t.toUpperCase()];
-        if(cgData[id]&&cgData[id].usd>0){livePrices[t]=cgData[id].usd;fetched++;cgFetched++;}
+        var entry=cgData[t.toUpperCase()];
+        if(entry&&entry.price>0){livePrices[t]=entry.price;fetched++;cgFetched++;}
       });
       openTrades.forEach(function(t){if(livePrices[t.ticker])t.livePrice=livePrices[t.ticker];});
     } else { cgError='HTTP '+cgRes.status; }
   }catch(cgErr){console.error('[BFD prices] CoinGecko fallback error:',cgErr);cgError=cgErr.message||String(cgErr);}
 }
 var srcNote=cgFetched>0?'Live prices via Yahoo Finance + CoinGecko':'Live prices via Yahoo Finance';
-if(missing.length && cgFetched<missing.length){srcNote+=' — CoinGecko blocked'+(cgError?' ('+cgError+')':'');}
+if(missing.length && cgFetched<missing.length){srcNote+=' — crypto-price failed'+(cgError?' ('+cgError+')':'');}
 note.textContent=fetched>0?srcNote+' ('+fetched+'/'+uniqueTickers.length+' tickers)':'Could not fetch live prices';
 }catch(err){console.error('Yahoo proxy error:',err);note.textContent='Error fetching prices: '+err.message;}
 renderOpenTrades(allTrades);renderOpenedThisWeek(allTrades);renderAlerts(allTrades);renderActionable(allTrades);
