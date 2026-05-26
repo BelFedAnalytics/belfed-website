@@ -366,6 +366,7 @@ TEXTS_RU = {
     "btn_status":      "📋 Моя подписка",
     "btn_disclaimer":  "⚠️ Disclaimer",
     "btn_request":     "Запросить актив",
+    "btn_support":     "💬 Написать в поддержку",
     "btn_link":        "🔗 Привязать аккаунт",
     "no_access":       ("Сначала зарегистрируйтесь на " + WEB_URL_RU + " и привяжите Telegram. "
                         "Получите 14 дней бесплатного доступа — без привязки карты."),
@@ -480,6 +481,7 @@ TEXTS_EN = {
     "btn_status":      "📋 My subscription",
     "btn_disclaimer":  "⚠️ Disclaimer",
     "btn_request":     "Request asset",
+    "btn_support":     "💬 Contact support",
     "btn_link":        "🔗 Link account",
     "no_access":       ("Please sign up at " + WEB_URL_EN + " and link Telegram first. "
                         "Get 14 days of free access — no card required."),
@@ -852,6 +854,7 @@ async def send_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE,
     rows.append([InlineKeyboardButton(T(lang, "btn_status"), callback_data="sub_status")])
     if has_access(profile):
         rows.append([InlineKeyboardButton(T(lang, "btn_request"), callback_data="request_asset")])
+        rows.append([InlineKeyboardButton(T(lang, "btn_support"), callback_data="feedback_open")])
 
     sub = await get_subscription(profile["id"]) if profile else None
     has_active_paid = sub and sub.get("status") == "active"
@@ -1160,6 +1163,130 @@ async def cmd_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # Admin-only: список последних платежей в TG.
 ADMIN_TELEGRAM_IDS = {118296372}  # Артём
 
+# ---------- Feedback / support (MVP) -------------------------------------
+FEEDBACK_DAILY_LIMIT = 3   # max messages per rolling 24h per Telegram user
+FEEDBACK_MAX_LEN     = 4000
+
+async def feedback_used_24h(telegram_id: int) -> int:
+    """Returns count of feedback messages from this telegram_id in the last 24h.
+    Uses RPC `feedback_used_24h(bigint)` (security definer)."""
+    status, data = await sb_post(
+        "/rest/v1/rpc/feedback_used_24h",
+        {"p_telegram_id": telegram_id},
+    )
+    if status in (200, 204) and isinstance(data, int):
+        return data
+    if status in (200, 204) and isinstance(data, list) and data:
+        # RPC may return scalar wrapped in a list
+        try:
+            return int(data[0])
+        except Exception:
+            return 0
+    log.warning("feedback_used_24h RPC returned %s %s", status, data)
+    return 0
+
+async def insert_feedback(profile_id: str | None, telegram_id: int,
+                          username: str | None, first_name: str | None,
+                          lang: str, body: str) -> int | None:
+    """Insert a new feedback row. Returns the row id or None on error."""
+    async with httpx.AsyncClient(timeout=10) as client:
+        r = await client.post(
+            f"{SUPABASE_URL}/rest/v1/feedback_messages",
+            headers={**SB_HEADERS, "Prefer": "return=representation"},
+            json={
+                "profile_id":   profile_id,
+                "telegram_id":  telegram_id,
+                "username":     username,
+                "first_name":   first_name,
+                "lang":         lang,
+                "body":         body,
+                "source":       "tg_bot",
+            },
+        )
+    if r.status_code not in (200, 201):
+        log.error("insert_feedback %s %s", r.status_code, r.text[:300])
+        return None
+    try:
+        rows = r.json()
+        return rows[0]["id"] if rows else None
+    except Exception:
+        return None
+
+async def fetch_feedback(fid: int) -> dict | None:
+    rows = await sb_get(
+        "/rest/v1/feedback_messages",
+        params={"id": f"eq.{fid}",
+                "select": "id,telegram_id,username,first_name,lang,body,status,profile_id"},
+    )
+    return rows[0] if rows else None
+
+async def mark_feedback_answered(fid: int, reply_text: str,
+                                  admin_msg_id: str | None = None) -> bool:
+    status = await sb_patch(
+        "/rest/v1/feedback_messages",
+        {"id": f"eq.{fid}"},
+        {
+            "status":          "answered",
+            "admin_reply":     reply_text,
+            "admin_message_id": admin_msg_id,
+            "replied_at":      datetime.now(timezone.utc).isoformat(),
+        },
+    )
+    return status in (200, 204)
+
+
+async def cmd_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin-only: /reply <feedback_id> <text>  — sends a signed reply
+    from BelFed Support to the original user and marks the row answered."""
+    user = update.effective_user
+    if user.id not in ADMIN_TELEGRAM_IDS:
+        return  # silently ignore
+    args = context.args or []
+    if len(args) < 2:
+        await update.message.reply_text(
+            "Usage: /reply <feedback_id> <text…>"
+        )
+        return
+    try:
+        fid = int(args[0])
+    except ValueError:
+        await update.message.reply_text("❌ feedback_id must be an integer.")
+        return
+    reply_text = " ".join(args[1:]).strip()
+    if not reply_text:
+        await update.message.reply_text("❌ Empty reply.")
+        return
+
+    fb = await fetch_feedback(fid)
+    if not fb:
+        await update.message.reply_text(f"❌ Feedback #{fid} not found.")
+        return
+
+    target_tg = fb["telegram_id"]
+    user_lang = (fb.get("lang") or "ru").lower()
+    header = ("📩 Reply from BelFed Support:"
+              if user_lang == "en"
+              else "📩 Ответ от BelFed Support:")
+    body = f"{header}\n\n{reply_text}"
+    try:
+        sent = await context.bot.send_message(chat_id=target_tg, text=body)
+        sent_msg_id = str(sent.message_id) if sent else None
+    except Exception as e:
+        log.exception("cmd_reply: send_message failed")
+        await update.message.reply_text(f"❌ Failed to deliver: {e}")
+        return
+
+    ok = await mark_feedback_answered(fid, reply_text, sent_msg_id)
+    if not ok:
+        await update.message.reply_text(
+            f"⚠️ Delivered to user, but DB update failed for #{fid}."
+        )
+        return
+    await update.message.reply_text(
+        f"✅ Replied to feedback #{fid} (tg={target_tg})."
+    )
+
+
 async def cmd_payments(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if user.id not in ADMIN_TELEGRAM_IDS:
@@ -1355,6 +1482,83 @@ async def on_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await _submit_chart_request(update.message, user, profile, lang, ticker, asset_class)
         return
 
+    # 3. Feedback / support ForceReply flow
+    fb_state = context.user_data.get("awaiting_feedback")
+    if fb_state:
+        user = update.effective_user
+        text = (update.message.text or "").strip()
+        lang = fb_state.get("lang", "ru")
+        if text.lower() in ("/cancel", "cancel", "отмена", "/отмена"):
+            context.user_data.pop("awaiting_feedback", None)
+            await update.message.reply_text(
+                "❌ Cancelled." if lang == "en" else "❌ Отменено."
+            )
+            return
+        if len(text) < 1 or len(text) > FEEDBACK_MAX_LEN:
+            err = (f"⚠️ Message must be 1–{FEEDBACK_MAX_LEN} characters."
+                   if lang == "en" else
+                   f"⚠️ Сообщение должно быть 1–{FEEDBACK_MAX_LEN} символов.")
+            await update.message.reply_text(err)
+            return
+        # Clear state BEFORE network calls to prevent double-submit
+        context.user_data.pop("awaiting_feedback", None)
+        # Re-check quota server-side (defense in depth)
+        used = await feedback_used_24h(user.id)
+        if used >= FEEDBACK_DAILY_LIMIT:
+            text_lim = (f"⛔ Daily limit reached ({FEEDBACK_DAILY_LIMIT} / 24h)."
+                        if lang == "en" else
+                        f"⛔ Суточный лимит исчерпан ({FEEDBACK_DAILY_LIMIT} / 24 ч).")
+            await update.message.reply_text(text_lim)
+            return
+        profile = await get_profile_by_telegram(user.id)
+        profile_id = profile["id"] if profile else None
+        fid = await insert_feedback(
+            profile_id=profile_id,
+            telegram_id=user.id,
+            username=user.username,
+            first_name=user.first_name,
+            lang=lang,
+            body=text,
+        )
+        if not fid:
+            err = ("⚠️ Service temporarily unavailable. Please try again later."
+                   if lang == "en" else
+                   "⚠️ Сервис временно недоступен. Попробуйте позже.")
+            await update.message.reply_text(err)
+            return
+        # Forward to admin DM(s) with metadata
+        plan_str = "—"
+        exp_str = "—"
+        if profile:
+            plan_str = profile.get("subscription_plan") or profile.get("subscription_status") or "—"
+            exp_str = profile.get("subscription_expires_at") or "—"
+        uname = f"@{user.username}" if user.username else "—"
+        admin_msg = (
+            f"💬 New feedback #{fid}\n"
+            f"From: {user.first_name or '—'} ({uname}, id={user.id})\n"
+            f"Plan: {plan_str}\n"
+            f"Expires: {exp_str}\n"
+            f"Lang: {lang}\n"
+            f"\n"
+            f"{text}\n"
+            f"\n"
+            f"Reply with: /reply {fid} <text>"
+        )
+        for admin_tg in ADMIN_TELEGRAM_IDS:
+            try:
+                await context.bot.send_message(chat_id=admin_tg, text=admin_msg)
+            except Exception as e:
+                log.error("feedback: failed to notify admin %s: %s", admin_tg, e)
+        ack = (f"✅ Your message has been sent. We typically reply within 24h.\n"
+               f"\n"
+               f"Quota: {used + 1}/{FEEDBACK_DAILY_LIMIT} used (rolling 24h)."
+               if lang == "en" else
+               f"✅ Ваше сообщение отправлено. Обычно отвечаем в течение 24 ч.\n"
+               f"\n"
+               f"Лимит: {used + 1}/{FEEDBACK_DAILY_LIMIT} использовано (за 24 ч).")
+        await update.message.reply_text(ack)
+        return
+
     state = context.user_data.get("awaiting_email_for_payment")
     if not state:
         return  # текст вне известных режимов — игнорируем
@@ -1458,6 +1662,41 @@ async def on_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         profile = await get_profile_by_telegram(user.id)
         lang = await get_user_lang(update, profile)
         await query.message.reply_text(T(lang, "disclaimer"))
+        return
+
+    if data == "feedback_open":
+        profile = await get_profile_by_telegram(user.id)
+        lang = await get_user_lang(update, profile)
+        # Quota check (3 / 24h)
+        used = await feedback_used_24h(user.id)
+        if used >= FEEDBACK_DAILY_LIMIT:
+            text = (f"⛔ Daily limit reached ({FEEDBACK_DAILY_LIMIT} / 24h). "
+                    f"Please try again later."
+                    if lang == "en" else
+                    f"⛔ Суточный лимит исчерпан ({FEEDBACK_DAILY_LIMIT} / 24 ч). "
+                    f"Пожалуйста, попробуйте позже.")
+            await query.message.reply_text(text)
+            return
+        context.user_data["awaiting_feedback"] = {"lang": lang}
+        prompt = (
+            "💬 Write your message to BelFed Support in a single reply.\n"
+            "\n"
+            "It will be delivered to our team. We'll reply here in the bot.\n"
+            "\n"
+            f"Limit: {FEEDBACK_DAILY_LIMIT} messages per 24h. Send /cancel to abort."
+            if lang == "en" else
+            "💬 Напишите ваше сообщение для BelFed Support одним ответом.\n"
+            "\n"
+            "Оно придёт нам, и мы ответим вам здесь же, в боте.\n"
+            "\n"
+            f"Лимит: {FEEDBACK_DAILY_LIMIT} сообщения в сутки. Отправьте /cancel, чтобы отменить."
+        )
+        placeholder = ("Your message…" if lang == "en"
+                       else "Ваше сообщение…")
+        await query.message.reply_text(
+            prompt,
+            reply_markup=ForceReply(selective=True, input_field_placeholder=placeholder),
+        )
         return
 
     if data == "request_asset":
@@ -1717,6 +1956,7 @@ def main():
     app.add_handler(CommandHandler("request",        cmd_request))
     app.add_handler(CommandHandler("payments",       cmd_payments))
     app.add_handler(CommandHandler("subscribers",    cmd_subscribers))
+    app.add_handler(CommandHandler("reply",          cmd_reply))
     # Positions management commands (admin-only) — must register BEFORE the
     # generic CallbackQueryHandler so command handlers fire first.
     positions.register(app)
