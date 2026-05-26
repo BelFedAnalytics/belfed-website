@@ -166,6 +166,7 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
   <a href="/admin-positions.html">[ ПОЗИЦИИ ]</a>
   <a href="https://belfed.com/admin-analytics-list.html">[ АНАЛИТИКА ]</a>
   <a href="/admin-analysis-posts.html" class="active">[ АНАЛИЗ АКТИВОВ ]</a>
+  <a href="/admin-chart-requests.html">[ ЗАПРОСЫ ]</a>
   <a href="/admin-subscribers.html">[ ПОДПИСЧИКИ ]</a>
 </nav>
 
@@ -429,6 +430,8 @@ function initEditor(){
   updateCounters(); updateReplyVisibility(); render();
   // Handle ?reply_to=<id> from URL
   handleReplyToParam();
+  // Handle ?fulfill_req=<id>&ticker=<>&asset_class=<> from URL
+  handleFulfillReqParam();
 }
 
 // =================== HASHTAG AUTOMATION ===================
@@ -463,6 +466,38 @@ function syncTickerTag(){
 }
 
 // =================== PARENT (REPLY) ===================
+async function handleFulfillReqParam(){
+  const params = new URLSearchParams(location.search);
+  const fulfillReq = params.get('fulfill_req');
+  if (!fulfillReq) return;
+  const ticker = (params.get('ticker') || '').toUpperCase();
+  const assetClass = params.get('asset_class') || 'stocks';
+  if (ticker) els.ticker.value = ticker;
+  if (assetClass) els.assetClass.value = assetClass;
+  els.tags.value = '#AnalysisUpdate #' + (assetClass==='crypto' ? 'crypto' : 'equities');
+  syncAssetClassTag();
+  // Show a banner indicating fulfillment mode
+  const existing = document.getElementById('fulfill-banner');
+  if (!existing) {
+    const b = document.createElement('div');
+    b.id = 'fulfill-banner';
+    b.style.cssText = 'background:#fffbe5;border:1px solid #000;padding:10px 14px;margin-bottom:14px;font-size:11px;letter-spacing:1px;display:flex;justify-content:space-between;align-items:center';
+    b.innerHTML = '<span>// РЕЖИМ ВЫПОЛНЕНИЯ ЗАПРОСА — после публикации запросы на $' + escapeHtml(ticker) + ' будут автоматически отмечены готовыми, пользователи получат DM.</span>' +
+      '<button class="btn small" onclick="clearFulfill()">[ ОТМЕНА ]</button>';
+    const notice = document.querySelector('.notice');
+    notice.parentNode.insertBefore(b, notice.nextSibling);
+  }
+  els.ticker.focus();
+}
+function clearFulfill(){
+  const url = new URL(location.href);
+  url.searchParams.delete('fulfill_req');
+  url.searchParams.delete('ticker');
+  url.searchParams.delete('asset_class');
+  history.replaceState(null,'', url.pathname + (url.search||''));
+  const b = document.getElementById('fulfill-banner');
+  if (b) b.remove();
+}
 async function handleReplyToParam(){
   const params = new URLSearchParams(location.search);
   const replyTo = params.get('reply_to');
@@ -747,6 +782,25 @@ async function publish(){
       flash('err', `ошибка публикации: ${j.error||res.status}`);
     } else {
       flash('ok', `Опубликовано: ${[data.publish_to_ru?'RU':'',data.publish_to_en?'EN':''].filter(Boolean).join(' + ')}`);
+      // Auto-fulfill request if we came from chart-requests queue
+      const fulfillParams = new URLSearchParams(location.search);
+      const fulfillReqId = fulfillParams.get('fulfill_req');
+      const publishedPostId = editingId;
+      if (fulfillReqId && publishedPostId) {
+        try {
+          const ff = await fetch(`${SUPABASE_URL}/functions/v1/chart-request`, {
+            method:'POST',
+            headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}`, 'apikey': SUPABASE_ANON },
+            body: JSON.stringify({ action: 'admin_fulfill', request_id: fulfillReqId, post_id: publishedPostId })
+          });
+          const fj = await ff.json().catch(()=>({}));
+          if (ff.ok && fj.ok) {
+            flash('ok', `Запрос выполнен: ${fj.fulfilled_count} пользователь(ей) уведомлены.`);
+          } else {
+            flash('err', `Не удалось выполнить запрос: ${fj.error||ff.status}`);
+          }
+        } catch (e) { flash('err', 'Сбой выполнения запроса: '+e.message); }
+      }
       // reset to fresh form
       editingId = null;
       parentPostId = null;
@@ -754,10 +808,15 @@ async function publish(){
       els.tags.value = '#AnalysisUpdate #equities'; els.type.value='update'; els.type.disabled=false; els.assetClass.value='stocks';
       const banner = document.getElementById('parent-banner');
       if (banner) banner.style.display='none';
-      // strip ?reply_to from URL
+      // strip ?reply_to + ?fulfill_req from URL
       const url = new URL(location.href);
       url.searchParams.delete('reply_to');
+      url.searchParams.delete('fulfill_req');
+      url.searchParams.delete('ticker');
+      url.searchParams.delete('asset_class');
       history.replaceState(null,'', url.pathname + (url.search||''));
+      const fb = document.getElementById('fulfill-banner');
+      if (fb) fb.remove();
       state.images=[]; renderThumbs(); updateCounters(); updateReplyVisibility(); render();
     }
     loadHistory();
