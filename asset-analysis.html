@@ -148,6 +148,31 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 .expired-box p{font-size:13px;line-height:1.8;margin-bottom:16px}
 .expired-box .login-btn{font-family:'Courier New',monospace;width:100%;padding:12px;font-size:13px;font-weight:bold;letter-spacing:2px;background:#000;color:#f5f2eb;border:none;cursor:pointer;margin-top:6px;text-decoration:none;display:block}
 
+/* Request panel */
+.req-panel{margin-top:14px;background:#fffbe5;border:1px solid #000;padding:14px}
+.req-panel .filter-title{border-bottom-color:#000}
+.req-quota{font-size:11px;letter-spacing:1px;margin-bottom:10px;opacity:0.8}
+.req-quota.exhausted{color:#a30000;opacity:1;font-weight:bold}
+.req-form-row{display:flex;gap:6px;margin-bottom:8px}
+.req-form-row input{flex:1;font-family:'Courier New',monospace;padding:7px 10px;font-size:12px;border:1px solid #000;background:#fff;outline:none;text-transform:uppercase}
+.req-form-row input:focus{background:#fff;box-shadow:inset 0 0 0 1px #000}
+.req-form-row button{font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;padding:7px 14px;border:1px solid #000;background:#000;color:#f5f2eb;cursor:pointer}
+.req-form-row button:hover{background:#222}
+.req-form-row button:disabled{background:#999;cursor:not-allowed}
+.req-msg{font-size:11px;letter-spacing:1px;margin-top:6px;min-height:14px}
+.req-msg.ok{color:#006400}
+.req-msg.err{color:#a30000}
+.req-list{margin-top:14px}
+.req-list-title{font-size:11px;font-weight:bold;letter-spacing:2px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #000}
+.req-row{display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:5px 0;border-bottom:1px dashed #ccc;letter-spacing:1px}
+.req-row:last-child{border-bottom:0}
+.req-row .t{font-weight:bold}
+.req-row .s{font-size:10px;padding:2px 6px;border:1px solid #000;letter-spacing:1px}
+.req-row .s.pending{background:#fff}
+.req-row .s.fulfilled{background:#000;color:#f5f2eb}
+.req-row .s.rejected{background:#ffe5e5}
+.req-row .s.expired{background:#e8e8e8;opacity:0.7}
+
 @media(max-width:900px){
   body{padding:14px 12px}
   .layout{grid-template-columns:1fr;gap:16px}
@@ -244,6 +269,21 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
           <button class="chip" data-class="crypto">КРИПТО</button>
           <button class="chip" data-class="commodities">СЫРЬЕ</button>
           <button class="chip" data-class="fx">FX</button>
+        </div>
+      </div>
+
+      <!-- Chart request panel (paid only) -->
+      <div class="req-panel" id="reqPanel" style="display:none">
+        <div class="filter-title">// ЗАПРОСИТЬ АНАЛИЗ</div>
+        <div class="req-quota" id="reqQuota">// ЗАГРУЗКА…</div>
+        <div class="req-form-row">
+          <input type="text" id="reqTicker" placeholder="напр. TSLA" maxlength="8" autocomplete="off">
+          <button id="reqSubmit" onclick="submitChartRequest()">→</button>
+        </div>
+        <div class="req-msg" id="reqMsg"></div>
+        <div class="req-list" id="reqListWrap" style="display:none">
+          <div class="req-list-title">// МОИ ЗАПРОСЫ</div>
+          <div id="reqList"></div>
         </div>
       </div>
     </aside>
@@ -768,6 +808,113 @@ function initFeed() {
     if (slug) scrollToPermalink(slug);
   });
   loadPosts();
+  // Init chart-request panel
+  initRequestPanel();
+  // Allow Enter to submit
+  var reqInput = document.getElementById('reqTicker');
+  if (reqInput) reqInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); submitChartRequest(); }
+  });
+}
+
+// ============== CHART REQUESTS ==============
+function reqStatusLabel(s) {
+  switch (s) {
+    case 'pending':   return 'ОЖИДАЕТ';
+    case 'fulfilled': return 'ГОТОВ';
+    case 'rejected':  return 'ОТКЛОНЕН';
+    case 'expired':   return 'ИСТЕК';
+    default: return s;
+  }
+}
+function reqErrLabel(code) {
+  switch (code) {
+    case 'quota_exceeded':    return 'Лимит 3 запросов в сутки исчерпан. Повторите позже.';
+    case 'invalid_ticker':    return 'Некорректный тикер (1–8 букв/цифр).';
+    case 'not_paid':          return 'Доступно только для платных подписок.';
+    case 'unauthorized':      return 'Сессия истекла. Обновите страницу.';
+    default: return 'Ошибка: ' + code;
+  }
+}
+function renderReqQuota(used, limit, paid) {
+  var el = document.getElementById('reqQuota');
+  var btn = document.getElementById('reqSubmit');
+  if (!paid) {
+    el.textContent = '// ДОСТУПНО ПОДПИСЧИКАМ';
+    btn.disabled = true;
+    return;
+  }
+  var remaining = Math.max(0, limit - used);
+  el.textContent = '// ОСТАЛОСЬ ' + remaining + ' / ' + limit + ' ЗА 24Ч';
+  if (remaining <= 0) el.classList.add('exhausted'); else el.classList.remove('exhausted');
+  btn.disabled = remaining <= 0;
+}
+function renderReqList(reqs) {
+  var wrap = document.getElementById('reqListWrap');
+  var list = document.getElementById('reqList');
+  if (!reqs || !reqs.length) { wrap.style.display = 'none'; list.innerHTML = ''; return; }
+  wrap.style.display = 'block';
+  list.innerHTML = reqs.slice(0, 5).map(function(r) {
+    var link = '';
+    if (r.status === 'fulfilled' && r.fulfilled_by_post_id) {
+      link = ' <a href="#post-' + escapeHtml(r.fulfilled_by_post_id) + '" style="font-size:10px;text-decoration:underline;color:#000;letter-spacing:0">[СМОТРЕТЬ]</a>';
+    }
+    return '<div class="req-row"><span class="t">' + escapeHtml(r.ticker) + '</span><span><span class="s ' + r.status + '">' + reqStatusLabel(r.status) + '</span>' + link + '</span></div>';
+  }).join('');
+}
+async function loadMyQuota() {
+  try {
+    var resp = await supaClient.functions.invoke('chart-request', { body: { action: 'my_quota' } });
+    if (resp.error) { console.warn('quota fetch failed', resp.error); return; }
+    var d = resp.data || {};
+    document.getElementById('reqPanel').style.display = d.paid ? 'block' : 'none';
+    if (!d.paid) return;
+    renderReqQuota(d.used || 0, d.limit || 3, true);
+    renderReqList(d.requests || []);
+  } catch (e) { console.warn('quota error', e); }
+}
+async function submitChartRequest() {
+  var input = document.getElementById('reqTicker');
+  var msg = document.getElementById('reqMsg');
+  var btn = document.getElementById('reqSubmit');
+  var ticker = (input.value || '').trim().toUpperCase();
+  msg.textContent = ''; msg.className = 'req-msg';
+  if (!/^[A-Z0-9]{1,8}$/.test(ticker)) {
+    msg.textContent = 'Некорректный тикер (1–8 букв/цифр).';
+    msg.className = 'req-msg err';
+    return;
+  }
+  btn.disabled = true;
+  try {
+    var resp = await supaClient.functions.invoke('chart-request', { body: { action: 'submit', ticker: ticker } });
+    var d = resp.data || {};
+    if (resp.error || !d.ok) {
+      var code = (d && d.error) || (resp.error && resp.error.message) || 'unknown';
+      // Re-parse to extract structured error if available
+      try {
+        if (resp.error && resp.error.context && typeof resp.error.context.text === 'function') {
+          var raw = await resp.error.context.text();
+          var p = JSON.parse(raw);
+          if (p && p.error) code = p.error;
+        }
+      } catch (_) {}
+      msg.textContent = reqErrLabel(code);
+      msg.className = 'req-msg err';
+    } else {
+      msg.textContent = 'Запрос принят. Осталось ' + d.remaining + ' / ' + d.limit + '.';
+      msg.className = 'req-msg ok';
+      input.value = '';
+      await loadMyQuota();
+    }
+  } catch (e) {
+    msg.textContent = 'Сбой сети. Попробуйте ещё раз.';
+    msg.className = 'req-msg err';
+  } finally {
+    btn.disabled = false;
+  }
+}
+function initRequestPanel() {
+  loadMyQuota();
 }
 </script>
 </body>
