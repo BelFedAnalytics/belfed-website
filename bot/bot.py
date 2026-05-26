@@ -1491,9 +1491,14 @@ async def on_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "⛔ Запросы доступны только платным подписчикам.")
             await query.message.reply_text(text)
             return
-        # Remove the picker keyboard from the previous message so user can't pick twice.
+        # Replace the picker keyboard on the previous message with a single "← back"
+        # button so the user can change their mind even after selecting a category.
+        back_label = "← Change category" if lang == "en" else "← Сменить категорию"
+        back_kb = InlineKeyboardMarkup([[
+            InlineKeyboardButton(back_label, callback_data="req_back")
+        ]])
         try:
-            await query.edit_message_reply_markup(reply_markup=None)
+            await query.edit_message_reply_markup(reply_markup=back_kb)
         except Exception:
             pass
         context.user_data["awaiting_chart_request_ticker"] = {
@@ -1505,6 +1510,22 @@ async def on_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             _request_prompt_text(lang, asset_class),
             reply_markup=ForceReply(selective=True, input_field_placeholder=placeholder),
         )
+        return
+
+    if data == "req_back":
+        profile = await get_profile_by_telegram(user.id)
+        lang = await get_user_lang(update, profile)
+        # Drop any pending ticker-await state.
+        context.user_data.pop("awaiting_chart_request_ticker", None)
+        # Restore the picker on the original message.
+        try:
+            await query.edit_message_reply_markup(reply_markup=_class_picker_keyboard(lang))
+        except Exception:
+            # If the original message can't be edited, send a fresh picker.
+            await query.message.reply_text(
+                _class_picker_text(lang),
+                reply_markup=_class_picker_keyboard(lang),
+            )
         return
 
     if data == "start_payment":
