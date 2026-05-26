@@ -365,7 +365,7 @@ TEXTS_RU = {
     "btn_paid":        "📺 Закрытый канал",
     "btn_status":      "📋 Моя подписка",
     "btn_disclaimer":  "⚠️ Disclaimer",
-    "btn_request":     "📈 Запросить актив",
+    "btn_request":     "Запросить актив",
     "btn_link":        "🔗 Привязать аккаунт",
     "no_access":       ("Сначала зарегистрируйтесь на " + WEB_URL_RU + " и привяжите Telegram. "
                         "Получите 14 дней бесплатного доступа — без привязки карты."),
@@ -479,7 +479,7 @@ TEXTS_EN = {
     "btn_paid":        "📺 Private channel",
     "btn_status":      "📋 My subscription",
     "btn_disclaimer":  "⚠️ Disclaimer",
-    "btn_request":     "📈 Request asset",
+    "btn_request":     "Request asset",
     "btn_link":        "🔗 Link account",
     "no_access":       ("Please sign up at " + WEB_URL_EN + " and link Telegram first. "
                         "Get 14 days of free access — no card required."),
@@ -1096,8 +1096,8 @@ def _class_picker_keyboard(lang: str) -> InlineKeyboardMarkup:
 
 def _class_picker_text(lang: str) -> str:
     if lang == "en":
-        return "📈 What asset class do you want analyzed?"
-    return "📈 К какому классу относится актив?"
+        return "What asset class do you want analyzed?"
+    return "К какому классу относится актив?"
 
 
 def _request_prompt_text(lang: str, asset_class: str | None = None) -> str:
@@ -1105,14 +1105,14 @@ def _request_prompt_text(lang: str, asset_class: str | None = None) -> str:
     if lang == "en":
         class_label = f" — {m['en']}" if m else ""
         examples = m["examples_en"] if m else "TSLA, BTC, RENDER, EURUSD"
-        return (f"📈 Reply with the ticker{class_label} (1–8 letters/digits).\n"
+        return (f"Reply with the ticker{class_label} (1–8 letters/digits).\n"
                 f"\n"
                 f"Examples: {examples}\n"
                 f"\n"
                 f"Limit: 3 requests per 24h.")
     class_label = f" ({m['ru']})" if m else ""
     examples = m["examples_ru"] if m else "TSLA, BTC, RENDER, EURUSD"
-    return (f"📈 Ответьте на это сообщение тикером{class_label} (1–8 букв/цифр).\n"
+    return (f"Ответьте на это сообщение тикером{class_label} (1–8 букв/цифр).\n"
             f"\n"
             f"Примеры: {examples}\n"
             f"\n"
@@ -1682,7 +1682,7 @@ async def _set_bot_commands(application: Application):
     try:
         ru_cmds = [
             BotCommand("start",     "Меню и приветствие"),
-            BotCommand("request",   "📈 Запросить анализ актива"),
+            BotCommand("request",   "Запросить анализ актива"),
             BotCommand("status",    "Моя подписка"),
             BotCommand("dashboard", "Открыть дашборд"),
             BotCommand("cancel",    "Отменить автопродление"),
@@ -1690,7 +1690,7 @@ async def _set_bot_commands(application: Application):
         ]
         en_cmds = [
             BotCommand("start",     "Menu and welcome"),
-            BotCommand("request",   "📈 Request asset analysis"),
+            BotCommand("request",   "Request asset analysis"),
             BotCommand("status",    "My subscription"),
             BotCommand("dashboard", "Open dashboard"),
             BotCommand("cancel",    "Cancel auto-renew"),
