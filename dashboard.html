@@ -363,23 +363,28 @@ Object.keys(data).forEach(function(sym){if(data[sym]&&data[sym].price>0){livePri
 openTrades.forEach(function(t){if(livePrices[t.ticker])t.livePrice=livePrices[t.ticker];});
 // === CoinGecko fallback for tickers Yahoo didn't resolve ===
 var missing=uniqueTickers.filter(function(t){return !livePrices[t] && COINGECKO_MAP[t.toUpperCase()];});
-var cgFetched=0;
+var cgFetched=0;var cgError=null;
+console.log('[BFD prices] yahoo got:',Object.keys(livePrices),'missing for cg:',missing);
 if(missing.length){
   try{
     var ids=missing.map(function(t){return COINGECKO_MAP[t.toUpperCase()];}).join(',');
     var cgUrl='https://api.coingecko.com/api/v3/simple/price?ids='+encodeURIComponent(ids)+'&vs_currencies=usd';
-    var cgRes=await fetch(cgUrl);
+    console.log('[BFD prices] coingecko url:',cgUrl);
+    var cgRes=await fetch(cgUrl,{cache:'no-store'});
+    console.log('[BFD prices] coingecko status:',cgRes.status);
     if(cgRes.ok){
       var cgData=await cgRes.json();
+      console.log('[BFD prices] coingecko data:',cgData);
       missing.forEach(function(t){
         var id=COINGECKO_MAP[t.toUpperCase()];
         if(cgData[id]&&cgData[id].usd>0){livePrices[t]=cgData[id].usd;fetched++;cgFetched++;}
       });
       openTrades.forEach(function(t){if(livePrices[t.ticker])t.livePrice=livePrices[t.ticker];});
-    }
-  }catch(cgErr){console.error('CoinGecko fallback error:',cgErr);}
+    } else { cgError='HTTP '+cgRes.status; }
+  }catch(cgErr){console.error('[BFD prices] CoinGecko fallback error:',cgErr);cgError=cgErr.message||String(cgErr);}
 }
 var srcNote=cgFetched>0?'Live prices via Yahoo Finance + CoinGecko':'Live prices via Yahoo Finance';
+if(missing.length && cgFetched<missing.length){srcNote+=' — CoinGecko blocked'+(cgError?' ('+cgError+')':'');}
 note.textContent=fetched>0?srcNote+' ('+fetched+'/'+uniqueTickers.length+' tickers)':'Could not fetch live prices';
 }catch(err){console.error('Yahoo proxy error:',err);note.textContent='Error fetching prices: '+err.message;}
 renderOpenTrades(allTrades);renderOpenedThisWeek(allTrades);renderAlerts(allTrades);renderActionable(allTrades);
