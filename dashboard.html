@@ -326,6 +326,9 @@ var CRYPTO_GID='1219794768';
 var currentTab='equities';
 var CSVURL='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:csv&gid='+GID+'&single=true';
 var YAHOO_PROXY='https://script.google.com/macros/s/AKfycbyXYFW0kFYR4aa9mCvX_wew6he08YtaLMjUjEyBUoGi-SSHqhddhVwl1RXDmpKQIZnv/exec';
+// CoinGecko fallback for crypto tickers Yahoo doesn't resolve.
+// Key = ticker as it appears in the Sheet (uppercase). Value = CoinGecko coin id.
+var COINGECKO_MAP={'TAO':'bittensor','RENDER':'render-token','RNDR':'render-token'};
 var allTrades=[];var livePrices={};
 function mskTime(){return new Date().toLocaleString('en-GB',{timeZone:'Europe/Moscow',year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})+' MSK';}
 function parseNum(v){if(v===null||v===undefined||v==='')return NaN;var s=String(v).trim().replace(/ /g,'').replace(/,/g,'.');return parseFloat(s);}
@@ -358,7 +361,26 @@ var data=JSON.parse(text);
 var fetched=0;
 Object.keys(data).forEach(function(sym){if(data[sym]&&data[sym].price>0){livePrices[sym]=data[sym].price;fetched++;}});
 openTrades.forEach(function(t){if(livePrices[t.ticker])t.livePrice=livePrices[t.ticker];});
-note.textContent=fetched>0?'Live prices via Yahoo Finance ('+fetched+'/'+uniqueTickers.length+' tickers)':'Could not fetch live prices';
+// === CoinGecko fallback for tickers Yahoo didn't resolve ===
+var missing=uniqueTickers.filter(function(t){return !livePrices[t] && COINGECKO_MAP[t.toUpperCase()];});
+var cgFetched=0;
+if(missing.length){
+  try{
+    var ids=missing.map(function(t){return COINGECKO_MAP[t.toUpperCase()];}).join(',');
+    var cgUrl='https://api.coingecko.com/api/v3/simple/price?ids='+encodeURIComponent(ids)+'&vs_currencies=usd';
+    var cgRes=await fetch(cgUrl);
+    if(cgRes.ok){
+      var cgData=await cgRes.json();
+      missing.forEach(function(t){
+        var id=COINGECKO_MAP[t.toUpperCase()];
+        if(cgData[id]&&cgData[id].usd>0){livePrices[t]=cgData[id].usd;fetched++;cgFetched++;}
+      });
+      openTrades.forEach(function(t){if(livePrices[t.ticker])t.livePrice=livePrices[t.ticker];});
+    }
+  }catch(cgErr){console.error('CoinGecko fallback error:',cgErr);}
+}
+var srcNote=cgFetched>0?'Live prices via Yahoo Finance + CoinGecko':'Live prices via Yahoo Finance';
+note.textContent=fetched>0?srcNote+' ('+fetched+'/'+uniqueTickers.length+' tickers)':'Could not fetch live prices';
 }catch(err){console.error('Yahoo proxy error:',err);note.textContent='Error fetching prices: '+err.message;}
 renderOpenTrades(allTrades);renderOpenedThisWeek(allTrades);renderAlerts(allTrades);renderActionable(allTrades);
 }
