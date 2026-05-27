@@ -271,7 +271,7 @@ footer{padding:32px 48px;border-top:1px solid #111;display:flex;justify-content:
   <script>
 (function(){
 var css=document.createElement('style');
-css.textContent='.pht{display:flex;align-items:baseline;justify-content:space-between;gap:24px}.yf{display:flex;gap:8px;align-items:center}.yfb{font-family:inherit;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 14px;border:1px solid #ccc;background:transparent;color:#888;cursor:pointer;transition:all .2s}.yfb:hover{border-color:#111;color:#111}.yfb.on{background:#111;color:#fff;border-color:#111}';
+css.textContent='.pht{display:flex;align-items:baseline;justify-content:space-between;gap:24px;flex-wrap:wrap}.yf{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.yfb{font-family:inherit;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 14px;border:1px solid #ccc;background:transparent;color:#888;cursor:pointer;transition:all .2s}.yfb:hover{border-color:#111;color:#111}.yfb.on{background:#111;color:#fff;border-color:#111}@media(max-width:600px){.pht{flex-direction:column;align-items:flex-start;gap:12px}.yfb{padding:6px 12px}}';
 document.head.appendChild(css);
 var h1=document.querySelector('.page-title');
 var ph=h1.parentNode;

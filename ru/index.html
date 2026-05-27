@@ -147,6 +147,7 @@
             .bottom-bar { display: grid; }
             body { padding-bottom: 76px; }
             .hero { padding: 60px 20px 40px; }
+            .hero h1 { font-size: clamp(24px, 8vw, 36px); overflow-wrap: anywhere; word-break: break-word; hyphens: auto; }
             .stats-bar { padding: 20px; gap: 32px; flex-wrap: wrap; }
             .stats-columns { flex-direction: column; padding: 0; }
             .stats-column { padding: 28px 20px; }
@@ -162,6 +163,9 @@
             .pricing-card-price { font-size: 36px; }
             .services-grid { grid-template-columns: 1fr; }
             footer { padding: 20px; flex-direction: column; text-align: center; }
+            .footer-links { flex-wrap: wrap; justify-content: center; gap: 12px 16px; }
+            .subscribe-form { flex-direction: column; }
+            .subscribe-form button { width: 100%; }
             .disclaimer-line { padding: 16px 20px; }
         }
     </style>
