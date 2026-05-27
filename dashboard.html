@@ -344,7 +344,8 @@ function stopCls(v){if(isNaN(v))return '';if(v<=2)return 'stop-danger';if(v<=5)r
 function statusLabel(pnl){if(isNaN(pnl)||pnl===0)return '\u2300 Breakeven';return pnl>0?'\uD83D\uDFE2 Profit':'\uD83D\uDD34 Underwater';}
 function tvLink(url){if(!url||!url.startsWith('http'))return '\u2014';return '<a class="tv-link" href="'+url+'" target="_blank" rel="noopener">\u2197 View</a>';}
 function parseCSV(text){var rows=[],row=[],field='',inQ=false;for(var i=0;i<text.length;i++){var c=text[i],nx=text[i+1];if(inQ){if(c==='"'&&nx==='"'){field+='"';i++;}else if(c==='"'){inQ=false;}else{field+=c;}}else{if(c==='"'){inQ=true;}else if(c===','){row.push(field);field='';}else if(c==='\n'){row.push(field);rows.push(row);row=[];field='';if(nx==='\r')i++;}else if(c==='\r'){row.push(field);rows.push(row);row=[];field='';if(nx==='\n')i++;}else{field+=c;}}}if(field||row.length){row.push(field);rows.push(row);}return rows;}
-function buildTrades(rows){var headerIdx=-1;for(var i=0;i<rows.length;i++){var r=rows[i];if(r.some(function(c){return c.trim()==='Ticker';})&&r.some(function(c){return c.trim()==='Direction';})){headerIdx=i;break;}}if(headerIdx<0)throw new Error('Header row not found');var trades=[];for(var i=headerIdx+1;i<rows.length;i++){var r=rows[i];var ticker=(r[1]||'').trim();if(!ticker)continue;var status=(r[3]||'').trim();if(!status)continue;trades.push({ticker:ticker,dir:(r[2]||'').trim(),status:status.toLowerCase(),entryDate:(r[4]||'').trim(),exitDate:(r[5]||'').trim(),entry:parseNum(r[6]),riskLevel:parseNum(r[7]),exit:parseNum(r[8]),result:parseNum(r[9]),tvUrl:(r[10]||'').trim(),livePrice:NaN});}return trades;}async function fetchLivePrices(trades){
+function isMemberSignal(v){return /^(yes|y|true|1|\*)$/i.test(String(v||'').trim());}
+function buildTrades(rows){var headerIdx=-1;for(var i=0;i<rows.length;i++){var r=rows[i];if(r.some(function(c){return c.trim()==='Ticker';})&&r.some(function(c){return c.trim()==='Direction';})){headerIdx=i;break;}}if(headerIdx<0)throw new Error('Header row not found');var trades=[];for(var i=headerIdx+1;i<rows.length;i++){var r=rows[i];var ticker=(r[1]||'').trim();if(!ticker)continue;var status=(r[3]||'').trim();if(!status)continue;if(!isMemberSignal(r[19]))continue;trades.push({ticker:ticker,dir:(r[2]||'').trim(),status:status.toLowerCase(),entryDate:(r[4]||'').trim(),exitDate:(r[5]||'').trim(),entry:parseNum(r[6]),riskLevel:parseNum(r[7]),exit:parseNum(r[8]),result:parseNum(r[9]),tvUrl:(r[10]||'').trim(),memberSignal:(r[19]||'').trim(),livePrice:NaN});}return trades;}async function fetchLivePrices(trades){
 var openTrades=trades.filter(function(t){return t.status==='open';});
 var uniqueTickers=[...new Set(openTrades.map(function(t){return t.ticker;}))];
 var note=document.getElementById('priceNote');
@@ -519,4 +520,3 @@ document.getElementById('searchTicker').addEventListener('input',function(){rend
 </script>
 </body>
 </html>
-
