@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BELFED — АДМИН · СВЕРКА ГРУППЫ</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f2eb;--paper:#fff;--ink:#000;--border:#000;--soft-border:#ccc;
+  --green:#1a7a1a;--red:#c50000;--amber:#e6a800;--blue:#1466a3;--muted:#999;
+  --font:'Courier New',Courier,monospace;
+}
+body{background:var(--bg);font-family:var(--font);color:var(--ink);padding:24px 20px;line-height:1.6;font-size:14px;visibility:hidden}
+body.ready{visibility:visible}
+
+.admin-nav{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;background:#000;padding:10px 14px;margin:-24px -20px 24px}
+.admin-nav a{font-family:var(--font);font-size:11px;letter-spacing:2px;padding:6px 14px;color:var(--bg);text-decoration:none;border:1px solid transparent}
+.admin-nav a:hover{border-color:var(--bg)}
+.admin-nav a.active{background:var(--bg);color:var(--ink);border-color:var(--bg)}
+.admin-nav .sep{color:#666;padding:6px 0}
+
+.container{max-width:1500px;margin:0 auto}
+
+header{text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid var(--ink)}
+header h2{font-size:13px;letter-spacing:4px;margin-bottom:8px}
+header h1{font-size:20px;font-weight:bold;letter-spacing:3px;margin-bottom:6px}
+.subtitle{font-size:11px;opacity:0.6;letter-spacing:1px}
+
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px}
+.user-info{font-size:11px;opacity:0.6;letter-spacing:1px}
+.btn{font-family:var(--font);font-size:11px;letter-spacing:2px;padding:8px 16px;border:1px solid var(--ink);background:var(--paper);cursor:pointer;color:var(--ink);text-decoration:none;display:inline-block}
+.btn:hover{background:#f0ede4}
+.btn.primary{background:var(--ink);color:var(--bg)}
+.btn.primary:hover{background:#222}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px}
+.stat-card{background:var(--paper);border:1px solid var(--ink);padding:14px 16px}
+.stat-card .label{font-size:10px;letter-spacing:2px;opacity:0.6;margin-bottom:6px;text-transform:uppercase}
+.stat-card .value{font-size:22px;font-weight:bold;letter-spacing:1px}
+.stat-card .sub{font-size:10px;opacity:0.55;letter-spacing:1px;margin-top:4px}
+.stat-card.green .value{color:var(--green)}
+.stat-card.amber .value{color:var(--amber)}
+.stat-card.red .value{color:var(--red)}
+.stat-card.blue .value{color:var(--blue)}
+
+.section{background:var(--paper);border:1px solid var(--ink);padding:18px 20px;margin-bottom:18px}
+.filters-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.filters-row .label{font-size:10px;letter-spacing:2px;opacity:0.6;margin-right:6px;text-transform:uppercase}
+.chip{font-family:var(--font);font-size:11px;letter-spacing:1.5px;padding:6px 12px;border:1px solid var(--ink);background:var(--bg);color:var(--ink);cursor:pointer;text-decoration:none}
+.chip:hover{background:#f0ede4}
+.chip.active{background:var(--ink);color:var(--bg)}
+.search-input{font-family:var(--font);padding:7px 10px;font-size:12px;border:1px solid var(--ink);background:var(--bg);outline:none;min-width:240px;flex:1}
+.search-input:focus{background:var(--paper)}
+
+.table-wrap{overflow-x:auto;background:var(--paper);border:1px solid var(--ink)}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th,td{padding:7px 8px;text-align:left;border:1px solid var(--soft-border);vertical-align:top}
+th{background:var(--ink);color:var(--bg);font-weight:bold;font-size:10px;letter-spacing:1px;white-space:nowrap;text-transform:uppercase}
+tr:nth-child(even) td{background:#fafaf5}
+tr:hover td{background:#f0ede4}
+
+.tag{display:inline-block;padding:1px 6px;font-size:9px;letter-spacing:1px;border:1px solid;text-transform:uppercase}
+.tag-ok{background:var(--green);color:#fff;border-color:var(--green)}
+.tag-ghost{background:var(--amber);color:#fff;border-color:var(--amber)}
+.tag-orphan{background:var(--red);color:#fff;border-color:var(--red)}
+.tag-noemail{background:var(--blue);color:#fff;border-color:var(--blue)}
+.tag-status-member{background:var(--green);color:#fff;border-color:var(--green)}
+.tag-status-left{background:#888;color:#fff;border-color:#888}
+.tag-status-kicked{background:var(--red);color:#fff;border-color:var(--red)}
+.tag-status-creator,.tag-status-administrator{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tag-chat-ru{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tag-chat-en{background:#fff;color:var(--ink);border:1px dashed var(--ink)}
+.tag-source-bot{background:#fff;color:var(--ink);border:1px dashed var(--ink)}
+.tag-source-admin_api{background:#eef;color:var(--blue);border-color:var(--blue)}
+.tag-source-get_chat_member{background:#fff;color:var(--ink);border:1px solid var(--soft-border)}
+.tag-source-manual_export{background:#fff8e0;color:#7a5e00;border:1px dashed var(--amber)}
+
+.email-cell{font-size:11px;max-width:240px;overflow:hidden;text-overflow:ellipsis}
+.email-cell.ghost{opacity:0.4;font-style:italic}
+.tg-cell a{color:var(--ink);text-decoration:underline}
+
+.action-btn{font-family:var(--font);font-size:10px;letter-spacing:1px;padding:4px 8px;border:1px solid var(--ink);background:var(--paper);cursor:pointer;color:var(--ink);margin-right:3px;margin-bottom:3px;text-decoration:none;display:inline-block}
+.action-btn:hover{background:var(--ink);color:var(--bg)}
+
+.empty-row{text-align:center;opacity:0.5;font-size:12px;padding:24px}
+
+.msg{padding:10px 12px;font-size:11px;letter-spacing:1px;border:1px solid var(--ink);margin:10px 0}
+.msg.ok{background:#e8f5e9;color:var(--green);border-color:var(--green)}
+.msg.err{background:#fff0f0;color:var(--red);border-color:var(--red)}
+.msg.info{background:#fff8e0;color:#7a5e00;border-color:var(--amber)}
+
+#loginScreen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:10}
+.login-box{background:var(--paper);border:2px solid var(--ink);padding:30px;width:340px}
+.login-box h3{font-size:13px;letter-spacing:3px;margin-bottom:6px;text-align:center}
+.login-sub{font-size:10px;opacity:0.55;text-align:center;margin-bottom:20px;letter-spacing:1px}
+.login-box input{width:100%;font-family:var(--font);padding:10px;border:1px solid var(--ink);background:var(--bg);font-size:13px;margin-bottom:10px}
+.login-box button{width:100%;font-family:var(--font);padding:10px;border:1px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer;font-size:12px;letter-spacing:2px}
+
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:20;padding:20px}
+.modal.show{display:flex}
+.modal-box{background:var(--paper);border:2px solid var(--ink);padding:24px;max-width:640px;width:100%;max-height:90vh;overflow:auto}
+.modal-box h3{font-size:13px;letter-spacing:2px;margin-bottom:14px;border-bottom:1px solid var(--ink);padding-bottom:8px}
+.modal-box label{display:block;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;opacity:0.6;margin:12px 0 4px}
+.modal-box input,.modal-box select,.modal-box textarea{width:100%;font-family:var(--font);padding:8px 10px;font-size:12px;border:1px solid var(--ink);background:var(--bg)}
+.modal-box textarea{min-height:180px;resize:vertical}
+.modal-buttons{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.modal-info-row{display:flex;font-size:11px;margin-bottom:4px}
+.modal-info-row .k{opacity:0.55;letter-spacing:1px;min-width:120px;text-transform:uppercase;font-size:10px}
+.modal-info-row .v{font-weight:bold}
+.help-text{font-size:10px;opacity:0.65;letter-spacing:0.5px;margin-top:6px;line-height:1.4}
+
+footer{text-align:center;font-size:10px;opacity:0.45;letter-spacing:2px;margin-top:24px;padding-top:14px;border-top:1px dashed var(--muted)}
+
+.loading{text-align:center;padding:30px;font-size:12px;opacity:0.5;letter-spacing:2px}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-box">
+    <h3>// АДМИН · СВЕРКА ГРУППЫ</h3>
+    <div class="login-sub">ОГРАНИЧЕННЫЙ ДОСТУП</div>
+    <input type="email" id="login-email" placeholder="admin@belfed.com" autocomplete="email">
+    <input type="password" id="login-password" placeholder="пароль" autocomplete="current-password">
+    <button onclick="signIn()">[ ВОЙТИ ]</button>
+    <div id="login-msg"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+
+<div class="admin-nav">
+  <a href="/admin.html">ХАБ</a>
+  <span class="sep">|</span>
+  <a href="/admin-positions.html">ПОЗИЦИИ</a>
+  <span class="sep">|</span>
+  <a href="/admin-analysis-posts.html">АНАЛИЗ АКТИВОВ</a>
+  <span class="sep">|</span>
+  <a href="/admin-subscribers.html">ПОДПИСЧИКИ</a>
+  <span class="sep">|</span>
+  <a href="/admin-roster.html" class="active">СВЕРКА ГРУППЫ</a>
+</div>
+
+<div class="container">
+
+<header>
+  <h2>— BELFED_ · СВЕРКА ГРУППЫ —</h2>
+  <h1>// ROSTER · TG ↔ DB</h1>
+  <div class="subtitle">Фактические участники RU/EN-чатов vs profiles. Заполнение пробелов: ручная привязка email, импорт списка участников из Telegram Desktop.</div>
+</header>
+
+<div class="toolbar">
+  <div class="user-info" id="user-info"></div>
+  <div>
+    <button class="btn" onclick="loadData()">[ ОБНОВИТЬ ]</button>
+    <button class="btn primary" id="syncBtn" onclick="runSync()">[ ЗАПУСТИТЬ СИНХР ]</button>
+    <button class="btn" onclick="openImport()">[ ИМПОРТ ]</button>
+    <button class="btn" onclick="signOut()">[ ВЫЙТИ ]</button>
+  </div>
+</div>
+
+<div class="stats-grid" id="statsGrid"></div>
+
+<div class="section">
+  <div class="filters-row">
+    <span class="label">ПРОБЕЛЫ:</span>
+    <button class="chip active" data-gap="all">ВСЕ</button>
+    <button class="chip" data-gap="ghost_email">GHOST EMAIL</button>
+    <button class="chip" data-gap="orphan_in_group">ORPHAN</button>
+    <button class="chip" data-gap="no_email">NO EMAIL</button>
+    <button class="chip" data-gap="ok">OK</button>
+    <span class="label" style="margin-left:18px">ЧАТ:</span>
+    <button class="chip active" data-chat="all">ВСЕ</button>
+    <button class="chip" data-chat="ru">RU</button>
+    <button class="chip" data-chat="en">EN</button>
+    <span class="label" style="margin-left:18px">СТАТУС:</span>
+    <button class="chip active" data-status="all">ВСЕ</button>
+    <button class="chip" data-status="active">В ГРУППЕ</button>
+    <button class="chip" data-status="left">ВЫШЕЛ</button>
+    <input type="text" class="search-input" id="searchInput" placeholder="поиск: @username / имя / id / email…">
+  </div>
+</div>
+
+<div id="msgBox"></div>
+
+<div class="table-wrap">
+  <table id="rosterTable">
+    <thead>
+      <tr>
+        <th>ПРОБЕЛ</th>
+        <th>ЧАТ</th>
+        <th>TG ID</th>
+        <th>USERNAME / ИМЯ</th>
+        <th>СТАТУС</th>
+        <th>EMAIL ПРОФИЛЯ</th>
+        <th>ПОДПИСКА</th>
+        <th>ИСТОЧНИК</th>
+        <th>ВИДЕЛИ</th>
+        <th>ДЕЙСТВИЯ</th>
+      </tr>
+    </thead>
+    <tbody id="tbody">
+      <tr><td colspan="10" class="loading">// ЗАГРУЗКА…</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<footer>BELFED ANALYTICS · АДМИН · СВЕРКА ГРУППЫ · v1.0</footer>
+
+</div>
+</div>
+
+<!-- Modal: Manual link email -->
+<div class="modal" id="linkModal">
+  <div class="modal-box">
+    <h3 id="linkTitle">// ПРИВЯЗАТЬ EMAIL</h3>
+    <div id="linkUserInfo"></div>
+    <label>EMAIL (существующий профиль)</label>
+    <input type="email" id="linkEmail" placeholder="user@example.com" autocomplete="off">
+    <div class="help-text">
+      Если у пользователя ещё нет lite-профиля — RPC создаст связь.<br>
+      Если есть lite (tg_…@belfed.local) — он будет слит с найденным real-профилем.<br>
+      Если email уже занят другим telegram_id — операция вернёт ошибку email_taken.
+    </div>
+    <div id="linkResult"></div>
+    <div class="modal-buttons">
+      <button class="btn primary" id="linkSubmitBtn" onclick="doManualLink()">[ ПРИВЯЗАТЬ ]</button>
+      <button class="btn" onclick="closeModal('linkModal')">[ ОТМЕНА ]</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Manual import (Этап 2) -->
+<div class="modal" id="importModal">
+  <div class="modal-box" style="max-width:760px">
+    <h3>// ИМПОРТ СПИСКА УЧАСТНИКОВ (TG DESKTOP)</h3>
+
+    <div class="help-text" style="margin-bottom:14px">
+      <b>Telegram официально не отдаёт getChatMembers через Bot API.</b>
+      Чтобы увидеть всех ~32 фактических участников группы, экспортируйте список вручную:
+      <br><br>
+      1. Откройте <b>Telegram Desktop</b> → нужная группа → <b>...</b> → <b>View Group Info</b> → <b>N Members</b>.<br>
+      2. Прокрутите список до конца — Telegram подгрузит всех.<br>
+      3. Скопируйте список (правой кнопкой → Copy / в Telegram Desktop) или используйте инструмент «Export chat history» (Settings → Advanced → Export Telegram data → конкретная группа, только Members JSON).<br>
+      4. Вставьте сюда в формате JSON-массива.<br><br>
+      <b>Поддерживаемые форматы:</b><br>
+      <code>[{"telegram_id":118296372,"username":"tyoma_fyodorov","first_name":"Artyom"}]</code><br>
+      Поля: <code>telegram_id</code> обязательное; <code>username</code>, <code>first_name</code>, <code>last_name</code>, <code>status</code>, <code>is_admin</code> опциональные.
+    </div>
+
+    <label>ЧАТ</label>
+    <select id="importChatId">
+      <option value="-1003773738299">RU · -1003773738299</option>
+      <option value="-1003869302680">EN · -1003869302680</option>
+    </select>
+
+    <label>JSON-МАССИВ</label>
+    <textarea id="importJson" placeholder='[{"telegram_id":118296372,"username":"tyoma_fyodorov","first_name":"Artyom"}]'></textarea>
+
+    <div id="importResult"></div>
+
+    <div class="modal-buttons">
+      <button class="btn primary" id="importSubmitBtn" onclick="doImport()">[ ИМПОРТИРОВАТЬ ]</button>
+      <button class="btn" onclick="closeModal('importModal')">[ ОТМЕНА ]</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL  = 'https://obujqvqqmyfcfflhqvud.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9idWpxdnFxbXlmY2ZmbGhxdnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDgxNjYsImV4cCI6MjA4OTkyNDE2Nn0.syl4YBLbf8aBitxyK3gCL51pPYxWjEW99mMTXJaQQ8w';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+const RU_CHAT = -1003773738299;
+const EN_CHAT = -1003869302680;
+
+let state = {
+  rows: [],
+  summary: null,
+  filterGap: 'all',
+  filterChat: 'all',
+  filterStatus: 'all',
+  search: '',
+  selectedRow: null,
+};
+
+// ---------- AUTH ----------
+async function signIn() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) { document.getElementById('login-msg').innerHTML = '<div class="msg err">' + escapeHtml(error.message) + '</div>'; return; }
+  await checkAdminAndShow();
+}
+async function signOut() { await sb.auth.signOut(); location.reload(); }
+
+async function checkAdminAndShow() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+    document.body.classList.add('ready');
+    return;
+  }
+  const { data: profile } = await sb.from('profiles').select('subscription_status,email').eq('id', session.user.id).maybeSingle();
+  if (!profile || profile.subscription_status !== 'admin') {
+    document.getElementById('login-msg').innerHTML = '<div class="msg err">Доступ запрещён — у вашего аккаунта нет прав администратора.</div>';
+    document.body.classList.add('ready');
+    return;
+  }
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('user-info').textContent = 'Вход выполнен: ' + (profile.email || session.user.email);
+  document.body.classList.add('ready');
+  await loadData();
+}
+
+// ---------- DATA ----------
+async function loadData() {
+  setMsg('');
+  document.getElementById('tbody').innerHTML = '<tr><td colspan="10" class="loading">// ЗАГРУЗКА…</td></tr>';
+
+  const [listRes, summaryRes] = await Promise.all([
+    sb.rpc('admin_roster_list'),
+    sb.rpc('admin_roster_summary'),
+  ]);
+
+  if (listRes.error) { setMsg('Ошибка загрузки списка: ' + listRes.error.message, 'err'); return; }
+  if (summaryRes.error) { setMsg('Ошибка загрузки сводки: ' + summaryRes.error.message, 'err'); return; }
+
+  state.rows = listRes.data || [];
+  state.summary = summaryRes.data || {};
+
+  renderStats();
+  renderTable();
+}
+
+function renderStats() {
+  const grid = document.getElementById('statsGrid');
+  const gaps = (state.summary && state.summary.gap_counts) || {};
+  const byChat = (state.summary && state.summary.by_chat) || [];
+
+  const ru = byChat.find(c => c.chat_id === RU_CHAT) || { total:0, members:0, left:0, kicked:0, admins:0 };
+  const en = byChat.find(c => c.chat_id === EN_CHAT) || { total:0, members:0, left:0, kicked:0, admins:0 };
+
+  grid.innerHTML = `
+    <div class="stat-card"><div class="label">RU · ВСЕГО</div><div class="value">${ru.total}</div>
+      <div class="sub">в группе: ${ru.members} · вышли: ${ru.left} · кикнуты: ${ru.kicked}</div></div>
+    <div class="stat-card"><div class="label">EN · ВСЕГО</div><div class="value">${en.total}</div>
+      <div class="sub">в группе: ${en.members} · вышли: ${en.left} · кикнуты: ${en.kicked}</div></div>
+    <div class="stat-card green"><div class="label">OK</div><div class="value">${gaps.ok || 0}</div>
+      <div class="sub">профиль + email + в группе</div></div>
+    <div class="stat-card amber"><div class="label">GHOST EMAIL</div><div class="value">${gaps.ghost_email || 0}</div>
+      <div class="sub">lite-профиль без email</div></div>
+    <div class="stat-card red"><div class="label">ORPHAN</div><div class="value">${gaps.orphan_in_group || 0}</div>
+      <div class="sub">в группе, но нет профиля</div></div>
+    <div class="stat-card blue"><div class="label">NO EMAIL</div><div class="value">${gaps.no_email || 0}</div>
+      <div class="sub">профиль без email-связи</div></div>
+  `;
+}
+
+function renderTable() {
+  const tbody = document.getElementById('tbody');
+  const rows = state.rows.filter(r => {
+    if (state.filterGap !== 'all' && r.gap_kind !== state.filterGap) return false;
+    if (state.filterChat === 'ru' && r.chat_id !== RU_CHAT) return false;
+    if (state.filterChat === 'en' && r.chat_id !== EN_CHAT) return false;
+    if (state.filterStatus === 'active' && !['member','administrator','creator','restricted'].includes(r.status)) return false;
+    if (state.filterStatus === 'left' && !['left','kicked'].includes(r.status)) return false;
+    if (state.search) {
+      const q = state.search.toLowerCase();
+      const hay = [r.username, r.first_name, r.last_name, String(r.telegram_id), r.profile_email].filter(Boolean).join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10" class="empty-row">// нет записей по текущим фильтрам</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.map(r => {
+    const isRu = r.chat_id === RU_CHAT;
+    const name = [r.first_name, r.last_name].filter(Boolean).join(' ') || '—';
+    const usernameHtml = r.username
+      ? `<a href="https://t.me/${escapeAttr(r.username)}" target="_blank">@${escapeHtml(r.username)}</a>`
+      : '<span style="opacity:0.4">—</span>';
+    const ghostEmail = r.profile_email && r.profile_email.endsWith('@belfed.local');
+    const emailHtml = r.profile_email
+      ? `<span class="email-cell ${ghostEmail ? 'ghost' : ''}">${escapeHtml(r.profile_email)}</span>`
+      : '<span style="opacity:0.4">—</span>';
+    const lastSeen = r.last_seen_at ? new Date(r.last_seen_at).toISOString().slice(0,16).replace('T',' ') : '—';
+    const canLink = (r.gap_kind === 'ghost_email' || r.gap_kind === 'orphan_in_group' || r.gap_kind === 'no_email');
+
+    return `<tr>
+      <td><span class="tag tag-${gapClass(r.gap_kind)}">${escapeHtml(r.gap_kind)}</span></td>
+      <td><span class="tag tag-chat-${isRu ? 'ru' : 'en'}">${isRu ? 'RU' : 'EN'}</span></td>
+      <td style="font-family:monospace">${r.telegram_id}</td>
+      <td>${usernameHtml}<br><span style="font-size:10px;opacity:0.65">${escapeHtml(name)}</span></td>
+      <td><span class="tag tag-status-${escapeAttr(r.status||'unknown')}">${escapeHtml(r.status || '?')}</span>${r.is_admin ? ' <span class="tag tag-status-creator">ADM</span>' : ''}</td>
+      <td>${emailHtml}</td>
+      <td style="font-size:10px">${escapeHtml(r.subscription_status || '—')}</td>
+      <td><span class="tag tag-source-${escapeAttr(r.source||'unknown')}">${escapeHtml(r.source || '?')}</span></td>
+      <td style="font-family:monospace;font-size:10px">${lastSeen}</td>
+      <td>
+        ${canLink ? `<button class="action-btn" onclick='openLink(${JSON.stringify(r)})'>[ EMAIL ]</button>` : ''}
+        <a class="action-btn" href="https://t.me/${escapeAttr(r.username || '')}" target="_blank" ${!r.username ? 'style="opacity:0.3;pointer-events:none"' : ''}>[ TG ]</a>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function gapClass(kind) {
+  return { ok:'ok', ghost_email:'ghost', orphan_in_group:'orphan', no_email:'noemail' }[kind] || 'orphan';
+}
+
+// ---------- SYNC ----------
+async function runSync() {
+  const btn = document.getElementById('syncBtn');
+  btn.disabled = true;
+  btn.textContent = '[ СИНХРОНИЗАЦИЯ… ]';
+  setMsg('Запрашиваю Telegram API…', 'info');
+
+  // Используем сессию админа как Bearer + service header через edge fn proxy
+  // Edge fn принимает x-bot-secret, поэтому пробросим через прокси-RPC,
+  // которая знает секрет. Делаем простой fetch — sb.functions.invoke не подойдёт,
+  // т.к. не пускает кастомный x-bot-secret. Делаем RPC-обёртку через edge fn.
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const resp = await fetch(SUPABASE_URL + '/functions/v1/telegram-roster-sync', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + session.access_token,
+        'apikey': SUPABASE_ANON,
+        'Content-Type': 'application/json',
+      },
+      body: '{}',
+    });
+    const body = await resp.json();
+    if (!resp.ok || body.ok === false) {
+      setMsg('Ошибка синхронизации: ' + (body.error || resp.status), 'err');
+    } else {
+      const lines = (body.results || []).map(c => `${c.chat}: admins=${c.admins} · checked=${c.profiles_checked} · in=${c.members} · left=${c.left} · kicked=${c.kicked}` + (c.errors && c.errors.length ? ' · ERR=' + c.errors.join(';') : ''));
+      setMsg('Готово. ' + lines.join(' | '), 'ok');
+      await loadData();
+    }
+  } catch (e) {
+    setMsg('Ошибка запроса: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '[ ЗАПУСТИТЬ СИНХР ]';
+  }
+}
+
+// ---------- MANUAL LINK ----------
+function openLink(row) {
+  state.selectedRow = row;
+  const name = [row.first_name, row.last_name].filter(Boolean).join(' ') || '—';
+  document.getElementById('linkUserInfo').innerHTML = `
+    <div class="modal-info-row"><div class="k">TG ID</div><div class="v">${row.telegram_id}</div></div>
+    <div class="modal-info-row"><div class="k">USERNAME</div><div class="v">${row.username ? '@' + escapeHtml(row.username) : '—'}</div></div>
+    <div class="modal-info-row"><div class="k">ИМЯ</div><div class="v">${escapeHtml(name)}</div></div>
+    <div class="modal-info-row"><div class="k">ТЕКУЩИЙ EMAIL</div><div class="v">${escapeHtml(row.profile_email || '—')}</div></div>
+    <div class="modal-info-row"><div class="k">ПРОБЕЛ</div><div class="v">${escapeHtml(row.gap_kind)}</div></div>
+  `;
+  document.getElementById('linkEmail').value = '';
+  document.getElementById('linkResult').innerHTML = '';
+  openModal('linkModal');
+}
+
+async function doManualLink() {
+  const row = state.selectedRow;
+  if (!row) return;
+  const email = document.getElementById('linkEmail').value.trim().toLowerCase();
+  const out = document.getElementById('linkResult');
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    out.innerHTML = '<div class="msg err">Неверный email</div>';
+    return;
+  }
+  const btn = document.getElementById('linkSubmitBtn');
+  btn.disabled = true; btn.textContent = '[ ПРИВЯЗЫВАЮ… ]';
+
+  const { data, error } = await sb.rpc('admin_roster_manual_link', {
+    p_telegram_id: row.telegram_id,
+    p_email: email,
+  });
+
+  btn.disabled = false; btn.textContent = '[ ПРИВЯЗАТЬ ]';
+
+  if (error) {
+    out.innerHTML = '<div class="msg err">' + escapeHtml(error.message) + '</div>';
+    return;
+  }
+  out.innerHTML = '<div class="msg ok">OK · ' + escapeHtml(JSON.stringify(data)) + '</div>';
+  setTimeout(() => { closeModal('linkModal'); loadData(); }, 1200);
+}
+
+// ---------- IMPORT ----------
+function openImport() {
+  document.getElementById('importJson').value = '';
+  document.getElementById('importResult').innerHTML = '';
+  openModal('importModal');
+}
+
+async function doImport() {
+  const chatId = parseInt(document.getElementById('importChatId').value, 10);
+  const raw = document.getElementById('importJson').value.trim();
+  const out = document.getElementById('importResult');
+  if (!raw) { out.innerHTML = '<div class="msg err">Пустой JSON</div>'; return; }
+  let items;
+  try {
+    items = JSON.parse(raw);
+    if (!Array.isArray(items)) throw new Error('Ожидается массив');
+  } catch (e) {
+    out.innerHTML = '<div class="msg err">JSON parse: ' + escapeHtml(e.message) + '</div>';
+    return;
+  }
+
+  const btn = document.getElementById('importSubmitBtn');
+  btn.disabled = true; btn.textContent = '[ ИМПОРТИРУЮ… ]';
+
+  const { data, error } = await sb.rpc('admin_roster_import_manual', {
+    p_chat_id: chatId,
+    p_items: items,
+  });
+
+  btn.disabled = false; btn.textContent = '[ ИМПОРТИРОВАТЬ ]';
+
+  if (error) {
+    out.innerHTML = '<div class="msg err">' + escapeHtml(error.message) + '</div>';
+    return;
+  }
+  out.innerHTML = '<div class="msg ok">' + escapeHtml(JSON.stringify(data)) + '</div>';
+  setTimeout(() => { closeModal('importModal'); loadData(); }, 1500);
+}
+
+// ---------- UI HELPERS ----------
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+function setMsg(text, kind) {
+  const box = document.getElementById('msgBox');
+  if (!text) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="msg ' + (kind || 'info') + '">' + escapeHtml(text) + '</div>';
+}
+
+function escapeHtml(s) { if (s == null) return ''; return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]); }
+function escapeAttr(s) { return escapeHtml(s); }
+
+// ---------- FILTERS ----------
+document.querySelectorAll('.chip[data-gap]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.chip[data-gap]').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  state.filterGap = b.dataset.gap;
+  renderTable();
+}));
+document.querySelectorAll('.chip[data-chat]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.chip[data-chat]').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  state.filterChat = b.dataset.chat;
+  renderTable();
+}));
+document.querySelectorAll('.chip[data-status]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.chip[data-status]').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  state.filterStatus = b.dataset.status;
+  renderTable();
+}));
+document.getElementById('searchInput').addEventListener('input', e => { state.search = e.target.value; renderTable(); });
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') signIn();
+  if (e.key === 'Escape') { document.querySelectorAll('.modal.show').forEach(m => m.classList.remove('show')); }
+});
+
+checkAdminAndShow();
+</script>
+
+</body>
+</html>
