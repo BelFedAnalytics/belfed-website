@@ -13,6 +13,7 @@ header{position:relative;text-align:center;margin-bottom:14px;padding-bottom:14p
 header h2{font-size:14px;letter-spacing:4px;font-weight:bold;margin-bottom:8px}
 header h1{font-size:18px;letter-spacing:3px;font-weight:bold}
 .header-sub{font-size:11px;letter-spacing:2px;opacity:0.55;margin-top:8px}
+.header-actions{display:contents}
 .members-link{position:absolute;left:0;top:50%;transform:translateY(-50%);font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;color:#000;text-decoration:none;border:1px solid #000;padding:5px 12px}
 .logout-btn{position:absolute;right:0;top:50%;transform:translateY(-50%);font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;padding:6px 16px;background:none;border:1px solid #000;cursor:pointer;color:#000}
 .logout-btn:hover{background:#000;color:#f5f2eb}
@@ -177,7 +178,14 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
   body{padding:14px 12px}
   .layout{grid-template-columns:1fr;gap:16px}
   .filters{position:static}
-  header h1{font-size:14px;letter-spacing:2px}
+  header{display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:16px;padding-bottom:16px}
+  header h2{font-size:12px;letter-spacing:2.5px;margin-bottom:0}
+  header h1{font-size:clamp(13px,4vw,14px);letter-spacing:1px;line-height:1.35;margin:0;max-width:100%;overflow-wrap:anywhere}
+  .header-sub{font-size:10px;letter-spacing:1px;line-height:1.45;margin-top:0;max-width:34ch}
+  .header-actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:4px;width:100%}
+  .members-link,.logout-btn{position:static;transform:none;display:inline-flex;align-items:center;justify-content:center;min-height:34px;min-width:104px;font-size:10px;letter-spacing:.8px;padding:7px 12px;line-height:1}
+  .sub-nav{justify-content:center;row-gap:4px}
+  .sub-nav a{font-size:11px;letter-spacing:1px;padding:9px 10px}
   .ticker-badge{font-size:16px}
   .card-head{padding:12px 14px}
   .card-body{padding:14px 16px}
@@ -241,8 +249,10 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
     <h2><a href="/" style="color:#000;text-decoration:none">— BELFED_ —</a></h2>
     <h1>— АНАЛИЗ АКТИВОВ И ЗАПРОСЫ —</h1>
     <div class="header-sub">ОБНОВЛЕНИЯ ОТ АНАЛИТИКА · СИНХРОНИЗАЦИЯ С TELEGRAM</div>
-    <a href="/members.html" class="members-link">&larr; КАБИНЕТ</a>
-    <button class="logout-btn" onclick="handleLogout()">ВЫЙТИ</button>
+    <div class="header-actions">
+      <a href="/members.html" class="members-link">&larr; КАБИНЕТ</a>
+      <button class="logout-btn" onclick="handleLogout()">ВЫЙТИ</button>
+    </div>
   </header>
 
   <nav class="sub-nav">
@@ -943,4 +953,3 @@ function initRequestPanel() {
 </script>
 </body>
 </html>
-
