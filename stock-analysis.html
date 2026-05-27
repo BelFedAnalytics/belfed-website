@@ -48,6 +48,20 @@ main{padding-top:56px}
 .lightbox{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:1000;cursor:pointer;align-items:center;justify-content:center}
 .lightbox.active{display:flex}
 .lightbox img{max-width:90vw;max-height:90vh;border:2px solid var(--white)}
+@media(max-width:768px){
+  nav{padding:0 16px;gap:12px}
+  .nav-logo{font-size:14px;letter-spacing:0.04em}
+  .nav-links{gap:14px}
+  .nav-links a{font-size:10px;letter-spacing:0.08em}
+  .hero{padding:48px 20px 24px}
+  .hero h1{font-size:clamp(22px,7vw,32px)}
+  .content{padding:0 20px 40px}
+  .cards{grid-template-columns:1fr;gap:14px}
+  .card{padding:20px}
+}
+@media(max-width:380px){
+  .nav-links li:first-child{display:none}
+}
 </style>
 </head>
 <body>
