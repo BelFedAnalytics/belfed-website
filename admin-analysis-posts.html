@@ -129,8 +129,10 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 .hi-item .ti{font-size:10px;letter-spacing:1px}
 .hi-item .ex{font-size:9px;opacity:0.6;letter-spacing:1px;margin-top:2px}
 .hi-item .ax{display:flex;gap:4px}
-.icon-btn{font-family:'Courier New',monospace;font-size:10px;padding:4px 8px;border:1px solid #000;background:#fff;cursor:pointer}
+.icon-btn{font-family:'Courier New',monospace;font-size:10px;padding:4px 8px;border:1px solid #000;background:#fff;cursor:pointer;text-decoration:none;color:#000;display:inline-block}
 .icon-btn:hover{background:#f0ede4}
+.icon-btn:disabled,.icon-btn[disabled]{opacity:0.3;cursor:not-allowed;background:#f5f2eb}
+.icon-btn:disabled:hover,.icon-btn[disabled]:hover{background:#f5f2eb}
 .icon-btn.danger{background:#c50000;color:#fff;border-color:#c50000}
 
 .schedule-row{display:grid;grid-template-columns:160px 1fr;gap:8px;align-items:center}
@@ -890,7 +892,7 @@ async function loadHistory(query){
   }
 
   let req = sb.from('analysis_posts')
-    .select('id,ticker,company_name,post_type,reply_name,status,published_at,created_at,publish_to_ru,publish_to_en')
+    .select('id,ticker,slug,company_name,post_type,reply_name,status,published_at,created_at,publish_to_ru,publish_to_en')
     .neq('status','deleted')
     .order('created_at',{ascending:false});
 
@@ -923,6 +925,17 @@ async function loadHistory(query){
     const ti = p.post_type==='request' ? `reply to ${p.reply_name||'…'}` : (p.company_name || '');
     const tickerHtml = q ? highlightMatch(p.ticker, q) : escapeHtml(p.ticker);
     const tiHtml = q ? highlightMatch(ti, q) : escapeHtml(ti);
+    // Build live-page URL. Default = current admin host (belfed.ru). If post wasn't
+    // published to the current locale but only to the other one, link to that domain.
+    const tickerLc = (p.ticker||'').toLowerCase();
+    const onRu = location.hostname.includes('belfed.ru') || location.hostname === 'localhost';
+    let liveHost = onRu ? 'belfed.ru' : 'belfed.com';
+    if (onRu && !p.publish_to_ru && p.publish_to_en) liveHost = 'belfed.com';
+    if (!onRu && !p.publish_to_en && p.publish_to_ru) liveHost = 'belfed.ru';
+    const liveUrl = `https://${liveHost}/analysis/${encodeURIComponent(tickerLc)}/${encodeURIComponent(p.slug||'')}`;
+    const openBtn = (p.status==='published' && p.slug)
+      ? `<a class="icon-btn" href="${liveUrl}" target="_blank" rel="noopener" title="Открыть пост на сайте (${liveHost})">⧉</a>`
+      : `<button class="icon-btn" disabled title="Черновик — нет публичной страницы">⧉</button>`;
     return `
       <div class="hi-item">
         <div class="tk">$${tickerHtml}</div>
@@ -931,6 +944,7 @@ async function loadHistory(query){
           <div class="ex">${dStr} · ${channels}</div>
         </div>
         <div class="ax">
+          ${openBtn}
           <button class="icon-btn" data-act="reply" data-id="${p.id}" title="Опубликовать обновление (ответ)">↩</button>
           <button class="icon-btn" data-act="edit" data-id="${p.id}" title="Редактировать">✎</button>
           <button class="icon-btn danger" data-act="del" data-id="${p.id}" title="Удалить">×</button>
