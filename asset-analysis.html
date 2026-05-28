@@ -154,10 +154,10 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 .req-panel .filter-title{border-bottom-color:#000}
 .req-quota{font-size:11px;letter-spacing:1px;margin-bottom:10px;opacity:0.8}
 .req-quota.exhausted{color:#a30000;opacity:1;font-weight:bold}
-.req-form-row{display:flex;gap:6px;margin-bottom:8px}
-.req-form-row input{flex:1;font-family:'Courier New',monospace;padding:7px 10px;font-size:12px;border:1px solid #000;background:#fff;outline:none;text-transform:uppercase}
+.req-form-row{display:flex;gap:6px;margin-bottom:8px;align-items:stretch}
+.req-form-row input{flex:1;min-width:0;font-family:'Courier New',monospace;height:32px;padding:0 10px;font-size:12px;line-height:30px;border:1px solid #000;background:#fff;outline:none;text-transform:uppercase}
 .req-form-row input:focus{background:#fff;box-shadow:inset 0 0 0 1px #000}
-.req-form-row button{font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;padding:7px 14px;border:1px solid #000;background:#000;color:#f5f2eb;cursor:pointer}
+.req-form-row button{flex:0 0 auto;font-family:'Courier New',monospace;font-size:14px;line-height:1;height:32px;width:32px;padding:0;display:inline-flex;align-items:center;justify-content:center;border:1px solid #000;background:#000;color:#f5f2eb;cursor:pointer}
 .req-form-row button:hover{background:#222}
 .req-form-row button:disabled{background:#999;cursor:not-allowed}
 .req-msg{font-size:11px;letter-spacing:1px;margin-top:6px;min-height:14px}
