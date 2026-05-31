@@ -103,7 +103,41 @@ function openLightbox(src) {
   document.getElementById('lightbox').classList.add('active');
 }
 
+function renderLocked() {
+  const el = document.getElementById('cards');
+  const ld = document.getElementById('loading');
+  if (ld) ld.remove();
+  el.innerHTML =
+    '<div class="loading" style="grid-column:1/-1;padding:60px 20px;text-align:center;border:1px solid var(--border);background:var(--white)">' +
+      '<div style="font-size:13px;letter-spacing:0.12em;text-transform:uppercase;color:var(--gray);margin-bottom:12px">Доступ только для подписчиков</div>' +
+      '<div style="font-size:15px;margin-bottom:24px;color:#555">Оформите пробный доступ или подписку, чтобы увидеть анализ активов.</div>' +
+      '<a href="/members.html" style="display:inline-block;padding:12px 24px;border:1px solid var(--black);color:var(--black);text-decoration:none;font-size:12px;letter-spacing:0.1em;text-transform:uppercase">Перейти в личный кабинет</a>' +
+    '</div>';
+}
+
+async function checkAccess() {
+  // 1) Сессия есть?
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return false;
+  // 2) Проверяем роль/подписку в profiles
+  const { data: prof } = await sb.from('profiles')
+    .select('subscription_status, subscription_expires_at, trial_end')
+    .eq('id', session.user.id).maybeSingle();
+  if (!prof) return false;
+  if (prof.subscription_status === 'admin') return true;
+  if (prof.subscription_status === 'active'
+      && prof.subscription_expires_at
+      && new Date(prof.subscription_expires_at) > new Date()) return true;
+  if (prof.subscription_status === 'trial'
+      && prof.trial_end
+      && new Date(prof.trial_end) > new Date()) return true;
+  return false;
+}
+
 async function load() {
+  const allowed = await checkAccess();
+  if (!allowed) { renderLocked(); return; }
+
   const { data, error } = await sb
     .from('stock_analysis')
     .select('*')

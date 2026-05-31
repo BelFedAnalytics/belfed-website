@@ -48,7 +48,7 @@
     if (!session) return null;
     const [{ data: prof }, { data: sub }] = await Promise.all([
       c.from('profiles')
-        .select('subscription_plan, subscription_expires_at, telegram_id, telegram_username, trial_started_at')
+        .select('subscription_status, subscription_plan, subscription_expires_at, telegram_id, telegram_username, trial_started_at, trial_end')
         .eq('id', session.user.id).maybeSingle(),
       c.from('subscriptions')
         .select('status, plan_code, current_period_end, cancel_at_period_end, payment_method_id')
@@ -124,24 +124,29 @@
 
     const { profile, subscription } = state;
     const exp = profile?.subscription_expires_at ? new Date(profile.subscription_expires_at) : null;
-    const hasAccess = exp && exp > new Date();
-    const isPaid = subscription && subscription.status === 'active' && hasAccess;
-    const isTrial = !isPaid && hasAccess && profile?.subscription_plan === 'trial';
+    const trialEnd = profile?.trial_end ? new Date(profile.trial_end) : null;
+    const isAdmin = profile?.subscription_status === 'admin';
+    const hasAccess = (exp && exp > new Date()) || (trialEnd && trialEnd > new Date()) || isAdmin;
+    const isPaid = subscription && subscription.status === 'active' && exp && exp > new Date();
+    const isTrial = !isPaid && !isAdmin && profile?.subscription_status === 'trial'
+                    && trialEnd && trialEnd > new Date();
     const autorenew = isPaid && !subscription.cancel_at_period_end;
 
     let html = '';
 
     // ====== STATUS PANEL ======
     html += '<div class="bf-card">';
-    if (isPaid) {
+    if (isAdmin) {
+      html += `<div class="bf-status bf-status--ok">✨ АДМИНИСТРАТОР</div>`;
+      html += `<div class="bf-row">Полный доступ ко всем разделам без подписки.</div>`;
+    } else if (isPaid) {
       html += `<div class="bf-status bf-status--ok">✅ ПОДПИСКА АКТИВНА</div>`;
       html += `<div class="bf-row">План: месячный · ${PRICE_RUB} ₽ / мес</div>`;
       html += `<div class="bf-row">Действует до: <b>${fmt(exp)}</b></div>`;
       html += `<div class="bf-row">Автопродление: <b class="${autorenew?'bf-on':'bf-off'}">${autorenew?'включено':'отключено'}</b></div>`;
     } else if (isTrial) {
-      const left = daysLeft(exp);
       html += `<div class="bf-status bf-status--trial">🎁 ПРОБНЫЙ ДОСТУП · 14 дней</div>`;
-      html += `<div class="bf-row">Действует до: <b>${fmt(exp)}</b> · осталось ${left} дн.</div>`;
+      html += `<div class="bf-row">Действует до: <b>${fmt(trialEnd)}</b> · осталось ${daysLeft(trialEnd)} дн.</div>`;
       html += `<div class="bf-row bf-muted">После триала — подписка ${PRICE_RUB} ₽ / мес. Карта не привязана: оплата только по вашему действию.</div>`;
     } else {
       html += `<div class="bf-status">❌ ПОДПИСКИ НЕТ</div>`;
@@ -156,7 +161,7 @@
       html += '<div class="bf-row bf-muted" style="margin-bottom:10px">Доступ открыт по простой регистрации — без привязки карты. Если пользуетесь Telegram, можно привязать @BelfedBot для торговых возможностей, аналитики и обзоров рынка.</div>';
       html += '<button id="bfLinkTg" class="login-btn">🔗 Привязать Telegram (опционально)</button>';
     }
-    if (!isPaid) {
+    if (!isPaid && !isAdmin) {
       html += `<button id="bfPay" class="login-btn bf-cta">💳 Оформить подписку — ${PRICE_RUB} ₽ / мес</button>`;
     }
     if (autorenew) {
