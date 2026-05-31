@@ -256,11 +256,21 @@ async function loadReport() {
     } catch (_) { /* fall through */ }
   }
 
-  // 2) Try public path (works for published reports without sign-in).
+  // 2) Try public path. If user is signed in (subscriber/trial/admin), send
+  //    their JWT so the edge function unlocks the full report; otherwise fall
+  //    back to ANON_KEY which returns a teaser for gated content.
   const publicUrl = GET_URL + '?' + (slug ? `slug=${encodeURIComponent(slug)}` : `id=${encodeURIComponent(id)}`);
+  let userJwt = null;
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session && session.access_token) userJwt = session.access_token;
+  } catch (_) { /* no session is fine */ }
   try {
     const res = await fetch(publicUrl, {
-      headers: { 'apikey': ANON_KEY, 'authorization': 'Bearer ' + ANON_KEY }
+      headers: {
+        'apikey': ANON_KEY,
+        'authorization': 'Bearer ' + (userJwt || ANON_KEY)
+      }
     });
     if (res.ok) {
       const json = await res.json();
