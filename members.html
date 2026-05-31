@@ -143,6 +143,7 @@
       font-size: 11px; color: var(--gray); margin-bottom: 28px;
       letter-spacing: 0.08em;
     }
+.email-pref-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 0;border-bottom:1px dotted #e0d8c5}.email-pref-row:last-of-type{border-bottom:none}.email-pref-label{flex:1;min-width:220px;font-size:14px;display:flex;flex-direction:column;gap:3px}.email-pref-hint{color:var(--gray);font-size:12px;font-weight:400}.flag-label{font-size:12px;color:var(--gray);min-width:30px;display:inline-block;text-align:right}.bf-toggle{display:inline-flex;align-items:center;gap:8px;cursor:pointer}.bf-toggle input[type=checkbox]{width:18px;height:18px;cursor:pointer}.bf-toggle input[type=checkbox]:disabled{cursor:not-allowed;opacity:.5}
     .login-box input[type=email],
     .login-box input[type=password] {
       font-family: var(--font); width: 100%; padding: 12px 16px;
@@ -334,16 +335,57 @@
       </div>
 
       <!-- Email preferences -->
-      <div class="account-section">
-        <h2>// Настройки email</h2>
-        <div class="account-info" style="flex-wrap:wrap;gap:12px;align-items:center">
-          <span style="flex:1;min-width:240px">Получать аналитику на email <span id="emailPrefStatus" style="color:var(--gray);font-size:13px;display:block;margin-top:4px">Загрузка…</span></span>
+      <div class="account-section" id="email">
+        <h2>// Email-уведомления</h2>
+        <p id="emailPrefStatus" style="color:var(--gray);font-size:13px;margin:0 0 14px 0">Загрузка…</p>
+
+        <!-- Master enable + language -->
+        <div class="account-info" style="flex-wrap:wrap;gap:12px;align-items:center;border-bottom:1px dashed #e0d8c5;padding-bottom:14px;margin-bottom:14px">
+          <span style="flex:1;min-width:240px;font-weight:600">Получать письма от BelFed</span>
           <label class="bf-toggle" style="display:inline-flex;align-items:center;gap:8px;cursor:pointer">
             <input type="checkbox" id="emailPrefToggle" disabled style="width:18px;height:18px;cursor:pointer">
             <span id="emailPrefLabel" style="font-size:13px;color:var(--gray)">—</span>
           </label>
         </div>
-        <p style="color:var(--gray);font-size:13px;margin-top:10px">Дневная и еженедельная аналитика будет приходить на ваш email примерно через 30 минут после публикации. Отписаться можно в любое время.</p>
+
+        <!-- Detailed event toggles, shown only when master is enabled -->
+        <div id="emailEventGroup" style="display:none">
+          <h4 style="font-size:13px;letter-spacing:1px;text-transform:uppercase;color:var(--gray);margin:0 0 10px 0;font-family:'Courier New',monospace">// Что присылать</h4>
+
+          <div class="email-pref-row">
+            <span class="email-pref-label">Аналитика<span class="email-pref-hint">Каждая новая публикация: дневная и еженедельная.</span></span>
+            <label class="bf-toggle"><input type="checkbox" id="flagAnalytics" disabled><span class="flag-label">Выкл</span></label>
+          </div>
+          <div class="email-pref-row">
+            <span class="email-pref-label">Новые позиции<span class="email-pref-hint">Сигнал об открытии: тикер, направление, цена входа, стоп и цели.</span></span>
+            <label class="bf-toggle"><input type="checkbox" id="flagOpen" disabled><span class="flag-label">Выкл</span></label>
+          </div>
+          <div class="email-pref-row">
+            <span class="email-pref-label">Срабатывание стопа<span class="email-pref-hint">Стоп-лосс достигнут — позиция закрыта по риску.</span></span>
+            <label class="bf-toggle"><input type="checkbox" id="flagStop" disabled><span class="flag-label">Выкл</span></label>
+          </div>
+          <div class="email-pref-row">
+            <span class="email-pref-label">Достижение целей<span class="email-pref-hint">Тейк-профит 1/2/3 или частичная фиксация прибыли.</span></span>
+            <label class="bf-toggle"><input type="checkbox" id="flagTP" disabled><span class="flag-label">Выкл</span></label>
+          </div>
+          <div class="email-pref-row">
+            <span class="email-pref-label">Ручное закрытие<span class="email-pref-hint">Когда позиция закрывается вручную с комментарием.</span></span>
+            <label class="bf-toggle"><input type="checkbox" id="flagClose" disabled><span class="flag-label">Выкл</span></label>
+          </div>
+
+          <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:18px;padding-top:14px;border-top:1px dashed #e0d8c5">
+            <span style="flex:1;min-width:200px;font-weight:600">Язык писем</span>
+            <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="radio" name="emailLang" id="emailLangRu" value="ru" disabled> RU — Русский</label>
+            <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="radio" name="emailLang" id="emailLangEn" value="en" disabled> EN — English</label>
+          </div>
+
+          <div style="margin-top:18px;padding-top:14px;border-top:1px dashed #e0d8c5;display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+            <button type="button" id="sendTestEmailBtn" class="btn btn-secondary" style="font-size:12px;padding:8px 14px" disabled>Отправить тестовое письмо</button>
+            <span id="sendTestEmailStatus" style="font-size:12px;color:var(--gray)"></span>
+          </div>
+        </div>
+
+        <p style="color:var(--gray);font-size:12px;margin:14px 0 0 0;line-height:1.6">Письма приходят сразу при событии. Изменение настроек применяется мгновенно. Отписаться от всех писем можно одним переключателем выше.</p>
       </div>
     </main>
 
@@ -363,6 +405,29 @@
     // --- Members page callbacks ---
     // ===== Email preferences =====
     var emailPrefBusy = false;
+    var emailPrefState = { enabled: false, email: '', language: 'ru', flags: {} };
+
+    var FLAG_MAP = {
+      flagAnalytics: 'notify_analytics',
+      flagOpen:      'notify_position_open',
+      flagStop:      'notify_stop_hit',
+      flagTP:        'notify_take_profit',
+      flagClose:     'notify_manual_close'
+    };
+
+    function renderEmailPrefLabel(on) {
+      var lbl = document.getElementById('emailPrefLabel');
+      if (lbl) { lbl.textContent = on ? 'Вкл' : 'Выкл'; lbl.style.color = on ? '#1a7a1a' : 'var(--gray)'; }
+    }
+    function setFlagLabel(cb) {
+      var lbl = cb.parentElement && cb.parentElement.querySelector('.flag-label');
+      if (lbl) { lbl.textContent = cb.checked ? 'Вкл' : 'Выкл'; lbl.style.color = cb.checked ? '#1a7a1a' : 'var(--gray)'; }
+    }
+    function showEventGroup(on) {
+      var g = document.getElementById('emailEventGroup');
+      if (g) g.style.display = on ? 'block' : 'none';
+    }
+
     async function loadEmailPref() {
       try {
         var s = await supaClient.auth.getSession();
@@ -377,49 +442,166 @@
           document.getElementById('emailPrefStatus').textContent = 'Email-рассылка настраивается автоматически после оформления подписки.';
           return;
         }
+        emailPrefState = {
+          enabled:  !!j.enabled,
+          email:    j.email || '',
+          language: j.language || 'ru',
+          flags:    j.flags || {}
+        };
+        // Master toggle
         var cb = document.getElementById('emailPrefToggle');
         cb.disabled = false;
-        cb.checked = !!j.enabled;
-        renderEmailPrefLabel(!!j.enabled);
-        document.getElementById('emailPrefStatus').textContent = j.enabled
-          ? 'Отправляется на ' + (j.email || 'ваш email')
-          : 'Сейчас выключено';
+        cb.checked  = emailPrefState.enabled;
         cb.onchange = onEmailPrefToggle;
+        renderEmailPrefLabel(emailPrefState.enabled);
+        document.getElementById('emailPrefStatus').textContent = emailPrefState.enabled
+          ? 'Отправляется на ' + (emailPrefState.email || 'ваш email')
+          : 'Сейчас выключено';
+        // Per-event toggles
+        Object.keys(FLAG_MAP).forEach(function(domId){
+          var col = FLAG_MAP[domId];
+          var el = document.getElementById(domId);
+          if (!el) return;
+          el.disabled = !emailPrefState.enabled;
+          el.checked  = emailPrefState.flags[col] !== false;
+          setFlagLabel(el);
+          el.onchange = function(){ onFlagToggle(domId, col, el); };
+        });
+        // Language radios
+        var ruR = document.getElementById('emailLangRu');
+        var enR = document.getElementById('emailLangEn');
+        if (ruR && enR) {
+          ruR.disabled = !emailPrefState.enabled;
+          enR.disabled = !emailPrefState.enabled;
+          ruR.checked  = (emailPrefState.language !== 'en');
+          enR.checked  = (emailPrefState.language === 'en');
+          ruR.onchange = function(){ if (ruR.checked) onLangChange('ru'); };
+          enR.onchange = function(){ if (enR.checked) onLangChange('en'); };
+        }
+        // Test send button
+        var btn = document.getElementById('sendTestEmailBtn');
+        if (btn) {
+          btn.disabled = !emailPrefState.enabled;
+          btn.onclick  = onSendTestEmail;
+        }
+        showEventGroup(emailPrefState.enabled);
       } catch (e) {
         console.warn('loadEmailPref failed', e);
       }
     }
-    function renderEmailPrefLabel(on) {
-      var lbl = document.getElementById('emailPrefLabel');
-      if (lbl) { lbl.textContent = on ? 'Вкл' : 'Выкл'; lbl.style.color = on ? '#1a7a1a' : 'var(--gray)'; }
+
+    async function emailPrefPost(payload) {
+      var s = await supaClient.auth.getSession();
+      var token = s.data.session && s.data.session.access_token;
+      var r = await fetch(SUPABASE_URL + '/functions/v1/email-preferences', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      var j = await r.json().catch(function(){ return {}; });
+      return { ok: r.ok && !j.error, status: r.status, body: j };
     }
+
     async function onEmailPrefToggle(e) {
       if (emailPrefBusy) return;
       var cb = e.target;
       var enabled = cb.checked;
       emailPrefBusy = true; cb.disabled = true;
       try {
-        var s = await supaClient.auth.getSession();
-        var token = s.data.session && s.data.session.access_token;
-        var r = await fetch(SUPABASE_URL + '/functions/v1/email-preferences', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + token, 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ enabled: enabled })
-        });
-        var j = await r.json();
-        if (!r.ok || j.error) {
+        var res = await emailPrefPost({ enabled: enabled });
+        if (!res.ok) {
           cb.checked = !enabled;
-          alert('Не удалось обновить настройки: ' + (j.error || r.status));
+          alert('Не удалось обновить настройки: ' + (res.body.error || res.status));
         } else {
+          emailPrefState.enabled = enabled;
+          if (res.body.flags) emailPrefState.flags = res.body.flags;
           renderEmailPrefLabel(enabled);
           var st = document.getElementById('emailPrefStatus');
-          if (st) st.textContent = enabled ? 'Отправляется на ваш email' : 'Сейчас выключено';
+          if (st) st.textContent = enabled ? 'Отправляется на ' + (emailPrefState.email || 'ваш email') : 'Сейчас выключено';
+          // Sync sub-controls
+          Object.keys(FLAG_MAP).forEach(function(domId){
+            var el = document.getElementById(domId);
+            if (el) el.disabled = !enabled;
+          });
+          var ruR = document.getElementById('emailLangRu');
+          var enR = document.getElementById('emailLangEn');
+          if (ruR) ruR.disabled = !enabled;
+          if (enR) enR.disabled = !enabled;
+          var btn = document.getElementById('sendTestEmailBtn');
+          if (btn) btn.disabled = !enabled;
+          showEventGroup(enabled);
         }
       } catch (err) {
         cb.checked = !enabled;
         alert('Сетевая ошибка: ' + err.message);
       } finally {
         emailPrefBusy = false; cb.disabled = false;
+      }
+    }
+
+    async function onFlagToggle(domId, col, el) {
+      var checked = el.checked;
+      el.disabled = true;
+      try {
+        var payload = {}; payload[col] = checked;
+        var res = await emailPrefPost(payload);
+        if (!res.ok) {
+          el.checked = !checked;
+          alert('Не удалось обновить настройки: ' + (res.body.error || res.status));
+        } else {
+          emailPrefState.flags[col] = checked;
+          setFlagLabel(el);
+        }
+      } catch (err) {
+        el.checked = !checked;
+        alert('Сетевая ошибка: ' + err.message);
+      } finally {
+        el.disabled = !emailPrefState.enabled;
+      }
+    }
+
+    async function onLangChange(lang) {
+      var ruR = document.getElementById('emailLangRu');
+      var enR = document.getElementById('emailLangEn');
+      if (ruR) ruR.disabled = true;
+      if (enR) enR.disabled = true;
+      try {
+        var res = await emailPrefPost({ language: lang });
+        if (!res.ok) {
+          alert('Не удалось сменить язык: ' + (res.body.error || res.status));
+          if (ruR) ruR.checked = emailPrefState.language !== 'en';
+          if (enR) enR.checked = emailPrefState.language === 'en';
+        } else {
+          emailPrefState.language = lang;
+        }
+      } catch (err) {
+        alert('Сетевая ошибка: ' + err.message);
+      } finally {
+        if (ruR) ruR.disabled = !emailPrefState.enabled;
+        if (enR) enR.disabled = !emailPrefState.enabled;
+      }
+    }
+
+    async function onSendTestEmail() {
+      var btn = document.getElementById('sendTestEmailBtn');
+      var status = document.getElementById('sendTestEmailStatus');
+      if (!btn) return;
+      btn.disabled = true;
+      if (status) { status.textContent = 'Отправка…'; status.style.color = 'var(--gray)'; }
+      try {
+        var res = await emailPrefPost({ test: true });
+        if (!res.ok) {
+          if (status) { status.textContent = 'Ошибка: ' + (res.body.error || res.status); status.style.color = '#a14040'; }
+        } else {
+          if (status) {
+            status.textContent = 'Отправлено на ' + (res.body.test_sent_to || emailPrefState.email);
+            status.style.color = '#1a7a1a';
+          }
+        }
+      } catch (err) {
+        if (status) { status.textContent = 'Сетевая ошибка: ' + err.message; status.style.color = '#a14040'; }
+      } finally {
+        btn.disabled = !emailPrefState.enabled;
       }
     }
 
