@@ -6,6 +6,7 @@
 <title>BELFED ANALYTICS — Аналитика</title>
 <meta name="description" content="Профессиональная аналитика финансовых рынков от BelFed">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="belfed-auth.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background-color:#f5f2eb;font-family:'Courier New',Courier,monospace;color:#000;padding:24px 20px;line-height:1.6;font-size:14px;visibility:hidden}
@@ -87,7 +88,7 @@ a.card{text-decoration:none;color:#000}
 </header>
 
 <nav class="sub-nav">
-<a href="https://belfed.com/dashboard.html" data-i18n="navPositions">[ ПОЗИЦИИ ]</a>
+<a href="/dashboard.html" data-i18n="navPositions">[ ПОЗИЦИИ ]</a>
 <a href="/analytics.html" class="active" data-i18n="navAnalytics">[ АНАЛИТИКА ]</a>
 <a href="/asset-analysis.html" data-i18n="navAssetAnalysis">[ АНАЛИЗ АКТИВОВ ]</a>
 <a href="/trades.html" data-i18n="navArchive">[ АРХИВ ]</a>
@@ -150,10 +151,12 @@ a.card{text-decoration:none;color:#000}
 </div>
 
 <script>
-const SUPABASE_URL = 'https://obujqvqqmyfcfflhqvud.supabase.co';
-const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9idWpxdnFxbXlmY2ZmbGhxdnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDgxNjYsImV4cCI6MjA4OTkyNDE2Nn0.syl4YBLbf8aBitxyK3gCL51pPYxWjEW99mMTXJaQQ8w';
+// belfed-auth.js уже создал supaClient и SUPABASE_URL/SUPABASE_KEY. Используем их.
+const ANON_KEY = SUPABASE_KEY;
+const sb = supaClient;
 const LIST_URL = SUPABASE_URL + '/functions/v1/analytics-list';
-const sb = supabase.createClient(SUPABASE_URL, ANON_KEY);
+let authReady = false;
+let authedSession = null;
 
 const PAGE_SIZE = 12;
 let state = {
@@ -347,9 +350,13 @@ async function fetchList() {
   document.getElementById('resultsCount').textContent = '// ' + t.loading;
   document.getElementById('cardsGrid').innerHTML = `<div class="loading">// ${t.loading}</div>`;
 
-  // Получаем JWT текущего пользователя — без него edge function вернёт subscription_required.
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) { renderLocked(); return; }
+  // Ждём пока belfed-auth.js разберётся с сессией (onAuthReady / onAuthSignedOut).
+  if (!authReady) {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { renderLocked(); return; }
+    authedSession = session;
+  }
+  if (!authedSession) { renderLocked(); return; }
 
   const params = new URLSearchParams();
   params.set('limit', String(PAGE_SIZE));
@@ -361,7 +368,7 @@ async function fetchList() {
   if (state.tag) params.set('tag', state.tag);
   try {
     const res = await fetch(LIST_URL + '?' + params.toString(), {
-      headers: { 'apikey': ANON_KEY, 'authorization': 'Bearer ' + session.access_token }
+      headers: { 'apikey': ANON_KEY, 'authorization': 'Bearer ' + authedSession.access_token }
     });
     const json = await res.json();
     if (res.status === 403 || json.error === 'subscription_required') { renderLocked(); return; }
@@ -423,8 +430,21 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.body.style.visibility = 'visible';
-  fetchList();
+  // Не вызываем fetchList() сразу — ждём коллбэк от belfed-auth.js.
 });
+
+// Коллбэки для belfed-auth.js — вызываются после восстановления сессии из localStorage.
+function onAuthReady(profile, session, entitlement) {
+  authReady = true;
+  authedSession = session;
+  if (!entitlement || !entitlement.access) { renderLocked(); return; }
+  fetchList();
+}
+function onAuthSignedOut() {
+  authReady = true;
+  authedSession = null;
+  renderLocked();
+}
 </script>
 </body>
 </html>
