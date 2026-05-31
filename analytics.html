@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>BELFED ANALYTICS — Аналитика</title>
 <meta name="description" content="Профессиональная аналитика финансовых рынков от BelFed">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background-color:#f5f2eb;font-family:'Courier New',Courier,monospace;color:#000;padding:24px 20px;line-height:1.6;font-size:14px;visibility:hidden}
@@ -152,6 +153,7 @@ a.card{text-decoration:none;color:#000}
 const SUPABASE_URL = 'https://obujqvqqmyfcfflhqvud.supabase.co';
 const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9idWpxdnFxbXlmY2ZmbGhxdnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDgxNjYsImV4cCI6MjA4OTkyNDE2Nn0.syl4YBLbf8aBitxyK3gCL51pPYxWjEW99mMTXJaQQ8w';
 const LIST_URL = SUPABASE_URL + '/functions/v1/analytics-list';
+const sb = supabase.createClient(SUPABASE_URL, ANON_KEY);
 
 const PAGE_SIZE = 12;
 let state = {
@@ -286,6 +288,24 @@ function readTimeMins(report) {
   return 6;
 }
 
+function renderLocked() {
+  const grid = document.getElementById('cardsGrid');
+  const t = I18N[state.lang];
+  const title = state.lang === 'ru' ? 'Доступ только для подписчиков' : 'Subscribers only';
+  const body = state.lang === 'ru'
+    ? 'Оформите пробный доступ или подписку, чтобы видеть аналитику.'
+    : 'Activate a trial or subscription to view analytics.';
+  const cta = state.lang === 'ru' ? 'Перейти в личный кабинет' : 'Open member area';
+  document.getElementById('resultsCount').textContent = '';
+  document.querySelector('.pager').style.display = 'none';
+  grid.innerHTML =
+    '<div class="empty" style="grid-column:1/-1;padding:60px 20px;text-align:center;border:1px solid #000;background:#fff;letter-spacing:normal;opacity:1">' +
+      '<div style="font-size:13px;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">' + title + '</div>' +
+      '<div style="font-size:13px;margin-bottom:24px;opacity:0.8;letter-spacing:normal">' + body + '</div>' +
+      '<a href="/members.html" style="display:inline-block;padding:12px 24px;border:1px solid #000;color:#000;text-decoration:none;font-size:11px;letter-spacing:2px;text-transform:uppercase">' + cta + '</a>' +
+    '</div>';
+}
+
 function renderCards(items) {
   const grid = document.getElementById('cardsGrid');
   grid.innerHTML = '';
@@ -326,6 +346,11 @@ async function fetchList() {
   const t = I18N[state.lang];
   document.getElementById('resultsCount').textContent = '// ' + t.loading;
   document.getElementById('cardsGrid').innerHTML = `<div class="loading">// ${t.loading}</div>`;
+
+  // Получаем JWT текущего пользователя — без него edge function вернёт subscription_required.
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { renderLocked(); return; }
+
   const params = new URLSearchParams();
   params.set('limit', String(PAGE_SIZE));
   params.set('offset', String(state.offset));
@@ -336,9 +361,10 @@ async function fetchList() {
   if (state.tag) params.set('tag', state.tag);
   try {
     const res = await fetch(LIST_URL + '?' + params.toString(), {
-      headers: { 'apikey': ANON_KEY, 'authorization': 'Bearer ' + ANON_KEY }
+      headers: { 'apikey': ANON_KEY, 'authorization': 'Bearer ' + session.access_token }
     });
     const json = await res.json();
+    if (res.status === 403 || json.error === 'subscription_required') { renderLocked(); return; }
     if (!json.ok) throw new Error(json.error || 'unknown');
     state.total = json.total || 0;
     renderCards(json.items);
