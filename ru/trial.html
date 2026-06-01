@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://obujqvqqmyfcfflhqvud.supabase.co; img-src 'self'; frame-src 'none';">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Бесплатный 14-дневный пробный доступ — BelFed Analytics</title>
+  <meta name="description" content="Активируйте 14 дней бесплатного доступа BelFed. Укажите email, примите Политику конфиденциальности и Оферту — мы перенаправим вас в Telegram-бот.">
+  <meta name="robots" content="noindex, follow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --black: #0a0a0a;
+      --white: #f5f5f0;
+      --gray: #888;
+      --light-gray: #e8e8e3;
+      --border: #d0d0ca;
+      --green: #1a6b3a;
+      --red: #8b1a1a;
+      --gold: #b8860b;
+      --font: 'Courier Prime', 'Courier New', monospace;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font);
+      background: var(--white);
+      color: var(--black);
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    nav {
+      background: var(--white); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 40px; height: 56px;
+    }
+    .nav-logo { font-size: 17px; font-weight: 700; letter-spacing: 0.05em; text-decoration: none; color: var(--black); }
+    .nav-back {
+      font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+      text-decoration: none; color: var(--black); border: 1px solid var(--black);
+      padding: 9px 18px; background: transparent;
+      transition: background 0.2s, color 0.2s;
+    }
+    .nav-back:hover { background: var(--black); color: var(--white); }
+
+    main { flex: 1; padding: 60px 40px 80px; max-width: 660px; margin: 0 auto; width: 100%; }
+
+    .tag {
+      font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase;
+      color: var(--gray); margin-bottom: 20px;
+    }
+    h1 {
+      font-size: clamp(28px, 5vw, 44px); font-weight: 700;
+      line-height: 1.15; letter-spacing: -0.01em; margin-bottom: 18px;
+    }
+    .lead {
+      font-size: 15px; color: #333; margin-bottom: 36px; max-width: 580px;
+    }
+    .lead strong { font-weight: 700; }
+
+    .steps {
+      list-style: none; padding: 0; margin: 0 0 36px;
+      border: 1px solid var(--border); background: #fbfbf6;
+    }
+    .steps li {
+      padding: 14px 20px; border-bottom: 1px solid var(--border);
+      font-size: 13px; display: flex; gap: 14px; align-items: baseline;
+    }
+    .steps li:last-child { border-bottom: none; }
+    .steps .num {
+      font-weight: 700; color: var(--gold); width: 22px; flex-shrink: 0;
+      font-size: 14px;
+    }
+
+    form { display: block; }
+    .field { margin-bottom: 22px; }
+    .field label.lbl {
+      display: block; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--gray); margin-bottom: 8px;
+    }
+    .field input[type="email"] {
+      width: 100%; font-family: var(--font); font-size: 16px;
+      padding: 14px 16px; background: var(--white); color: var(--black);
+      border: 1px solid var(--black); outline: none;
+      transition: border-color 0.2s;
+    }
+    .field input[type="email"]:focus { border-color: var(--gold); }
+    .field input[type="email"].error { border-color: var(--red); background: #fdf5f5; }
+    .field .hint { font-size: 12px; color: var(--gray); margin-top: 6px; }
+
+    .consent { margin-bottom: 14px; }
+    .consent label {
+      display: flex; gap: 12px; align-items: flex-start;
+      font-size: 13px; line-height: 1.5; cursor: pointer;
+      padding: 12px 14px; border: 1px solid var(--border); background: #fbfbf6;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .consent label:hover { border-color: var(--black); }
+    .consent input[type="checkbox"] {
+      appearance: none; -webkit-appearance: none;
+      width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px;
+      border: 1px solid var(--black); background: var(--white); cursor: pointer;
+      position: relative;
+    }
+    .consent input[type="checkbox"]:checked { background: var(--black); }
+    .consent input[type="checkbox"]:checked::after {
+      content: ''; position: absolute; left: 5px; top: 1px;
+      width: 5px; height: 10px; border: solid var(--white);
+      border-width: 0 2px 2px 0; transform: rotate(45deg);
+    }
+    .consent.error label { border-color: var(--red); background: #fdf5f5; }
+    .consent a { color: var(--black); text-decoration: underline; }
+    .consent a:hover { color: var(--gold); }
+
+    .submit-row { margin-top: 28px; }
+    button[type="submit"] {
+      width: 100%; font-family: var(--font); font-size: 13px;
+      letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700;
+      padding: 16px 24px; background: var(--black); color: var(--white);
+      border: 1px solid var(--black); cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    button[type="submit"]:hover:not(:disabled) { background: transparent; color: var(--black); }
+    button[type="submit"]:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .alert {
+      margin-bottom: 22px; padding: 14px 18px; font-size: 13px;
+      border: 1px solid var(--red); background: #fdf5f5; color: var(--red);
+      display: none;
+    }
+    .alert.show { display: block; }
+    .alert.info { border-color: var(--gold); background: #fdfaf0; color: #6b5008; }
+
+    .small {
+      margin-top: 28px; font-size: 12px; color: var(--gray); line-height: 1.6;
+    }
+    .small a { color: var(--gray); }
+    .small a:hover { color: var(--black); }
+
+    footer {
+      border-top: 1px solid var(--border); padding: 24px 40px;
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 12px; color: var(--gray); flex-wrap: wrap; gap: 12px;
+    }
+    footer a { color: var(--gray); text-decoration: none; }
+    footer a:hover { color: var(--black); }
+    .footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
+
+    @media (max-width: 700px) {
+      nav { padding: 0 20px; }
+      main { padding: 40px 20px 60px; }
+      footer { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/ru/" class="nav-logo">BELFED_</a>
+    <a href="/ru/" class="nav-back">← Назад</a>
+  </nav>
+
+  <main>
+    <div class="tag">Бесплатно &middot; 14 дней &middot; без карты</div>
+    <h1>Активация пробного доступа.</h1>
+    <p class="lead">
+      Укажите email — мы перенаправим вас в Telegram-бот для активации доступа.
+      <strong>Без оплаты, без привязки карты.</strong>
+    </p>
+
+    <ol class="steps">
+      <li><span class="num">1.</span><span>Введите email и примите документы ниже.</span></li>
+      <li><span class="num">2.</span><span>Откроется <code>@BelfedBot</code> в Telegram.</span></li>
+      <li><span class="num">3.</span><span>Нажмите <strong>Start</strong> в боте — 14 дней доступа активируются автоматически.</span></li>
+    </ol>
+
+    <div id="alert" class="alert" role="alert"></div>
+
+    <form id="trialForm" novalidate>
+      <div class="field">
+        <label class="lbl" for="email">Электронная почта</label>
+        <input type="email" id="email" name="email" autocomplete="email" required
+               placeholder="you@example.com" inputmode="email" spellcheck="false">
+        <div class="hint">Нужна для восстановления доступа и важных сервисных уведомлений. Без рекламной рассылки.</div>
+      </div>
+
+      <div class="consent" id="consentPrivacyWrap">
+        <label>
+          <input type="checkbox" id="acceptPrivacy" name="acceptPrivacy">
+          <span>Я ознакомлен с <a href="/ru/privacy.html" target="_blank" rel="noopener">Политикой конфиденциальности</a> и даю согласие на обработку моих персональных данных (email, Telegram ID) оператором — ИП Фёдоров Артём Игоревич (ИНН 781103296545), в соответствии с 152-ФЗ.</span>
+        </label>
+      </div>
+
+      <div class="consent" id="consentTermsWrap">
+        <label>
+          <input type="checkbox" id="acceptTerms" name="acceptTerms">
+          <span>Я ознакомлен и принимаю условия <a href="/ru/oferta.html" target="_blank" rel="noopener">публичной оферты</a> и <a href="/ru/disclaimer.html" target="_blank" rel="noopener">дисклеймера о рисках</a> — материалы BelFed носят аналитический характер и не являются индивидуальной инвестиционной рекомендацией.</span>
+        </label>
+      </div>
+
+      <div class="submit-row">
+        <button type="submit" id="submitBtn">Продолжить в Telegram →</button>
+      </div>
+
+      <p class="small">
+        Данные хранятся на серверах Supabase (eu-west-1, ЕС). Вы можете отозвать согласие и потребовать удаления данных в любой момент, написав на
+        <a href="mailto:hello@belfed.com">hello@belfed.com</a>. Подробнее — в <a href="/ru/privacy.html" target="_blank">Политике конфиденциальности</a>.
+      </p>
+    </form>
+  </main>
+
+  <footer>
+    <span>&copy; 2025&ndash;2026 BelFed Analytics. Все права защищены.</span>
+    <div class="footer-links">
+      <a href="/ru/disclaimer.html">Дисклеймер</a>
+      <a href="/ru/privacy.html">Конфиденциальность</a>
+      <a href="/ru/oferta.html">Оферта</a>
+      <a href="https://belfed.com" target="_blank">EN site</a>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      var SUPABASE_URL = 'https://obujqvqqmyfcfflhqvud.supabase.co';
+      var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9idWpxdnFxbXlmY2ZmbGhxdnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDgxNjYsImV4cCI6MjA4OTkyNDE2Nn0.syl4YBLbf8aBitxyK3gCL51pPYxWjEW99mMTXJaQQ8w';
+
+      var params = new URLSearchParams(window.location.search);
+      var sourceRaw = params.get('source') || 'trial_web_ru';
+      var source = sourceRaw.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 64) || 'trial_web_ru';
+
+      var form = document.getElementById('trialForm');
+      var emailInput = document.getElementById('email');
+      var privacyCb = document.getElementById('acceptPrivacy');
+      var termsCb = document.getElementById('acceptTerms');
+      var privacyWrap = document.getElementById('consentPrivacyWrap');
+      var termsWrap = document.getElementById('consentTermsWrap');
+      var alertBox = document.getElementById('alert');
+      var submitBtn = document.getElementById('submitBtn');
+
+      function showAlert(msg, kind) {
+        alertBox.textContent = msg;
+        alertBox.className = 'alert show' + (kind === 'info' ? ' info' : '');
+        alertBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      function clearAlert() { alertBox.className = 'alert'; alertBox.textContent = ''; }
+      function clearErrors() {
+        emailInput.classList.remove('error');
+        privacyWrap.classList.remove('error');
+        termsWrap.classList.remove('error');
+      }
+      emailInput.addEventListener('input', clearErrors);
+      privacyCb.addEventListener('change', clearErrors);
+      termsCb.addEventListener('change', clearErrors);
+
+      var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+      form.addEventListener('submit', function(ev) {
+        ev.preventDefault();
+        clearAlert();
+        clearErrors();
+
+        var email = emailInput.value.trim().toLowerCase();
+        var hasPrivacy = privacyCb.checked;
+        var hasTerms = termsCb.checked;
+        var failed = false;
+
+        if (!email || !EMAIL_RE.test(email) || email.length > 254) {
+          emailInput.classList.add('error'); failed = true;
+        }
+        if (!hasPrivacy) { privacyWrap.classList.add('error'); failed = true; }
+        if (!hasTerms) { termsWrap.classList.add('error'); failed = true; }
+
+        if (failed) {
+          if (!email || !EMAIL_RE.test(email)) {
+            showAlert('Пожалуйста, укажите корректный email.');
+            emailInput.focus();
+          } else {
+            showAlert('Чтобы продолжить, необходимо принять Политику конфиденциальности и Оферту.');
+          }
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Подождите...';
+
+        fetch(SUPABASE_URL + '/functions/v1/trial-intent-create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + SUPABASE_ANON,
+            'apikey': SUPABASE_ANON
+          },
+          body: JSON.stringify({
+            email: email,
+            lang: 'ru',
+            source: source,
+            intent_type: 'trial',
+            accept_privacy: true,
+            accept_terms: true
+          })
+        }).then(function(r) {
+          return r.json().then(function(body) { return { status: r.status, body: body }; });
+        }).then(function(res) {
+          if (res.body && res.body.ok && res.body.deep_link) {
+            showAlert('Перенаправляем в Telegram...', 'info');
+            setTimeout(function() {
+              window.location.href = res.body.deep_link;
+            }, 400);
+            return;
+          }
+          var code = (res.body && res.body.error) || 'unknown_error';
+          var msg;
+          switch (code) {
+            case 'invalid_email':
+              msg = 'Email указан некорректно. Проверьте написание и попробуйте снова.';
+              emailInput.classList.add('error'); emailInput.focus();
+              break;
+            case 'consent_required':
+              msg = 'Необходимо принять Политику конфиденциальности и Оферту.';
+              if (!privacyCb.checked) privacyWrap.classList.add('error');
+              if (!termsCb.checked) termsWrap.classList.add('error');
+              break;
+            case 'rate_limited':
+              msg = 'Слишком много попыток с вашей сети. Подождите час или напишите на hello@belfed.com.';
+              break;
+            case 'db_error':
+            case 'server_error':
+              msg = 'Временная ошибка сервера. Пожалуйста, попробуйте через минуту.';
+              break;
+            default:
+              msg = 'Не удалось активировать пробный доступ (' + code + '). Попробуйте ещё раз или напишите на hello@belfed.com.';
+          }
+          showAlert(msg);
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Продолжить в Telegram →';
+        }).catch(function() {
+          showAlert('Сетевая ошибка. Проверьте подключение и попробуйте ещё раз.');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Продолжить в Telegram →';
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
