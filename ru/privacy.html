@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://script.google.com https://docs.google.com; img-src 'self'; frame-src 'none';">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Политика конфиденциальности | BelFed Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com/">
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --black: #0a0a0a;
+      --white: #f5f5f0;
+      --gray: #888;
+      --light-gray: #e8e8e3;
+      --border: #d0d0ca;
+      --font: 'Courier Prime', 'Courier New', monospace;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); background: var(--white); color: var(--black); font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: var(--white); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; height: 56px; }
+    .nav-logo { font-size: 17px; font-weight: 700; letter-spacing: 0.05em; text-decoration: none; color: var(--black); }
+    .nav-links { display: flex; gap: 32px; list-style: none; }
+    .nav-links a { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; color: var(--black); transition: opacity 0.2s; }
+    .nav-links a:hover { opacity: 0.5; }
+    main { padding-top: 56px; }
+    .legal-content { max-width: 720px; padding: 60px 40px 80px; }
+    .legal-tag { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); margin-bottom: 24px; }
+    .legal-content h1 { font-size: clamp(28px, 4vw, 40px); font-weight: 700; line-height: 1.2; margin-bottom: 12px; }
+    .legal-updated { font-size: 12px; color: var(--gray); margin-bottom: 40px; }
+    .legal-content h2 { font-size: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 40px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    .legal-content p { font-size: 14px; line-height: 1.8; color: #333; margin-bottom: 16px; }
+    .legal-content ul { font-size: 14px; line-height: 1.8; color: #333; margin-bottom: 16px; padding-left: 24px; }
+    .legal-content li { margin-bottom: 8px; }
+    .legal-content strong { color: var(--black); }
+    .legal-content table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 14px; }
+    .legal-content table th, .legal-content table td { padding: 10px 12px; border: 1px solid var(--border); color: #333; text-align: left; vertical-align: top; }
+    .legal-content table th { background: var(--light-gray); font-weight: 700; color: var(--black); }
+    .breadcrumb { font-size: 12px; color: var(--gray); margin-bottom: 32px; }
+    .breadcrumb a { color: var(--gray); text-decoration: none; }
+    .breadcrumb a:hover { color: var(--black); }
+    footer { border-top: 1px solid var(--border); padding: 24px 40px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--gray); flex-wrap: wrap; gap: 12px; }
+    footer a { color: var(--gray); text-decoration: none; }
+    footer a:hover { color: var(--black); }
+    .footer-links { display: flex; gap: 20px; }
+    @media(max-width: 768px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      .legal-content { padding: 40px 20px 60px; }
+      footer { flex-direction: column; gap: 12px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/ru/" class="nav-logo">BELFED_</a>
+    <ul class="nav-links">
+      <li><a href="/ru/">Главная</a></li>
+      <li><a href="/ru/trades.html">Сделки</a></li>
+      <li><a href="/ru/products.html">Продукты</a></li>
+      <li><a href="/ru/about.html">О нас</a></li>
+      <li><a href="/ru/contacts.html">Контакты</a></li>
+    </ul>
+    <a href="/dashboard.html" class="nav-cta" style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;text-decoration:none;color:var(--white);background:var(--black);padding:10px 20px;border:1px solid var(--black);">Личный кабинет</a>
+  </nav>
+
+  <main>
+    <div class="legal-content">
+      <div class="breadcrumb"><a href="/ru/">Главная</a> → Политика конфиденциальности</div>
+
+      <div class="legal-tag">// ПЕРСОНАЛЬНЫЕ ДАННЫЕ</div>
+      <h1>Политика конфиденциальности</h1>
+      <p class="legal-updated">Дата последнего обновления: 1 июня 2026 г. Версия 1.0</p>
+
+      <p>Настоящая Политика разъясняет, какие персональные данные собирает сервис BelFed Analytics, для каких целей они используются, как защищаются и какими правами обладает субъект персональных данных. Политика составлена в соответствии с Федеральным законом № 152-ФЗ «О персональных данных» (для пользователей из РФ) и принципами Регламента (ЕС) 2016/679 (GDPR) — для пользователей из ЕС/ЕЭЗ.</p>
+
+      <h2>1. Оператор персональных данных</h2>
+      <p><strong>Индивидуальный предприниматель Федоров Артём Игоревич</strong><br>
+      ИНН: 781103296545<br>
+      ОГРНИП: 326784700016572<br>
+      Адрес для корреспонденции: г. Санкт-Петербург, РФ<br>
+      Контакт по вопросам обработки персональных данных: <a href="mailto:contact@belfed.com">contact@belfed.com</a></p>
+      <p>Далее по тексту — «<strong>Оператор</strong>», «<strong>мы</strong>», «<strong>BelFed</strong>».</p>
+
+      <h2>2. На кого распространяется политика</h2>
+      <p>На всех пользователей сайтов <strong>belfed.ru</strong> и <strong>belfed.com</strong>, Telegram-бота <strong>@BelfedBot</strong> и закрытых Telegram-каналов BelFed, далее — «Сервис».</p>
+
+      <h2>3. Какие данные мы собираем</h2>
+      <table>
+        <thead><tr><th>Категория</th><th>Что именно</th></tr></thead>
+        <tbody>
+          <tr><td>Идентификаторы Telegram</td><td>telegram_id, username (если открыт), имя/фамилия как они показаны Telegram, факт входа в закрытый канал</td></tr>
+          <tr><td>Контактные данные</td><td>e-mail, указанный при оформлении доступа или подписки</td></tr>
+          <tr><td>Платёжные данные</td><td>идентификатор платежа и токен карты — <strong>хранятся у ЮКассы (НКО «ЮМани»)</strong>, мы не получаем номер карты целиком и CVV. На нашей стороне сохраняется только статус подписки, сумма и срок действия</td></tr>
+          <tr><td>Данные использования</td><td>журнал входов и действий в личном кабинете, IP-адрес, User-Agent, время запросов, реферер</td></tr>
+          <tr><td>Аналитика поведения</td><td>обезличенная статистика посещений (источник CTA, нажатые кнопки), cookie-файлы — только функциональные и собственные аналитические</td></tr>
+          <tr><td>Содержимое сообщений</td><td>сообщения, направленные нам через @BelfedBot или contact@belfed.com — для обработки обращений</td></tr>
+        </tbody>
+      </table>
+      <p>Мы не собираем специальные категории персональных данных (раса, политические взгляды, здоровье, биометрия и т. д.) и не запрашиваем паспортные данные.</p>
+
+      <h2>4. Цели и правовые основания обработки</h2>
+      <table>
+        <thead><tr><th>Цель</th><th>Правовое основание</th></tr></thead>
+        <tbody>
+          <tr><td>Предоставление доступа к сервису (создание учётной записи, выдача пробного периода, авторизация в Telegram-канале)</td><td>Исполнение договора (ст. 6(1)(b) GDPR; ст. 6 ч. 1 п. 5 152-ФЗ)</td></tr>
+          <tr><td>Оплата и автопродление подписки</td><td>Исполнение договора и требования законодательства (54-ФЗ — кассовые чеки)</td></tr>
+          <tr><td>Отправка уведомлений о позициях, аналитики и сервисных писем (открытие сделки, стоп, тейк, ручное закрытие, новости сервиса)</td><td>Согласие пользователя — настраивается переключателями в личном кабинете (ст. 6(1)(a) GDPR; согласие по ст. 9 152-ФЗ)</td></tr>
+          <tr><td>Маркетинговые рассылки (трейлы, продукты, скидки)</td><td>Только при отдельном согласии. Отписаться можно одним кликом в любом письме.</td></tr>
+          <tr><td>Безопасность сервиса и предотвращение злоупотреблений</td><td>Законные интересы Оператора (ст. 6(1)(f) GDPR)</td></tr>
+          <tr><td>Соблюдение требований закона (налоги, чеки, ответы на запросы госорганов)</td><td>Юридическая обязанность</td></tr>
+        </tbody>
+      </table>
+
+      <h2>5. Сроки хранения</h2>
+      <ul>
+        <li>Данные активной учётной записи — пока действует подписка/пробный доступ и в течение 36 месяцев после её прекращения (для разрешения возможных споров и налоговой отчётности).</li>
+        <li>Платёжные документы и кассовые чеки — 5 лет (требование Налогового кодекса РФ и 54-ФЗ).</li>
+        <li>Журналы доступа (логи) — до 12 месяцев.</li>
+        <li>Маркетинговые согласия — пока пользователь не отзовёт согласие; после отзыва — удаляются в течение 30 дней (за исключением минимально необходимого учёта факта отписки).</li>
+      </ul>
+      <p>По истечении сроков данные удаляются или обезличиваются.</p>
+
+      <h2>6. Кому мы передаём данные</h2>
+      <p>Мы привлекаем сторонних обработчиков (processors), которые обрабатывают данные исключительно по нашему поручению и в рамках своих собственных публичных политик:</p>
+      <table>
+        <thead><tr><th>Сервис</th><th>Назначение</th><th>Юрисдикция</th></tr></thead>
+        <tbody>
+          <tr><td>Supabase Inc.</td><td>База данных, аутентификация, серверные функции, хранение профилей</td><td>Хостинг в EU-West (Ирландия)</td></tr>
+          <tr><td>ЮКасса (НКО «ЮМани»)</td><td>Приём платежей, токенизация карт, выпуск кассовых чеков (54-ФЗ)</td><td>Россия</td></tr>
+          <tr><td>Telegram FZ-LLC</td><td>Передача сообщений, идентификация по telegram_id, доступ в закрытый канал</td><td>ОАЭ / международная инфраструктура</td></tr>
+          <tr><td>Brevo (Sendinblue SAS)</td><td>Доставка транзакционных и сервисных писем</td><td>Франция (ЕС)</td></tr>
+          <tr><td>Cloudflare / GitHub Pages</td><td>Хостинг статических сайтов, CDN, защита от DDoS</td><td>США / международная сеть</td></tr>
+        </tbody>
+      </table>
+      <p>Мы не продаём персональные данные и не передаём их рекламным сетям. Передача в третьи страны осуществляется на основании договорных мер защиты, предусмотренных GDPR (стандартные договорные условия / адекватные гарантии).</p>
+
+      <h2>7. Cookies и аналогичные технологии</h2>
+      <p>Сайты BelFed используют только функциональные cookie (запоминание сессии, языка интерфейса, переключателей) и собственную обезличенную аналитику. Сторонние рекламные cookie и трекеры третьих лиц <strong>не используются</strong>. Соответственно cookie-баннер не показывается, но при первом визите вы можете отключить cookie в настройках браузера без потери функциональности страниц с публичным контентом.</p>
+
+      <h2>8. Ваши права</h2>
+      <p>Вы имеете право:</p>
+      <ul>
+        <li><strong>Получить копию</strong> своих персональных данных, которые мы храним.</li>
+        <li><strong>Исправить</strong> неточные или неполные данные.</li>
+        <li><strong>Удалить</strong> учётную запись и связанные с ней данные (право «на забвение»), кроме данных, которые мы обязаны хранить по закону (платёжные чеки, налоговая отчётность).</li>
+        <li><strong>Ограничить</strong> или <strong>возразить</strong> против определённых видов обработки.</li>
+        <li><strong>Получить</strong> ваши данные в машиночитаемом формате (право на переносимость).</li>
+        <li><strong>Отозвать согласие</strong> на любую обработку, основанную на согласии, в любой момент. Отзыв не делает незаконной обработку, осуществлённую до отзыва.</li>
+        <li><strong>Подать жалобу</strong> в надзорный орган: Роскомнадзор (rkn.gov.ru) — для пользователей из РФ; орган защиты данных страны ЕС — для пользователей ЕС/ЕЭЗ.</li>
+      </ul>
+      <p>Реализовать любое из перечисленных прав можно письмом на <a href="mailto:contact@belfed.com">contact@belfed.com</a> с темой «Персональные данные». Срок ответа — не более 30 календарных дней.</p>
+      <p>Часть прав доступна напрямую в личном кабинете: настройка уведомлений (<code>belfed.ru/members.html</code>), отписка от email-рассылок одним кликом в любом письме, отмена автопродления подписки.</p>
+
+      <h2>9. Несовершеннолетние</h2>
+      <p>Сервис не предназначен для лиц младше 18 лет. Мы не запрашиваем и сознательно не обрабатываем данные несовершеннолетних. Если выясняется, что мы получили такие данные по ошибке, они будут удалены.</p>
+
+      <h2>10. Безопасность</h2>
+      <p>Мы применяем технические и организационные меры защиты, включая шифрование передаваемых данных (TLS), хранение паролей в виде криптографических хэшей, ограничение доступа к продакшен-системам, журналирование действий администраторов и регулярное резервное копирование. Тем не менее ни одна интернет-передача и ни одно хранилище не могут гарантировать абсолютную безопасность — пожалуйста, используйте сложные пароли и не передавайте свои учётные данные третьим лицам.</p>
+
+      <h2>11. Изменения в политике</h2>
+      <p>Мы можем обновлять настоящую Политику. При существенных изменениях мы уведомим пользователей в личном кабинете и/или по email не позднее чем за 14 календарных дней до вступления изменений в силу. Дата последнего обновления указана в начале документа.</p>
+
+      <h2>12. Контакты по вопросам персональных данных</h2>
+      <p>По любому вопросу, связанному с обработкой персональных данных, просьба обращаться к Оператору:<br>
+      e-mail: <a href="mailto:contact@belfed.com">contact@belfed.com</a><br>
+      тема письма: «Персональные данные»</p>
+    </div>
+  </main>
+
+  <footer>
+    <span>&copy; 2025&ndash;2026 BelFed Analytics</span>
+    <div class="footer-links">
+      <a href="/ru/disclaimer.html">Ограничение ответственности</a>
+      <a href="/ru/oferta.html">Договор-оферта</a>
+      <a href="/ru/privacy.html">Политика конфиденциальности</a>
+      <a href="/ru/contacts.html">Контакты</a>
+    </div>
+    <span>Не финансовая рекомендация.</span>
+  </footer>
+</body>
+</html>
