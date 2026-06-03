@@ -510,6 +510,9 @@ TEXTS_RU = {
     "btn_disclaimer":  "⚠️ Disclaimer",
     "btn_request":     "Запросить актив",
     "btn_support":     "💬 Написать в поддержку",
+    "freetext_fallback": ("Чтобы написать в поддержку — отправьте команду /support "
+                          "или нажмите кнопку «💬 Написать в поддержку» в меню "
+                          "(вызвать меню: /start)."),
     "btn_link":        "🔗 Привязать аккаунт",
     "no_access":       ("Сначала зарегистрируйтесь на " + WEB_URL_RU + " и привяжите Telegram. "
                         "Получите 14 дней бесплатного доступа — без привязки карты."),
@@ -666,6 +669,9 @@ TEXTS_EN = {
     "btn_disclaimer":  "⚠️ Disclaimer",
     "btn_request":     "Request asset",
     "btn_support":     "💬 Contact support",
+    "freetext_fallback": ("To contact support — send the /support command "
+                          "or tap the \"💬 Contact support\" button in the menu "
+                          "(open the menu with /start)."),
     "btn_link":        "🔗 Link account",
     "no_access":       ("Please sign up at " + WEB_URL_EN + " and link Telegram first. "
                         "Get 14 days of free access — no card required."),
@@ -2251,7 +2257,15 @@ async def on_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     state = context.user_data.get("awaiting_email_for_payment")
     if not state:
-        return  # текст вне известных режимов — игнорируем
+        # No active state: user just typed something. Don't stay silent —
+        # give a friendly hint how to reach support / open the menu.
+        try:
+            profile = await get_profile_by_telegram(update.effective_user.id)
+        except Exception:
+            profile = None
+        lang = await get_user_lang(update, profile) if profile is not None else "ru"
+        await update.message.reply_text(T(lang, "freetext_fallback"))
+        return
 
     user = update.effective_user
     text = (update.message.text or "").strip()
