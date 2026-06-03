@@ -61,26 +61,130 @@ async function handleMagicLink() {
   }
 }
 
+// ===========================================
+// BelFed Auth — Signup UX patch (RU)
+// Injected into the page on DOMContentLoaded.
+// Adds:
+//   • consent checkbox above signup button
+//   • post-signup success card with TG CTA
+// ===========================================
+
+(function () {
+  // ---- Inject CSS once ----
+  function injectStyles() {
+    if (document.getElementById('belfed-signup-styles')) return;
+    var css = ''
+      + '.signup-consent{margin:14px 0 8px;font-size:12px;line-height:1.55;display:flex;align-items:flex-start;gap:8px;letter-spacing:0.02em}'
+      + '.signup-consent input[type="checkbox"]{margin-top:3px;flex-shrink:0;cursor:pointer;width:14px;height:14px}'
+      + '.signup-consent label{cursor:pointer;color:var(--gray,#666)}'
+      + '.signup-consent a{color:inherit;text-decoration:underline;text-underline-offset:2px}'
+      + '.signup-consent a:hover{color:var(--green,#1a7a1a)}'
+      + '.signup-success{padding:24px 22px;border:1px solid #000;background:#fff;margin-top:18px}'
+      + '.signup-success h3{margin:0 0 12px;font-size:14px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase}'
+      + '.signup-success p{margin:0 0 20px;font-size:13px;line-height:1.6;color:#222}'
+      + '.signup-success .cta-tg{display:block;width:100%;text-align:center;padding:16px 18px;background:#000;color:#fff;text-decoration:none;font-size:13px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;border:1px solid #000;transition:background .15s ease,color .15s ease}'
+      + '.signup-success .cta-tg:hover{background:#1a7a1a;border-color:#1a7a1a;color:#fff}'
+      + '.signup-success .signup-success-note{margin:14px 0 0;font-size:11px;color:var(--gray,#999);text-align:center;letter-spacing:0.04em}'
+      + '.signup-success .signup-success-note a{color:inherit;text-decoration:underline}';
+    var st = document.createElement('style');
+    st.id = 'belfed-signup-styles';
+    st.textContent = css;
+    document.head.appendChild(st);
+  }
+
+  // ---- Inject consent checkbox into every signup form ----
+  function injectConsent() {
+    document.querySelectorAll('#signupForm').forEach(function (form) {
+      if (form.querySelector('.signup-consent')) return; // already injected
+      var btn = form.querySelector('.login-btn');
+      if (!btn) return;
+      var wrap = document.createElement('div');
+      wrap.className = 'signup-consent';
+      wrap.innerHTML = ''
+        + '<input type="checkbox" id="suConsent">'
+        + '<label for="suConsent">Я согласен с <a href="/privacy.html" target="_blank" rel="noopener">Политикой конфиденциальности</a> и <a href="/terms.html" target="_blank" rel="noopener">Условиями использования</a></label>';
+      form.insertBefore(wrap, btn);
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { injectStyles(); injectConsent(); });
+  } else {
+    injectStyles();
+    injectConsent();
+  }
+})();
+
+// ---- New handleSignUp (overrides previous) ----
 async function handleSignUp() {
   var email = document.getElementById('suEmail').value.trim();
-  var pw = document.getElementById('suPassword').value;
+  var pw  = document.getElementById('suPassword').value;
   var pw2 = document.getElementById('suPassword2').value;
+  var consentBox = document.getElementById('suConsent');
   var errEl = document.getElementById('loginError');
   var msgEl = document.getElementById('loginMsg');
   errEl.style.display = 'none'; msgEl.style.display = 'none';
-  if (!email || !pw || !pw2) { errEl.textContent = 'Please fill in all fields'; errEl.style.display = 'block'; return; }
-  if (pw !== pw2) { errEl.textContent = 'Passwords do not match'; errEl.style.display = 'block'; return; }
-  if (pw.length < 6) { errEl.textContent = 'Password must be at least 6 characters'; errEl.style.display = 'block'; return; }
+  msgEl.innerHTML = '';
+
+  if (!email || !pw || !pw2) { errEl.textContent = 'Заполните все поля'; errEl.style.display = 'block'; return; }
+  if (pw !== pw2) { errEl.textContent = 'Пароли не совпадают'; errEl.style.display = 'block'; return; }
+  if (pw.length < 6) { errEl.textContent = 'Пароль должен быть не менее 6 символов'; errEl.style.display = 'block'; return; }
+  if (!consentBox || !consentBox.checked) {
+    errEl.textContent = 'Нужно согласиться с Политикой конфиденциальности и Условиями использования';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  // Disable form while we work
+  var btn = document.querySelector('#signupForm .login-btn');
+  var prevBtnText = null;
+  if (btn) { prevBtnText = btn.textContent; btn.disabled = true; btn.textContent = 'Создание аккаунта...'; }
+
   try {
-    var res = await supaClient.auth.signUp({ email: email, password: pw, options: { emailRedirectTo: window.location.origin + '/confirm.html' } });
+    var res = await supaClient.auth.signUp({
+      email: email,
+      password: pw,
+      options: { emailRedirectTo: window.location.origin + '/confirm.html' }
+    });
     if (res.error) throw res.error;
-    if (res.data.user && !res.data.session) {
-      msgEl.textContent = 'Check your email to confirm your account, then sign in.';
-      msgEl.style.display = 'block';
-    } else if (res.data.session) {
+
+    // Fetch one-time TG deep-link with email + consent
+    var intentRes = await fetch(SUPABASE_URL + '/functions/v1/trial-intent-create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: email,
+        lang: 'ru',
+        source: 'web_signup',
+        accept_privacy: true,
+        accept_terms: true
+      })
+    });
+    var intentData = await intentRes.json();
+    var deepLink = (intentData && intentData.ok && intentData.deep_link)
+      ? intentData.deep_link
+      : 'https://t.me/BelfedBot?start=trial_link';
+
+    // Render success card
+    msgEl.innerHTML = ''
+      + '<div class="signup-success">'
+      + '  <h3>Аккаунт создан</h3>'
+      + '  <p>Чтобы активировать 14-дневный доступ к личному кабинету и получать наши сделки в живом режиме — присоединяйтесь к нашей трейдинг-группе.</p>'
+      + '  <a class="cta-tg" href="' + deepLink + '" target="_blank" rel="noopener">Получить доступ к группе</a>'
+      + '  <div class="signup-success-note">Ссылка одноразовая, действует 15 минут. Если что — <a href="#" onclick="document.getElementById(\'signupForm\').querySelector(\'.login-btn\').click();return false;">запросите новую</a>.</div>'
+      + '</div>';
+    msgEl.style.display = 'block';
+
+    // Auto-login if session already exists (shouldn't, but safe)
+    if (res.data.session) {
       await checkProfile();
     }
-  } catch (err) { errEl.textContent = err.message || 'Sign up failed'; errEl.style.display = 'block'; }
+  } catch (err) {
+    errEl.textContent = err.message || 'Ошибка регистрации';
+    errEl.style.display = 'block';
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = prevBtnText || 'Начать 14 дней бесплатно'; }
+  }
 }
 
 async function handleForgotPassword() {
