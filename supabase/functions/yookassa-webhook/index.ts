@@ -230,6 +230,37 @@ Deno.serve(async (req) => {
         newExpiry: (newExpiry as string) ?? paidAt,
       });
 
+      // ---- Founding-slot claim (if user paid with founding_intent) ----------
+      // Set on yookassa-create-payment when resolve_payment_price returned
+      // founding_intent=true. We re-verify by calling claim_founding_slot,
+      // which is atomic (FOR UPDATE on founding_quota). Outcomes:
+      //   - ok:true                    → slot granted, profile flipped to founding
+      //   - already_founding           → user already had a slot (idempotent)
+      //   - quota_exhausted            → race lost; logged, but payment stands
+      //   - invalid_locale / not_found → defensive, logged
+      // We never throw here — the payment is already applied; founding is bonus.
+      const foundingIntent = obj.metadata?.founding_intent === "1";
+      const foundingLocale = (obj.metadata?.founding_locale ?? "").toString();
+      if (foundingIntent && (foundingLocale === "ru" || foundingLocale === "en")) {
+        try {
+          const { data: claimRes, error: claimErr } = await admin.rpc("claim_founding_slot", {
+            p_user_id: userId,
+            p_locale:  foundingLocale,
+            p_source:  "paid_checkout_yookassa",
+            p_notes:   `payment_id=${paymentId}, amount=${amount} RUB`,
+          });
+          if (claimErr) {
+            console.error("claim_founding_slot RPC error", claimErr);
+          } else {
+            console.log("claim_founding_slot result", JSON.stringify(claimRes));
+          }
+        } catch (e) {
+          console.error("claim_founding_slot failed", (e as Error).message);
+        }
+        // Clean up the pending claim row regardless of outcome
+        await admin.from("pending_founding_claims").delete().eq("user_id", userId);
+      }
+
       const isInitial = obj.metadata?.initial === "1";
       if (!isInitial) {
         await admin.from("payments").update({ is_recurring: true })

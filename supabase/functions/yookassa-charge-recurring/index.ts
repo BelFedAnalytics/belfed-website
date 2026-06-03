@@ -24,32 +24,52 @@ const SHOP_ID    = IS_LIVE ? Deno.env.get("YOOKASSA_SHOP_ID")!     : Deno.env.ge
 const SECRET_KEY = IS_LIVE ? Deno.env.get("YOOKASSA_SECRET_KEY")! : Deno.env.get("YOOKASSA_TEST_SECRET_KEY")!;
 const VAT_CODE   = Number(Deno.env.get("YOOKASSA_VAT_CODE") ?? "1");
 const TAX_SYSTEM = Deno.env.get("YOOKASSA_TAX_SYSTEM");
-const PRICE_RUB  = Number(Deno.env.get("PRICE_MONTHLY_RUB") ?? "1500");
 
-// Единый план — один и тот же для всех подписчиков.
-const MONTHLY = {
-  amount: PRICE_RUB,
-  months: 1,
-  description: "BelFed Analytics — продление подписки 1 месяц",
-};
+// Pricing is RESOLVED per-user via RPC `resolve_payment_price`. Founding members
+// pay the discounted rate; standard members pay the standard rate; if standard
+// price has been raised recently, founding members keep paying the previous-
+// founding rate for 30 days (grace window) before flipping to the new founding
+// rate. All of this is handled inside the RPC.
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
 async function chargeOne(sub: any) {
   const plan = "monthly";
-  const p    = MONTHLY;
+
+  // Resolve current per-user price (founding discount, grace, etc.)
+  const { data: priceRes, error: priceErr } = await admin.rpc("resolve_payment_price", {
+    p_user_id: sub.user_id,
+  });
+  if (priceErr) throw new Error(`resolve_price_error: ${priceErr.message}`);
+  if (!priceRes?.ok)  throw new Error(`resolve_price_failed: ${priceRes?.reason ?? "unknown"}`);
+
+  // Provider gating: if the resolved price says this user is locked to Stars
+  // (i.e. founding EN), we must NOT charge them via YooKassa. Skip silently and
+  // log — they'll renew through Telegram instead. This is defense in depth;
+  // EN-locked users shouldn't have a YooKassa payment_method_id at all.
+  if (priceRes.allowed_provider && priceRes.allowed_provider !== "yookassa") {
+    console.warn(`skip user=${sub.user_id} sub=${sub.id} — locked to ${priceRes.allowed_provider}`);
+    await admin.from("subscriptions").update({
+      last_charge_attempt_at: new Date().toISOString(),
+      last_charge_error: `skipped: locked to ${priceRes.allowed_provider}`,
+    }).eq("id", sub.id);
+    return null;
+  }
+
+  const amountRub: number = Number(priceRes.amount_rub);
+  const description = (priceRes.already_founding || priceRes.founding_intent)
+    ? "BelFed Analytics — Founding Member, продление 1 месяц"
+    : "BelFed Analytics — продление подписки 1 месяц";
+  const p = { amount: amountRub, months: 1, description };
 
   // Fetch the user's email for 54-FZ receipt
-  const { data: prof } = await admin
-    .from("profiles")
-    .select("id")
-    .eq("id", sub.user_id)
-    .maybeSingle();
   const { data: userRow } = await admin.auth.admin.getUserById(sub.user_id);
   const email = userRow?.user?.email;
   if (!email) throw new Error("no_email_for_receipt");
 
-  const idempotenceKey = `rec_${sub.id}_${new Date(sub.next_billing_at).toISOString().slice(0, 10)}_${PRICE_RUB}`;
+  // Idempotence key includes the RESOLVED amount so a re-run after a price
+  // change won't collide with the previous attempt.
+  const idempotenceKey = `rec_${sub.id}_${new Date(sub.next_billing_at).toISOString().slice(0, 10)}_${amountRub}`;
 
   const receipt: Record<string, any> = {
     customer: { email },
@@ -75,6 +95,11 @@ async function chargeOne(sub: any) {
       period_months: p.months,
       initial: "0",
       subscription_id: sub.id,
+      // Recurring charges never carry founding_intent (the founding slot, if any,
+      // was already claimed on the initial payment). Surface already_founding so
+      // the webhook can log it but won't re-claim.
+      already_founding: priceRes.already_founding ? "1" : "0",
+      founding_locale:  priceRes.locale ?? "",
     },
     receipt,
   };

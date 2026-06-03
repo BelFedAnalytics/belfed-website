@@ -1,4 +1,24 @@
 // deno-lint-ignore-file no-explicit-any
+//
+// yookassa-create-payment
+// ========================
+// Creates a YooKassa payment URL for a user.
+//
+// Pricing is RESOLVED on the server via RPC `resolve_payment_price(user_id)`:
+//   - standard:           1500 RUB (from pricing_config)
+//   - founding pending:   1050 RUB (founding_intent=true, claim_founding_slot will run on webhook)
+//   - already founding:   1050 RUB (founding_intent=false, already has the slot)
+//
+// PROVIDER GATING (hard split):
+//   - founding RU → must use YooKassa  (this function)
+//   - founding EN → must use Telegram Stars (handled in bot.py)
+//   - If a user with EN founding intent reaches this function, we 409 with a
+//     pointer to use Stars. This prevents arbitrage and keeps tax/locale clean.
+//
+// Auth paths (unchanged):
+//   1. Bot call: x-bot-secret header → body.user_id (uuid) required
+//   2. User call: Authorization: Bearer <jwt>
+//
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL       = Deno.env.get("SUPABASE_URL")!;
@@ -11,18 +31,10 @@ const SHOP_ID            = MODE === "live"
 const SECRET_KEY         = MODE === "live"
   ? Deno.env.get("YOOKASSA_SECRET_KEY")!
   : Deno.env.get("YOOKASSA_TEST_SECRET_KEY")!;
-const PRICE_RUB          = Number(Deno.env.get("PRICE_MONTHLY_RUB") ?? "1500");
 const SAVE_PM            = (Deno.env.get("SAVE_PAYMENT_METHOD") ?? "false").toLowerCase() === "true";
 const BOT_SHARED_SECRET  = Deno.env.get("BOT_SHARED_SECRET") ?? "";
 
 const RETURN_URL = "https://belfed.ru/members.html?payment=return";
-
-const MONTHLY = { amount: PRICE_RUB, months: 1, description: "BelFed Analytics — подписка на 1 месяц" };
-const PLANS: Record<string, { amount: number; months: number; description: string }> = {
-  month:   MONTHLY,
-  monthly: MONTHLY,
-  "1m":    MONTHLY,
-};
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,6 +45,13 @@ const corsHeaders = {
 const isGhostEmail = (e: string | null | undefined) =>
   !!e && /@belfed\.local$/i.test(e);
 
+function jsonResp(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") {
@@ -41,49 +60,30 @@ Deno.serve(async (req) => {
 
   const body = await req.json().catch(() => ({}));
   const planKey: string = (body.plan ?? "month").toString();
-  const p = PLANS[planKey];
-  if (!p) {
-    return new Response(JSON.stringify({ error: `Unknown plan: ${planKey}` }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+  if (!["month", "monthly", "1m"].includes(planKey)) {
+    return jsonResp({ error: `unknown_plan: ${planKey}` }, 400);
   }
 
   // ---------- Auth ---------------------------------------------------------
-  // Two paths:
-  // 1. Bot call: x-bot-secret header matches, body must contain user_id (uuid)
-  // 2. User call: Authorization: Bearer <jwt> from website
   let userId: string | null = null;
   let userEmail: string | null = null;
   let isLite = false;
 
   const incomingBotSecret = req.headers.get("x-bot-secret") ?? "";
   if (BOT_SHARED_SECRET && incomingBotSecret === BOT_SHARED_SECRET) {
-    // Bot path — trusted
     const requestedUserId = (body.user_id ?? "").toString().trim();
-    if (!requestedUserId) {
-      return new Response(JSON.stringify({ error: "user_id_required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (!requestedUserId) return jsonResp({ error: "user_id_required" }, 400);
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } });
     const { data: profile, error: profErr } = await admin
       .from("profiles")
       .select("id, email, is_lite_profile")
       .eq("id", requestedUserId)
       .maybeSingle();
-    if (profErr || !profile) {
-      return new Response(JSON.stringify({ error: "profile_not_found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (profErr || !profile) return jsonResp({ error: "profile_not_found" }, 404);
     userId = profile.id;
     userEmail = profile.email;
     isLite = !!profile.is_lite_profile;
   } else {
-    // User path — JWT
     const authHeader = req.headers.get("Authorization") ?? "";
     const userClient = createClient(SUPABASE_URL, ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
@@ -95,11 +95,9 @@ Deno.serve(async (req) => {
     }
     userId = userData.user.id;
     userEmail = userData.user.email ?? null;
-    // Detect lite (ghost email) even if site somehow lets a lite user log in
     if (isGhostEmail(userEmail)) {
       isLite = true;
     } else {
-      // Double-check via profiles.is_lite_profile
       const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } });
       const { data: profile } = await admin
         .from("profiles")
@@ -113,38 +111,74 @@ Deno.serve(async (req) => {
     }
   }
 
-  // ---------- Build YooKassa payload --------------------------------------
+  // ---------- Resolve price + provider gating ------------------------------
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+  const { data: priceRes, error: priceErr } = await admin.rpc("resolve_payment_price", {
+    p_user_id: userId,
+  });
+  if (priceErr) {
+    console.error("resolve_payment_price failed", priceErr);
+    return jsonResp({ error: "price_resolution_failed", details: priceErr.message }, 500);
+  }
+  if (!priceRes?.ok) {
+    return jsonResp({ error: priceRes?.reason ?? "price_resolution_failed" }, 400);
+  }
+
+  const amountRub: number       = Number(priceRes.amount_rub);
+  const foundingIntent: boolean = !!priceRes.founding_intent;
+  const alreadyFounding: boolean = !!priceRes.already_founding;
+  const foundingLocale: string | null = priceRes.locale ?? null;
+  const allowedProvider: string | null = priceRes.allowed_provider ?? null;
+
+  // Provider gating: if founding_intent OR already_founding constraint applies,
+  // the locale MUST allow yookassa. EN founding → reject with a clear pointer.
+  if ((foundingIntent || alreadyFounding) && allowedProvider && allowedProvider !== "yookassa") {
+    return jsonResp({
+      error: "wrong_provider_for_founding",
+      message: "This founding membership is locked to Telegram Stars. " +
+               "Please open @BelfedBot and use the Subscribe button there.",
+      allowed_provider: allowedProvider,
+      locale: foundingLocale,
+    }, 409);
+  }
+
+  // ---------- Build YooKassa payload ---------------------------------------
+  const description = (foundingIntent || alreadyFounding)
+    ? "BelFed Analytics — Founding Member subscription (1 month)"
+    : "BelFed Analytics — subscription (1 month)";
+
   const idempotenceKey = crypto.randomUUID();
   const returnUrl: string = (body.return_url || RETURN_URL).toString();
 
   const receipt: Record<string, any> = {
     items: [{
-      description: p.description,
+      description,
       quantity: "1.00",
-      amount: { value: p.amount.toFixed(2), currency: "RUB" },
+      amount: { value: amountRub.toFixed(2), currency: "RUB" },
       vat_code: 1,
       payment_subject: "service",
       payment_mode: "full_prepayment",
     }],
   };
 
-  // For full users with real email — pre-fill receipt customer.
-  // For lite users (ghost email) — DO NOT pre-fill; YooKassa will collect email
-  // on the payment page and return it in payment.receipt.customer.email
   if (userEmail && !isGhostEmail(userEmail) && !isLite) {
     receipt.customer = { email: userEmail };
   }
 
   const payload: Record<string, any> = {
-    amount: { value: p.amount.toFixed(2), currency: "RUB" },
+    amount: { value: amountRub.toFixed(2), currency: "RUB" },
     capture: true,
     confirmation: { type: "redirect", return_url: returnUrl },
-    description: p.description,
+    description,
     metadata: {
       user_id: userId,
       plan: "month",
-      period_months: p.months,
+      period_months: 1,
       is_lite_at_payment: isLite,
+      // Founding tracking — webhook reads these to decide whether to call claim_founding_slot
+      founding_intent:    foundingIntent ? "1" : "0",
+      already_founding:   alreadyFounding ? "1" : "0",
+      founding_locale:    foundingLocale ?? "",
     },
     receipt,
   };
@@ -163,20 +197,18 @@ Deno.serve(async (req) => {
   if (!res.ok) {
     const txt = await res.text();
     console.error("YooKassa create payment failed", res.status, txt);
-    return new Response(JSON.stringify({ error: "yookassa_error", details: txt }), {
-      status: 502,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResp({ error: "yookassa_error", details: txt }, 502);
   }
 
   const payment = await res.json();
-  return new Response(JSON.stringify({
+  return jsonResp({
     id: payment.id,
     status: payment.status,
     confirmation_url: payment.confirmation?.confirmation_url ?? null,
     is_lite: isLite,
-  }), {
-    status: 200,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // Surface founding info to clients (bot/web can show different copy)
+    amount_rub: amountRub,
+    founding_intent: foundingIntent,
+    already_founding: alreadyFounding,
   });
 });
