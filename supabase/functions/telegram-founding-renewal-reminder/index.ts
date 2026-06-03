@@ -97,10 +97,13 @@ Deno.serve(async (req) => {
   const results: any[] = [];
   for (const row of list ?? []) {
     try {
-      const hasPm = !!row.payment_method_id;
+      // Auto-renewal will happen if either a saved payment method exists (yookassa)
+      // or a Telegram Stars subscription is active (Telegram itself renews it).
+      const willAutoRenew = !!row.payment_method_id
+        || (row.provider === "telegram_stars" && !!row.provider_subscription_id);
       const text = row.locale === "en"
-        ? buildTextEN(row.current_period_end, hasPm)
-        : buildTextRU(row.current_period_end, hasPm);
+        ? buildTextEN(row.current_period_end, willAutoRenew)
+        : buildTextRU(row.current_period_end, willAutoRenew);
 
       const r: any = await tg("sendMessage", {
         chat_id: Number(row.telegram_id),
@@ -114,7 +117,7 @@ Deno.serve(async (req) => {
           .update({ founding_renewal_reminder_sent_at: new Date().toISOString() })
           .eq("id", row.user_id);
       }
-      results.push({ user: row.user_id, locale: row.locale, has_pm: hasPm, ok: !!r?.ok });
+      results.push({ user: row.user_id, locale: row.locale, will_auto_renew: willAutoRenew, ok: !!r?.ok });
     } catch (e) {
       results.push({ user: row.user_id, ok: false, error: (e as Error).message });
     }
