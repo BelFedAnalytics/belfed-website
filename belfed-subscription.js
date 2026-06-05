@@ -164,8 +164,9 @@
     if (!isPaid && !isAdmin) {
       html += `<button id="bfPay" class="login-btn bf-cta">💳 Оформить подписку — ${PRICE_RUB} ₽ / мес</button>`;
     }
-    if (autorenew) {
-      html += '<button id="bfCancel" class="login-btn bf-danger">Отменить автопродление</button>';
+    // Отмена автопродления и отвязка карты живут на /billing.html — здесь только ссылка.
+    if (isPaid || isTrial) {
+      html += '<a id="bfManage" class="login-btn" href="/billing.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">⚙️ Управление подпиской и оплатой →</a>';
     }
     html += '</div>';
     html += '<p id="bfMsg" class="bf-msg"></p>';
@@ -200,16 +201,7 @@
       }
     };
 
-    const cancelBtn = document.getElementById('bfCancel');
-    if (cancelBtn) cancelBtn.onclick = async () => {
-      if (!confirm('Отменить автопродление? Доступ сохранится до конца оплаченного периода.')) return;
-      try {
-        const r = await cancelSubscription('user_requested_web');
-        document.getElementById('bfMsg').textContent =
-          'Автопродление отключено. Доступ до ' + fmt(r.access_until) + '.';
-        setTimeout(render, 800);
-      } catch (e) { alert('Ошибка: ' + e.message); }
-    };
+    // Старая кнопка #bfCancel убрана — отмена автопродления живёт на /billing.html.
   }
 
   document.addEventListener('DOMContentLoaded', () => {

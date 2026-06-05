@@ -131,9 +131,11 @@ async function upsertSubscription(opts: {
   amountRub: number;
   months: number;
   paymentMethodId: string | null;
+  cardLast4: string | null;
+  cardBrand: string | null;
   newExpiry: string;
 }) {
-  const { userId, plan, amountRub, paymentMethodId, newExpiry } = opts;
+  const { userId, plan, amountRub, paymentMethodId, cardLast4, cardBrand, newExpiry } = opts;
   const { data: existing } = await admin
     .from("subscriptions")
     .select("id")
@@ -155,7 +157,15 @@ async function upsertSubscription(opts: {
     last_charge_error: null,
     updated_at: new Date().toISOString(),
   };
-  if (paymentMethodId) patch.payment_method_id = paymentMethodId;
+  if (paymentMethodId) {
+    patch.payment_method_id = paymentMethodId;
+    // Mark as freshly attached. If the user previously detached and is now
+    // attaching again (new card via new checkout), reset detached_at.
+    patch.payment_method_saved_at    = new Date().toISOString();
+    patch.payment_method_detached_at = null;
+  }
+  if (cardLast4) patch.card_last4 = cardLast4;
+  if (cardBrand) patch.card_brand = cardBrand;
 
   if (existing?.id) {
     await admin.from("subscriptions").update(patch).eq("id", existing.id);
@@ -224,9 +234,18 @@ Deno.serve(async (req) => {
       const paymentMethodId: string | null =
         obj.payment_method?.saved && obj.payment_method?.id ? obj.payment_method.id : null;
 
+      // Card metadata for the /billing UI. YooKassa returns it nested under
+      // payment_method.card. Both fields are best-effort: SBP/other methods
+      // won't have them, and that's fine — UI handles NULL gracefully.
+      const card = obj.payment_method?.card ?? null;
+      const cardLast4: string | null =
+        card?.last4 && /^\d{4}$/.test(String(card.last4)) ? String(card.last4) : null;
+      const cardBrand: string | null =
+        card?.card_type ? String(card.card_type).toLowerCase() : null;
+
       await upsertSubscription({
         userId, plan, amountRub: amount, months,
-        paymentMethodId,
+        paymentMethodId, cardLast4, cardBrand,
         newExpiry: (newExpiry as string) ?? paidAt,
       });
 

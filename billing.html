@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co; img-src 'self'; frame-src 'none';">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Подписка и оплата — BelFed Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --black: #0a0a0a;
+      --white: #f5f5f0;
+      --gray: #888;
+      --light-gray: #e8e8e3;
+      --border: #d0d0ca;
+      --green: #1a6b3a;
+      --red: #8b1a1a;
+      --amber: #b8860b;
+      --font: 'Courier Prime', 'Courier New', monospace;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font);
+      background: var(--white);
+      color: var(--black);
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 40px; height: 56px;
+    }
+    .nav-logo {
+      font-size: 17px; font-weight: 700; letter-spacing: 0.05em;
+      text-decoration: none; color: var(--black);
+    }
+    .nav-links { display: flex; gap: 32px; list-style: none; }
+    .nav-links a {
+      font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+      text-decoration: none; color: var(--black); transition: opacity 0.2s;
+    }
+    .nav-links a:hover { opacity: 0.5; }
+    .nav-cta {
+      font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+      text-decoration: none; color: var(--black);
+      background: transparent; padding: 10px 20px;
+      border: 1px solid var(--black); cursor: pointer;
+      font-family: var(--font); transition: background 0.2s, color 0.2s;
+    }
+    .nav-cta:hover { background: var(--black); color: var(--white); }
+
+    main { padding-top: 56px; }
+    .billing-hero { padding: 60px 40px 24px; max-width: 900px; }
+    .billing-hero .tag {
+      font-size: 11px; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--gray); margin-bottom: 16px;
+    }
+    .billing-hero h1 {
+      font-size: clamp(28px, 4.5vw, 40px); font-weight: 700;
+      line-height: 1.1; letter-spacing: -0.01em; margin-bottom: 14px;
+    }
+    .billing-hero p { font-size: 14px; color: #555; max-width: 600px; }
+    .billing-back {
+      display: inline-block; font-size: 11px; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--gray); text-decoration: none;
+      margin-bottom: 24px;
+    }
+    .billing-back:hover { color: var(--black); }
+
+    .billing-section {
+      padding: 0 40px 32px; max-width: 900px;
+    }
+    .billing-card {
+      border: 1px solid var(--border);
+      background: var(--white);
+      padding: 28px 32px;
+      margin-bottom: 20px;
+    }
+    .billing-card h2 {
+      font-size: 12px; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--gray);
+      margin-bottom: 18px; font-weight: 700;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .billing-card h2 .h-num {
+      display: inline-block; font-size: 11px; color: var(--gray);
+      font-weight: 400;
+    }
+    .billing-row {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding: 10px 0;
+      border-bottom: 1px dotted var(--border);
+      font-size: 14px;
+    }
+    .billing-row:last-of-type { border-bottom: none; }
+    .billing-row .label { color: var(--gray); font-size: 13px; }
+    .billing-row .value { color: var(--black); font-weight: 700; text-align: right; }
+    .billing-row .value.muted { font-weight: 400; color: var(--gray); }
+
+    .status-badge {
+      display: inline-block; font-size: 10px; letter-spacing: 0.1em;
+      text-transform: uppercase; padding: 4px 10px;
+      border: 1px solid var(--green); color: var(--green); font-weight: 700;
+    }
+    .status-badge.expired { border-color: var(--red); color: var(--red); }
+    .status-badge.trial   { border-color: var(--amber); color: var(--amber); }
+    .status-badge.off     { border-color: var(--gray); color: var(--gray); }
+
+    .billing-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
+    .btn {
+      font-family: var(--font); font-size: 11px; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      padding: 12px 22px; cursor: pointer;
+      border: 1px solid var(--black); background: var(--white); color: var(--black);
+      transition: background 0.2s, color 0.2s;
+    }
+    .btn:hover:not(:disabled) { background: var(--black); color: var(--white); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: var(--black); color: var(--white); }
+    .btn-primary:hover:not(:disabled) { background: transparent; color: var(--black); }
+    .btn-danger {
+      border-color: var(--red); color: var(--red); background: var(--white);
+    }
+    .btn-danger:hover:not(:disabled) { background: var(--red); color: var(--white); }
+
+    .card-display {
+      display: flex; align-items: center; gap: 16px;
+      padding: 18px 0; border-bottom: 1px dotted var(--border);
+    }
+    .card-icon {
+      width: 44px; height: 28px; display: inline-flex;
+      align-items: center; justify-content: center;
+      border: 1px solid var(--border); background: var(--light-gray);
+      font-size: 10px; letter-spacing: 0.08em; font-weight: 700;
+      color: var(--black); text-transform: uppercase;
+    }
+    .card-meta { flex: 1; }
+    .card-meta .card-line1 { font-size: 14px; font-weight: 700; letter-spacing: 0.02em; }
+    .card-meta .card-line2 { font-size: 12px; color: var(--gray); margin-top: 2px; }
+
+    .billing-hint {
+      font-size: 12px; color: var(--gray); margin-top: 14px;
+      line-height: 1.6; max-width: 600px;
+    }
+    .billing-hint b { color: var(--black); font-weight: 700; }
+
+    .history-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .history-table th, .history-table td {
+      text-align: left; padding: 10px 12px;
+      border-bottom: 1px dotted var(--border);
+    }
+    .history-table th {
+      font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--gray); font-weight: 700;
+    }
+    .history-table td.amount { font-weight: 700; }
+    .history-table td.status-cell .status-badge { font-size: 9px; padding: 2px 8px; }
+    .history-empty {
+      text-align: center; color: var(--gray); font-size: 13px;
+      padding: 28px 0; font-style: italic;
+    }
+
+    .empty-card-state {
+      padding: 24px 0; color: var(--gray); font-size: 13px;
+      line-height: 1.7;
+    }
+    .empty-card-state b { color: var(--black); }
+
+    .login-required {
+      padding: 80px 40px; text-align: center; color: var(--gray);
+    }
+    .login-required a { color: var(--black); font-weight: 700; }
+
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: var(--black); color: var(--white);
+      padding: 14px 22px; font-size: 13px; letter-spacing: 0.05em;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.2); z-index: 200;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s;
+      max-width: 90vw;
+    }
+    .toast.show { opacity: 1; }
+    .toast.toast--error { background: var(--red); }
+    .toast.toast--success { background: var(--green); }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 24px 40px;
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 12px; color: var(--gray); flex-wrap: wrap; gap: 12px;
+    }
+    footer a { color: var(--gray); text-decoration: none; }
+    footer a:hover { color: var(--black); }
+    .footer-links { display: flex; gap: 18px; flex-wrap: wrap; }
+
+    .history-mobile { display: none; }
+    .history-item { padding: 14px 0; border-bottom: 1px dotted var(--border); }
+    .history-item:last-child { border-bottom: none; }
+    .history-item-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+    .history-item-date { font-size: 12px; color: var(--gray); }
+    .history-item-amount { font-size: 15px; font-weight: 700; white-space: nowrap; }
+    .history-item-bottom { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .history-item-type { font-size: 12px; color: #555; }
+
+    @media (max-width: 700px) {
+      nav { padding: 0 16px; height: 52px; gap: 12px; }
+      .nav-links { display: none; }
+      .nav-cta { padding: 8px 14px; font-size: 10px; letter-spacing: 0.1em; }
+      main { padding-top: 52px; }
+      .billing-hero { padding: 32px 18px 12px; }
+      .billing-hero h1 { font-size: 26px; }
+      .billing-hero p { font-size: 13px; }
+      .billing-section { padding: 0 18px 22px; }
+      .billing-card { padding: 20px 18px; }
+      .billing-card h2 { font-size: 11px; }
+      .billing-row { flex-direction: column; gap: 4px; align-items: flex-start; padding: 10px 0; }
+      .billing-row .value { text-align: left; }
+      .billing-actions .btn { width: 100%; }
+      .card-display { gap: 12px; flex-wrap: wrap; }
+      .card-meta .card-line1 { font-size: 13px; letter-spacing: 0; }
+      .card-meta .card-line2 { font-size: 11px; }
+      .history-table { display: none; }
+      .history-mobile { display: block; }
+      footer { padding: 18px 18px 22px; flex-direction: column; align-items: flex-start; gap: 10px; font-size: 11px; text-align: left; }
+      .footer-links { gap: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/" class="nav-logo">BELFED_</a>
+    <ul class="nav-links">
+      <li><a href="/members.html">Личный кабинет</a></li>
+      <li><a href="/dashboard.html">Результаты</a></li>
+      <li><a href="/analytics.html">Аналитика</a></li>
+    </ul>
+    <button class="nav-cta" id="navLogoutBtn" onclick="handleLogout()">Выйти</button>
+  </nav>
+
+  <main>
+    <div id="loginRequired" class="login-required" style="display:none">
+      Войдите в <a href="/members.html">личный кабинет</a>, чтобы управлять подпиской.
+    </div>
+
+    <div id="billingContent" style="display:none">
+      <div class="billing-hero">
+        <a href="/members.html" class="billing-back">&larr; Назад в личный кабинет</a>
+        <div class="tag">// Подписка и оплата</div>
+        <h1>Управление подпиской</h1>
+        <p>Здесь вы можете отменить автопродление, удалить привязанную карту и посмотреть историю платежей.</p>
+      </div>
+
+      <!-- 1. Подписка -->
+      <section class="billing-section">
+        <div class="billing-card">
+          <h2><span>// 01</span> Подписка</h2>
+          <div id="subscriptionBlock">
+            <div class="billing-row"><span class="label">Загрузка…</span></div>
+          </div>
+          <div id="subscriptionActions" class="billing-actions"></div>
+          <div class="billing-hint" id="subscriptionHint"></div>
+        </div>
+      </section>
+
+      <!-- 2. Способ оплаты -->
+      <section class="billing-section">
+        <div class="billing-card">
+          <h2><span>// 02</span> Способ оплаты</h2>
+          <div id="paymentMethodBlock">
+            <div class="empty-card-state">Загрузка…</div>
+          </div>
+          <div id="paymentMethodActions" class="billing-actions"></div>
+          <div class="billing-hint" id="paymentMethodHint"></div>
+        </div>
+      </section>
+
+      <!-- 3. История платежей -->
+      <section class="billing-section">
+        <div class="billing-card">
+          <h2><span>// 03</span> История платежей</h2>
+          <div id="historyBlock">
+            <div class="history-empty">Загрузка…</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <span>&copy; 2025&ndash;2026 BelFed Analytics. Все права защищены.</span>
+    <div class="footer-links">
+      <a href="/disclaimer.html">Ограничение ответственности</a>
+      <a href="/oferta.html">Оферта</a>
+      <a href="/privacy.html">Политика конфиденциальности</a>
+    </div>
+  </footer>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="belfed-auth.js"></script>
+  <script src="belfed-billing.js"></script>
+  <script>
+    async function handleLogout() {
+      try {
+        if (window.supaClient) await window.supaClient.auth.signOut();
+      } catch (_) {}
+      window.location.href = '/';
+    }
+  </script>
+</body>
+</html>
