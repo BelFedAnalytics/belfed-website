@@ -27,6 +27,15 @@ const TG_TOKEN         = Deno.env.get("TELEGRAM_BOT_TOKEN") ?? "";
 const PAID_CHAT_ID     = Deno.env.get("TELEGRAM_PAID_CHAT_ID") ?? "";              // RU paid (default)
 const PAID_CHAT_ID_EN  = Deno.env.get("TELEGRAM_PAID_CHAT_ID_EN") ?? "";           // EN paid (optional)
 
+// Admin Telegram IDs to notify on every successful YooKassa payment.
+// Source of truth: ADMIN_TELEGRAM_IDS env (comma-separated). Fallback: Artem.
+const ADMIN_TG_IDS: number[] = (
+  (Deno.env.get("ADMIN_TELEGRAM_IDS") ?? "118296372")
+    .split(",")
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isFinite(n) && n > 0)
+);
+
 // https://yookassa.ru/developers/using-api/webhooks#ip
 const YOOKASSA_CIDRS_V4 = [
   "185.71.76.0/27", "185.71.77.0/27",
@@ -122,6 +131,112 @@ async function inviteLinkedTelegramUser(userId: string) {
       user_id: userId, telegram_id: tgId, chat_id: chatId,
       action: "invite", result: "error", detail: JSON.stringify(res),
     });
+  }
+}
+
+// Format an ISO timestamp as DD.MM.YYYY (UTC) for admin-readable messages.
+function fmtExpiryDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "—";
+    const dd = String(d.getUTCDate()).padStart(2, "0");
+    const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const yyyy = d.getUTCFullYear();
+    return `${dd}.${mm}.${yyyy}`;
+  } catch { return "—"; }
+}
+
+function brandLast4(brand: string | null, last4: string | null): string {
+  if (!brand && !last4) return "—";
+  const b = brand ? brand.charAt(0).toUpperCase() + brand.slice(1) : "Card";
+  return last4 ? `${b} •••• ${last4}` : b;
+}
+
+async function notifyAdminsNewPayment(opts: {
+  userId: string;
+  paymentId: string;
+  amount: number;
+  currency: string;
+  plan: string;
+  newExpiry: string;
+  isRecurring: boolean;
+  foundingIntent: boolean;
+  foundingClaimRes: any;
+  foundingClaimOk: boolean;
+  cardLast4: string | null;
+  cardBrand: string | null;
+  paymentMethodSaved: boolean;
+  receiptEmail: string | null;
+}) {
+  if (!TG_TOKEN || ADMIN_TG_IDS.length === 0) return;
+
+  // Fetch profile snapshot for richer message (best-effort).
+  const { data: prof } = await admin
+    .from("profiles")
+    .select("id, email, telegram_id, telegram_username, lang, founding_member, founding_locale")
+    .eq("id", opts.userId)
+    .maybeSingle();
+
+  const tgUsername = prof?.telegram_username ? `@${prof.telegram_username}` : "—";
+  const tgId = prof?.telegram_id ?? "—";
+  const email = prof?.email ?? opts.receiptEmail ?? "—";
+  const lang = prof?.lang ?? "—";
+
+  // Founding line. If claim succeeded now, or user is already founding
+  // (idempotent re-charge / recurring), surface that. Also surface failure
+  // reasons so admin can investigate (e.g. quota_exhausted, invalid_locale).
+  let foundingLine = "Type: Standard subscription";
+  if (opts.foundingIntent) {
+    if (opts.foundingClaimOk) {
+      foundingLine = "Type: Founding Member 🌟 (just granted)";
+    } else if (prof?.founding_member) {
+      foundingLine = "Type: Founding Member 🌟 (already, renewal/recurring)";
+    } else {
+      const reason = (opts.foundingClaimRes && (opts.foundingClaimRes as any).reason) || "unknown";
+      foundingLine = `Type: Standard — founding_intent set but claim failed (${reason})`;
+    }
+  } else if (prof?.founding_member) {
+    // Founding user on a recurring charge — keep the badge visible.
+    foundingLine = "Type: Founding Member 🌟 (recurring charge)";
+  }
+
+  const recurringStr = opts.isRecurring ? "yes (auto-renew charge)" : "one-time / initial";
+  const amountStr = `${opts.amount} ${opts.currency}`;
+  const card = brandLast4(opts.cardBrand, opts.cardLast4);
+  const savedStr = opts.paymentMethodSaved ? "saved (auto-renew enabled)" : "not saved (one-time)";
+  const expStr = fmtExpiryDate(opts.newExpiry);
+
+  const text =
+    "💰 New paid subscription (YooKassa)\n" +
+    "\n" +
+    `User: ${tgUsername}\n` +
+    `TG ID: ${tgId}\n` +
+    `Email: ${email}\n` +
+    `Lang: ${lang}\n` +
+    `Profile: ${opts.userId}\n` +
+    "\n" +
+    `${foundingLine}\n` +
+    `Provider: YooKassa\n` +
+    `Amount: ${amountStr}\n` +
+    `Plan: ${opts.plan}\n` +
+    `Recurring: ${recurringStr}\n` +
+    `Card: ${card}\n` +
+    `Payment method: ${savedStr}\n` +
+    "\n" +
+    `Subscription until: ${expStr}\n` +
+    `Payment ID: ${opts.paymentId}`;
+
+  for (const adminTg of ADMIN_TG_IDS) {
+    try {
+      await tg("sendMessage", {
+        chat_id: adminTg,
+        text,
+        disable_web_page_preview: true,
+      });
+    } catch (e) {
+      console.error(`admin notify: failed to send to ${adminTg}: ${(e as Error).message}`);
+    }
   }
 }
 
@@ -237,6 +352,12 @@ Deno.serve(async (req) => {
       // Card metadata for the /billing UI. YooKassa returns it nested under
       // payment_method.card. Both fields are best-effort: SBP/other methods
       // won't have them, and that's fine — UI handles NULL gracefully.
+      //
+      // NOTE: we capture last4/brand regardless of payment_method.saved.
+      // Even non-recurring (saved=false) payments display in the user's
+      // /billing page so they can see what card paid. The recurring/auto-
+      // renewal capability is governed separately by payment_method_id
+      // (which we only persist when saved=true above).
       const card = obj.payment_method?.card ?? null;
       const cardLast4: string | null =
         card?.last4 && /^\d{4}$/.test(String(card.last4)) ? String(card.last4) : null;
@@ -260,6 +381,8 @@ Deno.serve(async (req) => {
       // We never throw here — the payment is already applied; founding is bonus.
       const foundingIntent = obj.metadata?.founding_intent === "1";
       const foundingLocale = (obj.metadata?.founding_locale ?? "").toString();
+      let foundingClaimRes: any = null;
+      let foundingClaimOk = false;
       if (foundingIntent && (foundingLocale === "ru" || foundingLocale === "en")) {
         try {
           const { data: claimRes, error: claimErr } = await admin.rpc("claim_founding_slot", {
@@ -270,11 +393,20 @@ Deno.serve(async (req) => {
           });
           if (claimErr) {
             console.error("claim_founding_slot RPC error", claimErr);
+            await admin.from("payment_events").update({
+              processing_error: `founding_claim_rpc_error: ${claimErr.message ?? JSON.stringify(claimErr)}`,
+            }).eq("provider", "yookassa").eq("provider_event_id", eventId);
           } else {
             console.log("claim_founding_slot result", JSON.stringify(claimRes));
+            foundingClaimRes = claimRes;
+            foundingClaimOk = !!(claimRes && (claimRes as any).ok === true);
           }
         } catch (e) {
-          console.error("claim_founding_slot failed", (e as Error).message);
+          const m = (e as Error).message;
+          console.error("claim_founding_slot failed", m);
+          await admin.from("payment_events").update({
+            processing_error: `founding_claim_exception: ${m}`,
+          }).eq("provider", "yookassa").eq("provider_event_id", eventId);
         }
         // Clean up the pending claim row regardless of outcome
         await admin.from("pending_founding_claims").delete().eq("user_id", userId);
@@ -324,6 +456,33 @@ Deno.serve(async (req) => {
 
       // Grant Telegram access (first payment OR re-activation)
       await inviteLinkedTelegramUser(userId).catch((e) => console.error("tg invite failed", e));
+
+      // ---- Admin DM notification (every successful YooKassa payment) --------
+      // Mirrors the Telegram-Stars admin notification produced by bot.py's
+      // notify_admins_new_subscription so Artem (and any other listed admin)
+      // sees a single consistent format for every paid event regardless of
+      // payment rail. Best-effort: errors are logged, never re-thrown — a
+      // failed admin DM must not roll back the user's payment.
+      try {
+        await notifyAdminsNewPayment({
+          userId,
+          paymentId,
+          amount,
+          currency: obj.amount?.currency ?? "RUB",
+          plan,
+          newExpiry: (newExpiry as string) ?? paidAt,
+          isRecurring: !isInitial,
+          foundingIntent,
+          foundingClaimRes,
+          foundingClaimOk,
+          cardLast4,
+          cardBrand,
+          paymentMethodSaved: !!obj.payment_method?.saved,
+          receiptEmail,
+        });
+      } catch (e) {
+        console.error("notifyAdminsNewPayment failed", (e as Error).message);
+      }
     }
     else if (eventType === "payment.canceled") {
       await admin.from("payments").update({
