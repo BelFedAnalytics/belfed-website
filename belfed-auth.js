@@ -169,7 +169,7 @@ async function handleSignUp() {
     msgEl.innerHTML = ''
       + '<div class="signup-success">'
       + '  <h3>Аккаунт создан</h3>'
-      + '  <p>Чтобы активировать 14-дневный доступ к личному кабинету и получать наши сделки в живом режиме — присоединяйтесь к нашей трейдинг-группе.</p>'
+      + '  <p>Чтобы активировать 7-дневный доступ к личному кабинету и получать наши сделки в живом режиме — присоединяйтесь к нашей трейдинг-группе.</p>'
       + '  <a class="cta-tg" href="' + deepLink + '" target="_blank" rel="noopener">Получить доступ к группе</a>'
       + '  <div class="signup-success-note">Ссылка одноразовая, действует 15 минут. Если что — <a href="#" onclick="document.getElementById(\'signupForm\').querySelector(\'.login-btn\').click();return false;">запросите новую</a>.</div>'
       + '</div>';
@@ -183,7 +183,7 @@ async function handleSignUp() {
     errEl.textContent = err.message || 'Ошибка регистрации';
     errEl.style.display = 'block';
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = prevBtnText || 'Начать 14 дней бесплатно'; }
+    if (btn) { btn.disabled = false; btn.textContent = prevBtnText || 'Начать 7 дней бесплатно'; }
   }
 }
 

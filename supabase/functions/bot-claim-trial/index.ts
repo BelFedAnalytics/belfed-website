@@ -2,7 +2,7 @@
 // Supabase Edge Function: bot-claim-trial
 //
 // Called by the Telegram bot (bot.py) on /start trial deep-link.
-// Creates a "lite" profile (ghost-email tg_<id>@belfed.local) with a 14-day trial
+// Creates a "lite" profile (ghost-email tg_<id>@belfed.local) with a 7-day trial
 // and returns a one-shot invite link to the paid Telegram group (RU or EN).
 //
 // AUTH: shared secret in header `x-bot-secret` must match BOT_SHARED_SECRET env.
@@ -13,7 +13,7 @@
 //   TRADING_CHANNEL_ID              — RU paid chat_id (e.g. -1003773738299)
 //   TRADING_CHANNEL_ID_EN           — EN paid chat_id (e.g. -1003869302680)
 //   BOT_SHARED_SECRET               — random string, also set on bot server
-//   TRIAL_DAYS                      — optional, defaults to 14
+//   TRIAL_DAYS                      — legacy/optional; trial length is now hardcoded to 7
 //
 // REQUEST (POST application/json):
 //   { "telegram_id": "118296372", "telegram_username": "tyoma_fyodorov",
@@ -30,7 +30,10 @@ const BOT_TOKEN             = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
 const TRADING_CHANNEL_ID    = Deno.env.get("TRADING_CHANNEL_ID")!;
 const TRADING_CHANNEL_ID_EN = Deno.env.get("TRADING_CHANNEL_ID_EN") ?? "";
 const BOT_SHARED_SECRET     = Deno.env.get("BOT_SHARED_SECRET")!;
-const TRIAL_DAYS            = parseInt(Deno.env.get("TRIAL_DAYS") ?? "14", 10);
+// Trial length is fixed at 7 days across the whole service (Tribute caps trial at 7d,
+// so bot/site/Tribute are unified). Hardcoded to stay deterministic regardless of the
+// TRIAL_DAYS env var, which may still be set to a legacy value.
+const TRIAL_DAYS            = 7;
 
 const cors = {
   "Access-Control-Allow-Origin":  "*",
