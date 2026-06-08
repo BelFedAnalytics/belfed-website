@@ -88,7 +88,7 @@
 
     const [{ data: prof }, { data: sub }, { data: pays }] = await Promise.all([
       c.from('profiles')
-        .select('id, email, subscription_status, subscription_plan, subscription_expires_at, telegram_id, telegram_username, trial_started_at, trial_end, is_founding_member, founding_locale')
+        .select('id, email, subscription_status, subscription_plan, subscription_expires_at, telegram_id, telegram_username, trial_started_at, trial_end, founding_member, founding_locale')
         .eq('id', session.user.id).maybeSingle(),
       c.from('subscriptions')
         .select('id, status, plan_code, amount_rub, current_period_end, cancel_at_period_end, payment_method_id, card_last4, card_brand, payment_method_saved_at, payment_method_detached_at, failed_attempts, last_charge_error')
@@ -117,7 +117,7 @@
     const autorenew = isPaid && !subscription.cancel_at_period_end && subscription.payment_method_id;
 
     // Pricing label — founding members keep 30% off forever
-    const isFounding = !!profile?.is_founding_member;
+    const isFounding = !!profile?.founding_member;
     const monthlyAmount = subscription?.amount_rub || (isFounding ? 1050 : 1500);
 
     let rows = '';
