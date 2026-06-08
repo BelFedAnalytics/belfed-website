@@ -31,11 +31,12 @@ const SHOP_ID            = MODE === "live"
 const SECRET_KEY         = MODE === "live"
   ? Deno.env.get("YOOKASSA_SECRET_KEY")!
   : Deno.env.get("YOOKASSA_TEST_SECRET_KEY")!;
-// save_payment_method MUST be true for our subscription model — without it YooKassa
-// returns payment_method.saved=false and we cannot run autorenewals. Previously gated
-// by SAVE_PAYMENT_METHOD env flag; that flag was unset in prod, causing every paid
-// user to silently lose autorenewal (see Daria 2026-06-08). Hardcoded true now.
-const SAVE_PM            = true;
+// IMPORTANT: our YooKassa shop currently does NOT have recurring/saved-card capability
+// enabled (API returns 403 "This store can't make recurring payments" if save_payment_method
+// is sent). Therefore SAVE_PM must stay false until the shop is upgraded by YooMoney.
+// Flip SAVE_PAYMENT_METHOD env to "true" only AFTER the upgrade is confirmed.
+// See 2026-06-08 troubleshooting (Daria's 1500 ₽ payment + admin-test-link 403).
+const SAVE_PM            = (Deno.env.get("SAVE_PAYMENT_METHOD") ?? "false").toLowerCase() === "true";
 const BOT_SHARED_SECRET  = Deno.env.get("BOT_SHARED_SECRET") ?? "";
 
 const RETURN_URL = "https://belfed.ru/members.html?payment=return";
