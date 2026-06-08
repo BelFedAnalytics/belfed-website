@@ -548,7 +548,7 @@ TEXTS_RU = {
     ),
     "paid_invite_msg": "📺 Ваша ссылка в закрытый канал (1 час, одноразовая):\n{link}",
     "paid_invite_fail":"⚠️ Не удалось создать ссылку. Проверьте, что бот — администратор канала.",
-    "lang_pick_title": "🌐 Выберите язык / Choose language:",
+    "lang_pick_title": "🌐 Choose language / Выберите язык:",
     "btn_lang_ru":     "🇷🇺 Русский",
     "btn_lang_en":     "🇬🇧 English",
     "lang_saved":      "✅ Язык: Русский",
@@ -623,6 +623,11 @@ TEXTS_RU = {
         "После оплаты я пришлю персональную ссылку в закрытый канал."
     ),
     "btn_open_stars_pay": f"💳 Оформить — ${PRICE_USD} / мес",
+    "stars_invoice_hint": (
+        "⏱ Ссылка на оплату действует несколько минут — это особенность Telegram Stars.\n"
+        "Если Telegram показывает «срок действия истёк» — нажмите «🔄 Обновить ссылку»."
+    ),
+    "btn_refresh_invoice": "🔄 Обновить ссылку",
     "stars_payment_received": (
         "✅ Оплата получена! Спасибо.\n\n"
         "Подписка активна до: {until}\n"
@@ -796,6 +801,11 @@ TEXTS_EN = {
         "After payment I'll send your personal invite to the private channel."
     ),
     "btn_open_stars_pay": f"💳 Subscribe — ${PRICE_USD} / mo",
+    "stars_invoice_hint": (
+        "⏱ This payment link is valid only for a few minutes — that's how Telegram Stars work.\n"
+        "If Telegram says “payment link expired”, tap “🔄 Refresh link” below."
+    ),
+    "btn_refresh_invoice": "🔄 Refresh link",
     "stars_payment_received": (
         "✅ Payment received. Thank you!\n\n"
         "Subscription active until: {until}\n"
@@ -901,6 +911,71 @@ async def run_trial_flow(update: Update, context: ContextTypes.DEFAULT_TYPE,
                 T(lang, "trial_claim_ok").format(invite=invite),
                 disable_web_page_preview=True,
             )
+        # Web-dashboard follow-up: приглашаем юзера зарегистрироваться
+        # на сайте, чтобы получить доступ к веб-лК (привязка TG↔веб
+        # произойдёт автоматически через merge_lite_into_full).
+        try:
+            if lang == "ru":
+                wa_url = "https://belfed.ru/members.html"
+                wa_btn = "🌐 Открыть belfed.ru/members.html"
+                wa_txt = (
+                    "🌐 Для регистрации в личном кабинете на сайте — откройте belfed.ru/members.html\n"
+                    "Для входа нужно зарегистрироваться по email.\n"
+                    "Регистрация на сайте автоматически свяжется с вашим Telegram."
+                )
+            else:
+                wa_url = "https://belfed.com/members.html"
+                wa_btn = "🌐 Open belfed.com/members.html"
+                wa_txt = (
+                    "🌐 To set up your web dashboard — open belfed.com/members.html\n"
+                    "Sign up with your email. Registration will automatically link to your Telegram."
+                )
+            await reply_target.reply_text(
+                wa_txt,
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(wa_btn, url=wa_url)]]),
+                disable_web_page_preview=True,
+            )
+        except Exception as e:
+            log.warning("trial-flow web-account follow-up failed: %s", e)
+
+        # Founding follow-up: если юзер пришёл по founding deep-link,
+        # предлагаем сразу оформить founding-подписку по скидке 30% навсегда.
+        # Кнопка ведёт на тот же deep-link — сейчас у юзера уже есть
+        # профиль после триала, поэтому сработает Сценарий A:
+        #   ensure_pending_founding_claim → resolve_payment_price → invoice.
+        if source and source.startswith("founding"):
+            try:
+                bot_username = (context.bot.username or "BelfedBot")
+                if lang == "ru":
+                    fnd_url = f"https://t.me/{bot_username}?start=founding_ru"
+                    fnd_btn = "✨ Оформить Founding 1050₽/мес"
+                    fnd_txt = (
+                        "✨ Готовы закрепить founding-цену?\n\n"
+                        f"1050₽/мес вместо {PRICE_RUB}₽/мес — скидка 30% остаётся навсегда, "
+                        "даже когда стандартная цена сервиса вырастет.\n"
+                        "Оплата картой через YooKassa (Мир / SBP / SberPay / T-Pay / ЮMoney)."
+                    )
+                else:
+                    fnd_url = f"https://t.me/{bot_username}?start=founding_en"
+                    fnd_btn = "✨ Claim Founding $10.50/mo"
+                    fnd_txt = (
+                        "✨ Ready to lock in the founding price?\n"
+                        "\n"
+                        f"$10.50/mo instead of ${PRICE_USD}/mo — 30% off forever, "
+                        "even when our standard price changes later.\n"
+                        "\n"
+                        "Plus: 3 asset requests per day (priority), founding status "
+                        "tied to your account, pause anytime with 60 days to come back.\n"
+                        "\n"
+                        "Tap the button below to open the in-bot payment screen."
+                    )
+                await reply_target.reply_text(
+                    fnd_txt,
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(fnd_btn, url=fnd_url)]]),
+                    disable_web_page_preview=True,
+                )
+            except Exception as e:
+                log.warning("trial-flow founding follow-up failed: %s", e)
     else:
         err = res.get("error")
         if err == "trial_already_used":
@@ -1059,15 +1134,21 @@ async def _send_stars_invoice(reply_target, profile: dict, lang: str,
     btn_label = (f"💳 Subscribe · Founding — ${amount_usd}/mo"
                  if founding_flag else
                  f"💳 Subscribe — ${amount_usd}/mo")
-    kb = InlineKeyboardMarkup([[InlineKeyboardButton(btn_label, url=invoice_url)]])
+    # Колбэк refresh несёт founding-флаг, чтобы on_button мог выбрать верную ветку.
+    refresh_cb = f"stars_refresh|{'f' if founding_flag else 's'}"
+    kb = InlineKeyboardMarkup([
+        [InlineKeyboardButton(btn_label, url=invoice_url)],
+        [InlineKeyboardButton(T(lang, "btn_refresh_invoice"), callback_data=refresh_cb)],
+    ])
     if founding_flag:
-        body = (
+        body_core = (
             f"💳 BelFed Premium · Founding Member — ${amount_usd}/mo\n\n"
             "✨ 30% off forever — the discount stays with you even when our standard price changes.\n"
             "✨ Auto-renew can be cancelled anytime from the Telegram payment screen."
         )
     else:
-        body = T(lang, "stars_pay_link")
+        body_core = T(lang, "stars_pay_link")
+    body = body_core + "\n\n" + T(lang, "stars_invoice_hint")
     await reply_target.reply_text(
         body,
         reply_markup=kb,
@@ -1117,6 +1198,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Если /start пришёл во время сбора email — выходим из всех email-state'ов
     context.user_data.pop("awaiting_email_for_payment", None)
     context.user_data.pop("awaiting_email_for_link", None)
+    context.user_data.pop("awaiting_email_for_founding", None)
 
     # Deep-link /start auth — direct dashboard access for paid members
     if args and (args[0] == "auth" or args[0].startswith("auth_")):
@@ -1166,18 +1248,42 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             lang = "en" if (user.language_code or "").startswith("en") else "ru"
 
         # 2) Нужен профиль — founding выдаётся только зарегистрированным юзерам.
-        # Если нет профиля — отправляем на trial flow (claim_trial создаст lite-профиль).
+        # Если нет TG-профиля — спрашиваем email (мог зарегиться через сайт).
+        # link_telegram_email_via_rpc найдёт существующий профиль и привяжет.
+        # Если email не найден — fallback на trial flow.
         if not profile:
+            if lang == "ru":
+                ask_text = (
+                    "✨ Добро пожаловать в BelFed Founding Members.\n"
+                    "\n"
+                    "Если у вас уже есть аккаунт BelFed (зарегистрировались на сайте) — "
+                    "пришлите ваш email одним сообщением. Мы привяжем Telegram "
+                    "к вашему профилю и сразу откроем founding-цену.\n"
+                    "\n"
+                    "Если вы новый пользователь — нажмите «Пропустить»."
+                )
+                skip_label = "Пропустить — я новый пользователь"
+            else:
+                ask_text = (
+                    "✨ Welcome to BelFed Founding Members.\n"
+                    "\n"
+                    "If you already have a BelFed account (signed up on the site) — "
+                    "send your email in one message. We'll link your Telegram "
+                    "to your existing profile and open the founding price immediately.\n"
+                    "\n"
+                    "If you're new here — tap Skip below."
+                )
+                skip_label = "Skip — I'm new here"
+            context.user_data["awaiting_email_for_founding"] = {
+                "lang":   lang,
+                "source": source,
+            }
             await update.message.reply_text(
-                ("✨ Добро пожаловать в BelFed Founding Members. "
-                 "Сначала активируем 14-дневный триал, потом оформите founding-подписку.")
-                if lang == "ru" else
-                ("✨ Welcome to BelFed Founding Members. "
-                 "Let's start your 14-day trial first, then you can claim the founding price.")
+                ask_text,
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton(skip_label, callback_data=f"founding_skip|{source}"),
+                ]]),
             )
-            await run_trial_flow(update, context, user.id, user.username,
-                                  source=source, lang=lang,
-                                  reply_target=update.message)
             return
 
         # 3) Отмечаем founding-intent на 24h (чтобы resolve_payment_price выдал founding-цену).
@@ -1216,9 +1322,24 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # 5) RU founding → yookassa, EN founding → Stars. Отправляем юзера по правильному flow.
         if lang == "ru":
             intro = (
-                f"✨ BelFed Founding Members — {amount_rub}₽/мес вместо {PRICE_RUB}₽/мес\n"
-                f"Скидка {int(discount)}% от стоимости сервиса — навсегда.\n\n"
-                "Оформляем подписку картой (Часто пользуются карты российских банков)."
+                f"✨ BelFed Founding Members\n"
+                f"\n"
+                f"// 01\n"
+                f"Скидка {int(discount)}% от стоимости сервиса — навсегда. "
+                f"{amount_rub}₽/мес вместо {PRICE_RUB}₽/мес. "
+                f"Скидка сохраняется при любом изменении базовой цены в будущем.\n"
+                f"\n"
+                f"// 02\n"
+                f"3 заявки на разбор актива в день с приоритетным рассмотрением. "
+                f"После закрытия программы новые пользователи будут получать 1/день — "
+                f"у вас остаётся 3, навсегда.\n"
+                f"\n"
+                f"// 03\n"
+                f"Статус Founding Member привязан к вашему аккаунту. Подписку можно "
+                f"поставить на паузу в любой момент — 60 дней на возврат без потери "
+                f"скидки и статуса.\n"
+                f"\n"
+                f"Оформляем подписку картой (Мир / SBP / SberPay / T-Pay / ЮMoney)."
             )
             await update.message.reply_text(intro)
             # Нужен email для чека: если уже есть — сразу выдаём ссылку, иначе просим.
@@ -1236,9 +1357,21 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         else:
             intro = (
-                f"✨ BelFed Founding Members — ${amount_usd}/mo instead of ${PRICE_USD}/mo\n"
-                f"{int(discount)}% off forever — stays with you even when our standard price changes.\n\n"
-                "Tap Subscribe below to open the Telegram Stars payment screen. Cancel anytime."
+                f"✨ BelFed Founding Members\n"
+                f"\n"
+                f"// 01\n"
+                f"{int(discount)}% off, forever. ${amount_usd}/mo instead of ${PRICE_USD}/mo. "
+                f"The discount stays no matter how our pricing changes later.\n"
+                f"\n"
+                f"// 02\n"
+                f"3 asset requests per day with priority review. New users will get 1/day "
+                f"after the program closes — you keep 3, permanently.\n"
+                f"\n"
+                f"// 03\n"
+                f"Founding Member status tied to your account. Pause anytime — 60 days "
+                f"to come back without losing the discount or status.\n"
+                f"\n"
+                f"Tap Subscribe below to open the Telegram Stars payment screen."
             )
             await update.message.reply_text(intro)
             await _send_stars_invoice(update.message, profile, lang, user.id)
@@ -1340,8 +1473,15 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data["pending_trial_source"] = source
             if intent_token:
                 context.user_data["pending_trial_intent_token"] = intent_token
+            trial_greeting = (
+                "👋 Welcome to BelFed Analytics!\n"
+                "Please choose your language to start your free trial.\n"
+                "\n"
+                "👋 Добро пожаловать в BelFed Analytics!\n"
+                "Выберите язык, чтобы начать бесплатный пробный период."
+            )
             await update.message.reply_text(
-                TEXTS_RU["lang_pick_title"],
+                trial_greeting,
                 reply_markup=lang_pick_keyboard("lang_trial"),
             )
             return
@@ -1391,9 +1531,17 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await send_main_menu(update, context, lang=lang)
         return
 
-    # Нет профиля — спрашиваем язык (lang_menu callback потом создаст lite и попросит email)
+    # Нет профиля — приветствуем билингвально и просим выбрать язык
+    # (lang_menu callback потом создаст lite и попросит email)
+    greeting = (
+        "👋 Welcome to BelFed Analytics!\n"
+        "Please choose your language below to continue.\n"
+        "\n"
+        "👋 Добро пожаловать в BelFed Analytics!\n"
+        "Выберите язык ниже, чтобы продолжить."
+    )
     await update.message.reply_text(
-        TEXTS_RU["lang_pick_title"],
+        greeting,
         reply_markup=lang_pick_keyboard("lang_menu"),
     )
 
@@ -1563,27 +1711,32 @@ async def cmd_lang(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def cmd_dashboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Шорткат к /start auth — одноразовая ссылка на веб-дашборд."""
+    """/dashboard — редирект на веб-личный кабинет (members.html).
+
+    Magic-link (auth-issue → auth-exchange) больше не используется.
+    Юзер входит в лК по email+password на сайте. Привязка TG↔веб
+    происходит через trial-intent-create + consume_trial_intent (для новых)
+    или merge_lite_into_full RPC (для тех, кто начал в боте).
+    """
     user = update.effective_user
     profile = await get_profile_by_telegram(user.id)
     lang = await get_user_lang(update, profile)
-    is_paid = await check_paid_membership(user.id, lang)
-    if not is_paid:
-        txt = ("⚠️ Дашборд — только для участников платного канала. Оформите подписку:") if lang == "ru" else \
-              "⚠️ Dashboard is for paid channel members. Activate your subscription:"
-        await update.message.reply_text(txt)
-        await send_main_menu(update, context, lang=lang)
-        return
-    ott = await issue_dashboard_session(user.id, lang)
-    if not ott:
-        txt = "⚠️ Не удалось создать сессию. Попробуйте через минуту." if lang == "ru" else \
-              "⚠️ Couldn't create session. Try again in a moment."
-        await update.message.reply_text(txt)
-        return
-    url = f"{DASHBOARD_AUTH_URL}?t={ott}"
-    btn = "📊 Открыть дашборд" if lang == "ru" else "📊 Open Dashboard"
-    msg = ("📊 Личный кабинет — открытые позиции, аналитика, история сделок.\nСсылка действует 5 минут.") if lang == "ru" else \
-          "📊 Member dashboard — open positions, analytics, trade history.\nLink valid for 5 minutes."
+    if lang == "ru":
+        url = "https://belfed.ru/members.html"
+        btn = "🌐 Открыть belfed.ru/members.html"
+        msg = (
+            "📊 Личный кабинет — открытые позиции, аналитика, история сделок.\n\n"
+            "Для входа нужно зарегистрироваться по email на сайте.\n"
+            "Регистрация автоматически свяжется с вашим Telegram."
+        )
+    else:
+        url = "https://belfed.com/members.html"
+        btn = "🌐 Open belfed.com/members.html"
+        msg = (
+            "📊 Member dashboard — open positions, analytics, trade history.\n\n"
+            "To sign in, register with your email on the site.\n"
+            "Registration will automatically link to your Telegram."
+        )
     await update.message.reply_text(
         msg,
         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(btn, url=url)]]),
@@ -2164,6 +2317,160 @@ async def on_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(ack)
         return
 
+    # 0) email для founding-flow (юзер пришёл по founding deep-link без TG-профиля)
+    founding_state = context.user_data.get("awaiting_email_for_founding")
+    if founding_state:
+        user = update.effective_user
+        text = (update.message.text or "").strip()
+        lang = founding_state.get("lang", "en")
+        source = founding_state.get("source", "founding_en" if lang == "en" else "founding_ru")
+
+        if not is_valid_email(text):
+            await update.message.reply_text(T(lang, "email_link_invalid"))
+            return
+
+        # Сначала создаём lite-профиль через bot-claim-trial (нужен telegram_id в БД
+        # чтобы link_telegram_email мог найти текущий "лайт" и смерджить).
+        res_trial = await claim_trial_via_edge(user.id, user.username,
+                                                source=source, lang=lang)
+        if not res_trial:
+            await update.message.reply_text(T(lang, "trial_claim_error"))
+            return
+
+        # Теперь link: если email уже зарегистрирован на сайте — мерджит lite-профиль
+        # в существующий. Если email новый — просто привязывает к lite-профилю.
+        res_link = await link_telegram_email_via_rpc(user.id, text, user.username)
+        if not res_link or not res_link.get("ok"):
+            err = (res_link or {}).get("error", "unknown")
+            log.warning("founding email-link error=%s tg=%s email=%s", err, user.id, text)
+            if err == "email_taken":
+                await update.message.reply_text(T(lang, "email_link_taken"))
+                return  # оставляем state — пусть пробует другой email
+            await update.message.reply_text(T(lang, "email_link_temporary"))
+            return
+
+        # Успех — выходим из state
+        context.user_data.pop("awaiting_email_for_founding", None)
+
+        if res_link.get("linked"):
+            # Существующий сайт-юзер успешно привязан
+            await update.message.reply_text(T(lang, "email_link_ok_linked").format(email=text))
+        elif res_link.get("created_email"):
+            await update.message.reply_text(T(lang, "email_link_ok_saved").format(email=text))
+
+        # Бонус +7 дней раннему подписчику (идемпотентно)
+        profile_id = res_link.get("user_id")
+        if profile_id:
+            try:
+                bonus = await grant_early_subscriber_bonus_via_rpc(profile_id)
+                if bonus and bonus.get("granted") and bonus.get("mode") == "expiry_extended":
+                    new_exp = bonus.get("new_expires_at") or ""
+                    new_exp_display = new_exp[:10] if isinstance(new_exp, str) and len(new_exp) >= 10 else new_exp
+                    if isinstance(new_exp_display, str) and len(new_exp_display) == 10:
+                        try:
+                            y, m, d = new_exp_display.split("-")
+                            new_exp_display = f"{d}.{m}.{y}"
+                        except Exception:
+                            pass
+                    await update.message.reply_text(
+                        T(lang, "early_bonus_granted").format(new_expiry=new_exp_display),
+                        parse_mode="Markdown",
+                    )
+            except Exception as e:
+                log.warning("founding-flow early bonus failed: %s", e)
+
+        # Запускаем founding-flow на привязанном профиле
+        profile = await get_profile_by_telegram(user.id)
+        if not profile:
+            await update.message.reply_text(T(lang, "pay_error"))
+            return
+
+        claim = await ensure_pending_founding_claim_via_rpc(
+            profile["id"], lang, source=source,
+        )
+        if not claim or not claim.get("ok"):
+            reason = (claim or {}).get("reason", "unknown")
+            log.warning("founding intent rejected for %s: %s", profile["id"], reason)
+            if reason == "quota_full":
+                txt = ("⚠️ Все founding-слоты заняты. Спасибо за интерес!"
+                       if lang == "ru" else
+                       "⚠️ All founding slots are taken. Thanks for your interest!")
+            elif reason == "already_founding":
+                txt = ("✅ Вы уже founding-участник. Скидка действует автоматически."
+                       if lang == "ru" else
+                       "✅ You're already a founding member. Discount applies automatically.")
+            else:
+                txt = ("⚠️ Не удалось обработать заявку. Попробуйте через минуту."
+                       if lang == "ru" else
+                       "⚠️ Couldn't process your request. Please try again in a minute.")
+            await update.message.reply_text(txt)
+            await send_main_menu(update, context, lang=lang)
+            return
+
+        price_info = await resolve_payment_price_via_rpc(profile["id"])
+        if not price_info or not price_info.get("ok"):
+            await update.message.reply_text(T(lang, "pay_error"))
+            return
+
+        amount_rub = price_info.get("amount_rub")
+        amount_usd = price_info.get("amount_usd")
+        discount   = price_info.get("discount_pct") or 30
+
+        if lang == "ru":
+            intro = (
+                f"✨ BelFed Founding Members\n"
+                f"\n"
+                f"// 01\n"
+                f"Скидка {int(discount)}% от стоимости сервиса — навсегда. "
+                f"{amount_rub}₽/мес вместо {PRICE_RUB}₽/мес. "
+                f"Скидка сохраняется при любом изменении базовой цены в будущем.\n"
+                f"\n"
+                f"// 02\n"
+                f"3 заявки на разбор актива в день с приоритетным рассмотрением. "
+                f"После закрытия программы новые пользователи будут получать 1/день — "
+                f"у вас остаётся 3, навсегда.\n"
+                f"\n"
+                f"// 03\n"
+                f"Статус Founding Member привязан к вашему аккаунту. Подписку можно "
+                f"поставить на паузу в любой момент — 60 дней на возврат без потери "
+                f"скидки и статуса.\n"
+                f"\n"
+                f"Оформляем подписку картой (Мир / SBP / SberPay / T-Pay / ЮMoney)."
+            )
+            await update.message.reply_text(intro)
+            email_for_receipt = profile.get("email")
+            if email_for_receipt and is_valid_email(email_for_receipt) and not is_ghost_email(email_for_receipt):
+                await create_and_send_payment(update.message, context, profile, email_for_receipt, lang)
+            else:
+                context.user_data["awaiting_email_for_payment"] = {
+                    "profile_id":  profile["id"],
+                    "lang":        lang,
+                    "provider":    "yookassa",
+                    "telegram_id": user.id,
+                }
+                await update.message.reply_text(T(lang, "ask_email"))
+        else:
+            intro = (
+                f"✨ BelFed Founding Members\n"
+                f"\n"
+                f"// 01\n"
+                f"{int(discount)}% off, forever. ${amount_usd}/mo instead of ${PRICE_USD}/mo. "
+                f"The discount stays no matter how our pricing changes later.\n"
+                f"\n"
+                f"// 02\n"
+                f"3 asset requests per day with priority review. New users will get 1/day "
+                f"after the program closes — you keep 3, permanently.\n"
+                f"\n"
+                f"// 03\n"
+                f"Founding Member status tied to your account. Pause anytime — 60 days "
+                f"to come back without losing the discount or status.\n"
+                f"\n"
+                f"Tap Subscribe below to open the Telegram Stars payment screen."
+            )
+            await update.message.reply_text(intro)
+            await _send_stars_invoice(update.message, profile, lang, user.id)
+        return
+
     # 1) email для привязки после голого /start
     link_state = context.user_data.get("awaiting_email_for_link")
     if link_state:
@@ -2303,6 +2610,40 @@ async def on_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     user = query.from_user
     data = query.data or ""
+
+    # Founding flow: пользователь нажал Skip (он новый, не сайт-подписчик)
+    if data.startswith("founding_skip|"):
+        _, _, source = data.partition("|")
+        if not source:
+            source = "founding_en"
+        lang = detect_lang_from_source(source) or "en"
+        # Очищаем state email
+        context.user_data.pop("awaiting_email_for_founding", None)
+        # Обычный trial flow + founding follow-up как раньше
+        intro = ("✨ Запускаем 14-дневный триал. После него вы сможете оформить founding-подписку."
+                 if lang == "ru" else
+                 "✨ Starting your 14-day trial. After that you can claim the founding price.")
+        await query.message.reply_text(intro)
+        await run_trial_flow(update, context, user.id, user.username,
+                              source=source, lang=lang,
+                              reply_target=query.message)
+        return
+
+    # Stars invoice refresh: пользователь нажал «🔄 Обновить ссылку» под истёкшим invoice.
+    # Telegram Stars invoice TTL ~10 минут — генерируем свежий через _send_stars_invoice.
+    # ensure_pending_founding_claim идемпотентен → переиспользует существующий founding-intent
+    # без перерасхода квоты. Цена и founding_flag берутся из resolve_payment_price.
+    if data.startswith("stars_refresh|"):
+        profile = await get_profile_by_telegram(user.id)
+        lang = await get_user_lang(update, profile)
+        if not profile:
+            await query.message.reply_text(T(lang, "need_link"))
+            return
+        # Передаём query.message как reply_target — новая invoice-карточка появится
+        # отдельным сообщением под старой (старую не трогаем, чтобы избежать гонки
+        # при перезапуске Telegram-клиента у пользователя).
+        await _send_stars_invoice(query.message, profile, lang, user.id)
+        return
 
     # Выбор языка: payload "lang_trial|ru" или "lang_menu|en"
     if data.startswith("lang_trial|") or data.startswith("lang_menu|"):
@@ -2525,6 +2866,96 @@ async def on_pre_checkout(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             pass
 
+
+# ---------- Admin notification: new paid subscription --------------------
+async def notify_admins_new_subscription(
+    context: ContextTypes.DEFAULT_TYPE,
+    profile: dict,
+    profile_after: dict | None,
+    user,  # telegram.User
+    sp,    # telegram.SuccessfulPayment
+    is_founding_payment: bool,
+    is_recurring_flag: bool,
+    claim_res: dict | None,
+    trial_end_before: "datetime | None" = None,
+):
+    """Send a short admin DM whenever a paid subscription is activated.
+    Best-effort: errors are logged, not raised — payment flow must never fail
+    because of a notification glitch.
+    """
+    try:
+        prof = profile_after or profile or {}
+        tg_username = ("@" + user.username) if user.username else "—"
+        full_name = " ".join(filter(None, [user.first_name, user.last_name])) or "—"
+        email = prof.get("email") or "—"
+        lang = prof.get("lang") or "—"
+        amount_units = sp.total_amount  # for XTR this is the Stars count integer
+        currency = sp.currency or "—"
+        provider = "Telegram Stars" if currency == "XTR" else (
+            "YooKassa" if currency in ("RUB", "rub") else currency
+        )
+        usd_estimate = ""
+        if currency == "XTR":
+            # 669⭐ → $10.50 founding, 956⭐ → $15.00 standard. Show approximate USD.
+            if amount_units == 669:
+                usd_estimate = " (~$10.50)"
+            elif amount_units == 956:
+                usd_estimate = " (~$15.00)"
+
+        # founding number, if claim succeeded
+        founding_line = ""
+        if is_founding_payment:
+            no = (claim_res or {}).get("founding_member_no")
+            # Founding Member shown without member_number per product decision
+            founding_line = "Type: Founding Member 🌟"
+        else:
+            founding_line = "Type: Standard subscription"
+
+        # subscription_expires_at after the payment
+        exp_str = "—"
+        exp_dt = parse_ts(prof.get("subscription_expires_at")) if prof else None
+        if exp_dt:
+            exp_str = exp_dt.strftime("%d.%m.%Y")
+
+        # trial rollover info — only meaningful if user paid BEFORE trial_end
+        rollover_line = ""
+        if trial_end_before:
+            now_utc = datetime.now(timezone.utc)
+            if trial_end_before > now_utc:
+                days = (trial_end_before - now_utc).days
+                was_str = trial_end_before.strftime("%b %d")
+                rollover_line = f"Trial rollover: +{days} days (was {was_str})\n"
+
+        recurring_str = "yes (auto-renew)" if is_recurring_flag else "one-time"
+
+        text = (
+            "💰 New paid subscription\n"
+            "\n"
+            f"User: {tg_username} ({full_name})\n"
+            f"TG ID: {user.id}\n"
+            f"Email: {email}\n"
+            f"Lang: {lang}\n"
+            f"Profile: {prof.get('id', '—')}\n"
+            "\n"
+            f"{founding_line}\n"
+            f"Provider: {provider}\n"
+            f"Amount: {amount_units}{' ⭐' if currency == 'XTR' else ' ' + currency}{usd_estimate}\n"
+            f"Recurring: {recurring_str}\n"
+            "\n"
+            f"Subscription until: {exp_str}\n"
+            f"{rollover_line}"
+            f"Charge ID: {sp.telegram_payment_charge_id}"
+        )
+
+        for admin_tg in ADMIN_TELEGRAM_IDS:
+            try:
+                await context.bot.send_message(chat_id=admin_tg, text=text)
+            except Exception as e:
+                log.error("admin notify: failed to send to %s: %s", admin_tg, e)
+    except Exception as e:
+        log.error("notify_admins_new_subscription: unexpected error: %s", e)
+
+
 async def on_successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """После успешной оплаты: записываем в БД, выдаём invite в EN-group."""
     msg = update.message
@@ -2578,6 +3009,9 @@ async def on_successful_payment(update: Update, context: ContextTypes.DEFAULT_TY
     lang = await get_user_lang(update, profile)
 
     # Запись в БД через RPC
+    # capture pre-payment trial_end for rollover reporting
+    trial_end_before = parse_ts(profile.get("subscription_expires_at")) if profile else None
+
     ok = await apply_stars_payment_via_rpc(
         telegram_charge_id=sp.telegram_payment_charge_id,
         user_id=profile["id"],
@@ -2596,6 +3030,7 @@ async def on_successful_payment(update: Update, context: ContextTypes.DEFAULT_TY
         )
         return
 
+    claim_res = None
     # Если это founding-платёж — закрепляем слот и убираем pending-claim.
     # Ошибка claim не блокирует выдачу доступа — платёж реальный, юзер имеет право на доступ.
     if is_founding_payment:
@@ -2660,21 +3095,50 @@ async def on_successful_payment(update: Update, context: ContextTypes.DEFAULT_TY
     except Exception as e:
         log.warning("post-Stars upgrade-email prompt failed: %s", e)
 
-    # Dashboard был недоступен без этого — выдаём одноразовую ссылку.
+    # Web dashboard — без magic-link, простой редирект на members.html.
+    # Привязка TG↔веб делается при регистрации на сайте.
     try:
-        ott = await issue_dashboard_session(user.id, lang)
-        if ott:
-            url = f"{DASHBOARD_AUTH_URL}?t={ott}"
-            btn_label = "📊 Открыть дашборд" if lang == "ru" else "📊 Open Dashboard"
-            txt = ("📊 Личный кабинет — открытые позиции, аналитика, история сделок.\nСсылка действует 5 минут.") if lang == "ru" else \
-                  "📊 Member dashboard — open positions, analytics, trade history.\nLink valid for 5 minutes."
-            await msg.reply_text(
-                txt,
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(btn_label, url=url)]]),
-                disable_web_page_preview=True,
+        if lang == "ru":
+            url = "https://belfed.ru/members.html"
+            btn_label = "🌐 Открыть belfed.ru/members.html"
+            txt = (
+                "📊 Личный кабинет — открытые позиции, аналитика, история сделок.\n\n"
+                "Для входа нужно зарегистрироваться по email на сайте.\n"
+                "Регистрация автоматически свяжется с вашим Telegram."
             )
+        else:
+            url = "https://belfed.com/members.html"
+            btn_label = "🌐 Open belfed.com/members.html"
+            txt = (
+                "📊 Member dashboard — open positions, analytics, trade history.\n\n"
+                "To sign in, register with your email on the site.\n"
+                "Registration will automatically link to your Telegram."
+            )
+        await msg.reply_text(
+            txt,
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(btn_label, url=url)]]),
+            disable_web_page_preview=True,
+        )
     except Exception as e:
-        log.warning("post-Stars dashboard link failed: %s", e)
+        log.warning("post-Stars web dashboard prompt failed: %s", e)
+
+
+    # ── Notify admins about the new paid subscription (best-effort) ──
+    try:
+        await notify_admins_new_subscription(
+            context=context,
+            profile=profile,
+            profile_after=profile_after,
+            user=user,
+            sp=sp,
+            is_founding_payment=is_founding_payment,
+            is_recurring_flag=is_recurring_flag,
+            claim_res=claim_res,
+            trial_end_before=trial_end_before,
+        )
+    except Exception as e:
+        log.warning("admin notify call failed: %s", e)
+
 
 # ---------- Roster: фиксируем приход/уход в TG-группах --------------------
 async def roster_upsert(
