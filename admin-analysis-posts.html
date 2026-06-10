@@ -123,6 +123,8 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 .search-meta{font-size:9px;letter-spacing:1px;opacity:0.6;text-align:right}
 .search-meta.active{color:#1a7a1a;opacity:1;font-weight:bold}
 .hi-mark{background:#fff59d;padding:0 2px;font-weight:bold}
+.tl-badge{display:inline-block;font-size:9px;letter-spacing:1px;padding:1px 5px;border:1px solid #1a7a1a;color:#1a7a1a;background:#eef6ee}
+.hi-cats{font-size:9px;letter-spacing:1px;opacity:0.6;text-transform:uppercase}
 .hi-item{display:grid;grid-template-columns:60px 1fr auto;gap:10px;padding:10px 16px;border-bottom:1px solid #ddd;align-items:center}
 .hi-item:last-child{border-bottom:none}
 .hi-item .tk{font-weight:bold;letter-spacing:1px}
@@ -157,6 +159,34 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 .field select:disabled{opacity:0.55;cursor:not-allowed;background:#eee}
 .hi-item .ax .icon-btn[data-act=reply]{background:#eef6ff;border-color:#2b6cb0;color:#2b6cb0;font-weight:bold}
 .hi-item .ax .icon-btn[data-act=reply]:hover{background:#2b6cb0;color:#fff}
+
+/* ── DESTINATION TOGGLE (Timeline / Reports) ── */
+.dest-block{border:1px solid #000;background:#fff;padding:14px;margin-bottom:16px}
+.dest-head{font-size:10px;letter-spacing:2px;opacity:0.7;margin-bottom:10px}
+.dest-opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:700px){.dest-opts{grid-template-columns:1fr}}
+.dest-card{position:relative;border:1px solid #000;background:#f5f2eb;padding:12px 14px 12px 34px;cursor:pointer;transition:background .12s}
+.dest-card:hover{background:#fff}
+.dest-card.sel{background:#fff;border-color:#1a7a1a;box-shadow:inset 0 0 0 1px #1a7a1a}
+.dest-card .radio{position:absolute;left:12px;top:14px;width:14px;height:14px;border:1px solid #000;border-radius:50%}
+.dest-card.sel .radio{border-color:#1a7a1a}
+.dest-card.sel .radio::after{content:'';position:absolute;left:3px;top:3px;width:6px;height:6px;border-radius:50%;background:#1a7a1a}
+.dest-card .dc-top{font-size:12px;letter-spacing:2px;font-weight:bold;display:flex;align-items:center;gap:8px}
+.dest-card .dot{width:8px;height:8px;border-radius:50%;background:#1a7a1a;display:inline-block}
+.dest-card .dot.idle{background:#bbb}
+.dest-card .dc-desc{font-size:10px;letter-spacing:.5px;opacity:0.65;margin-top:6px;line-height:1.45}
+
+/* ── TIMELINE CATEGORY CHIPS ── */
+.filter-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.fchip{font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;padding:5px 11px;border:1px solid #000;background:#fff;cursor:pointer;user-select:none}
+.fchip.on{background:#1a7a1a;color:#fff;border-color:#1a7a1a}
+.auto-note{font-size:9px;color:#999;letter-spacing:.5px;margin-top:8px}
+/* fields hidden depending on destination mode */
+.mode-report-only{display:block}
+.mode-timeline-only{display:none}
+body.dest-timeline .mode-report-only{display:none}
+body.dest-timeline .mode-timeline-only{display:block}
+body.dest-timeline .mode-timeline-only.row-2{display:grid}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -227,7 +257,59 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
       </div>
     </div>
 
-    <div class="row-4">
+    <!-- ───── DESTINATION (Timeline / Reports) ───── -->
+    <div class="dest-block">
+      <div class="dest-head">// КУДА НА САЙТЕ (НАЗНАЧЕНИЕ)</div>
+      <div class="dest-opts">
+        <div class="dest-card sel" id="dest-timeline" data-dest="timeline">
+          <span class="radio"></span>
+          <div class="dc-top"><span class="dot"></span> ЛЕНТА · TIMELINE</div>
+          <div class="dc-desc">Непрерывная лента вкладки «Аналитика». Заголовок + текст + хештеги. Без тикера.</div>
+        </div>
+        <div class="dest-card" id="dest-report" data-dest="report">
+          <span class="radio"></span>
+          <div class="dc-top"><span class="dot idle"></span> ОБЗОРЫ · АНАЛИЗ АКТИВА</div>
+          <div class="dc-desc">Классический пост с тикером и графиком (анализ актива / ответ на запрос). Прежний функционал сохраняется полностью.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ───── TIMELINE-MODE FIELDS ───── -->
+    <div class="section-block mode-timeline-only">
+      <div class="section-head">// ПОСТ ДЛЯ ЛЕНТЫ</div>
+      <div class="bodies-grid">
+        <div class="body-col">
+          <div class="body-col-head"><span class="lang">RU</span></div>
+          <div class="field">
+            <label>// ЗАГОЛОВОК ПОСТА <span class="hint">имя поста</span></label>
+            <input type="text" id="headline-ru" placeholder="Goldman: бэклог SMR переосмысливает атомный тезис">
+          </div>
+        </div>
+        <div class="body-col">
+          <div class="body-col-head"><span class="lang">EN</span></div>
+          <div class="field">
+            <label>// POST HEADLINE <span class="hint">post name</span></label>
+            <input type="text" id="headline-en" placeholder="Goldman: SMR backlog reframes nuclear thesis">
+          </div>
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:14px">
+        <label>// КАТЕГОРИИ → ХЕШТЕГИ <span class="hint">совпадают с фильтрами ленты · можно несколько</span></label>
+        <div class="filter-chips" id="cat-chips">
+          <span class="fchip" data-cat="macro">Macro</span>
+          <span class="fchip" data-cat="crypto">Crypto</span>
+          <span class="fchip" data-cat="equities">Equities</span>
+          <span class="fchip" data-cat="volatility">Volatility</span>
+          <span class="fchip" data-cat="world">World</span>
+          <span class="fchip" data-cat="commodities">Commodities</span>
+        </div>
+        <div class="auto-note" id="cat-note">→ авто-вставка в текст: (выберите категории)</div>
+      </div>
+    </div>
+
+    <!-- ───── REPORT-MODE META ROW ───── -->
+    <div class="row-4 mode-report-only">
       <div class="field">
         <label>// ТИКЕР <span class="hint">$AAAA</span></label>
         <input type="text" id="ticker" placeholder="SNAP" maxlength="10">
@@ -254,7 +336,7 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
       </div>
     </div>
 
-    <div id="replyto-block" style="display:none">
+    <div id="replyto-block" class="mode-report-only" style="display:none">
       <div class="section-block">
         <div class="section-head">// REPLY CONTEXT (общая для RU/EN)</div>
         <div class="row-2">
@@ -271,12 +353,12 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
     </div>
 
     <div class="section-block">
-      <div class="section-head">// ТЕКСТ СООБЩЕНИЯ (различается)</div>
+      <div class="section-head"><span class="mode-report-only">// ТЕКСТ СООБЩЕНИЯ (различается)</span><span class="mode-timeline-only">// ТЕКСТ ПОСТА (различается RU/EN)</span></div>
       <div class="bodies-grid">
 
         <div class="body-col">
           <div class="body-col-head"><span class="lang">RU</span></div>
-          <div class="field">
+          <div class="field mode-report-only">
             <label>// ОБРАЩЕНИЕ <span class="hint">опционально</span></label>
             <input type="text" id="greet-ru" value="Анализ по запросу пользователя" placeholder="Например: Привет, Алекс!">
           </div>
@@ -289,7 +371,7 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 
         <div class="body-col">
           <div class="body-col-head"><span class="lang">EN</span></div>
-          <div class="field">
+          <div class="field mode-report-only">
             <label>// GREETING <span class="hint">optional</span></label>
             <input type="text" id="greet-en" placeholder="Hello Alex!">
           </div>
@@ -306,14 +388,19 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
     <div class="section-block">
       <div class="section-head">// МЕТА И МЕДИА (общие для RU/EN)</div>
 
-      <div class="field">
+      <div class="field mode-report-only">
         <label>// TRADINGVIEW URL</label>
         <input type="url" id="tv" placeholder="https://www.tradingview.com/x/4PfYzeR7/">
       </div>
 
-      <div class="field">
+      <div class="field mode-report-only">
         <label>// HASHTAGS <span class="hint">через пробел</span></label>
         <input type="text" id="tags" value="#AnalysisUpdate #equities">
+      </div>
+
+      <div class="field mode-timeline-only">
+        <label>// ИСТОЧНИК <span class="hint">отображается как «Source: …» / «Источник: …»</span></label>
+        <input type="text" id="source" placeholder="Goldman Sachs Research">
       </div>
 
       <div class="field">
@@ -373,7 +460,10 @@ const $ = (s)=>document.querySelector(s);
 const els = {};
 let editingId = null; // currently loaded post for editing
 let parentPostId = null; // when set, this post is a reply/update to parent
-const state = { previewLang:'ru', images:[] }; // images: {file?, url, path?, isUploaded}
+const state = { previewLang:'ru', images:[], destination:'timeline', categories:new Set() }; // images: {file?, url, path?, isUploaded}
+
+// category -> hashtag map (1:1 with Timeline filters)
+const CAT_TAGS = { macro:'#macro', crypto:'#crypto', equities:'#equities', volatility:'#volatility', world:'#world', commodities:'#commodities' };
 
 // hashtag set for asset class
 const ASSET_CLASS_TAG = { stocks:'#equities', crypto:'#crypto', commodities:'#commodities', fx:'#fx' };
@@ -419,6 +509,9 @@ function initEditor(){
     greetRu:$('#greet-ru'), greetEn:$('#greet-en'),
     bodyRu:$('#body-ru'), bodyEn:$('#body-en'),
     tv:$('#tv'), tags:$('#tags'),
+    headlineRu:$('#headline-ru'), headlineEn:$('#headline-en'), source:$('#source'),
+    catChips:$('#cat-chips'), catNote:$('#cat-note'),
+    destTimeline:$('#dest-timeline'), destReport:$('#dest-report'),
     cntRu:$('#cnt-ru'), cntEn:$('#cnt-en'),
     files:$('#files'), dropzone:$('#dropzone'), thumbs:$('#thumbs'),
     btnClear:$('#btn-clear'), btnDraft:$('#btn-draft'), btnPublish:$('#btn-publish'),
@@ -428,9 +521,23 @@ function initEditor(){
     searchMeta:$('#search-meta'), historyTitle:$('#history-title')
   });
 
-  ['ticker','company','replyName','replyText','greetRu','greetEn','bodyRu','bodyEn','tv','tags']
+  ['ticker','company','replyName','replyText','greetRu','greetEn','bodyRu','bodyEn','tv','tags','headlineRu','headlineEn','source']
     .forEach(k => els[k] && els[k].addEventListener('input', ()=>{ updateCounters(); render(); }));
   els.type.addEventListener('change', ()=>{ updateReplyVisibility(); render(); });
+
+  // destination toggle (Timeline / Reports)
+  els.destTimeline.addEventListener('click', ()=>setDestination('timeline'));
+  els.destReport.addEventListener('click', ()=>setDestination('report'));
+
+  // category chips (Timeline)
+  els.catChips.querySelectorAll('.fchip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      const cat = chip.getAttribute('data-cat');
+      if (state.categories.has(cat)){ state.categories.delete(cat); chip.classList.remove('on'); }
+      else { state.categories.add(cat); chip.classList.add('on'); }
+      updateCatNote(); updateCounters(); render();
+    });
+  });
 
   // hashtag automation: asset class change → swap class tag
   els.assetClass.addEventListener('change', ()=>{ syncAssetClassTag(); render(); });
@@ -467,6 +574,7 @@ function initEditor(){
     els.searchInput.value=''; els.searchClear.disabled=true; els.searchInput.focus(); loadHistory('');
   });
 
+  setDestination(state.destination);
   updateCounters(); updateReplyVisibility(); render();
   // Handle ?reply_to=<id> from URL
   handleReplyToParam();
@@ -474,8 +582,41 @@ function initEditor(){
   handleFulfillReqParam();
 }
 
+// =================== DESTINATION (Timeline / Reports) ===================
+function setDestination(dest){
+  state.destination = dest === 'report' ? 'report' : 'timeline';
+  const isTl = state.destination === 'timeline';
+  document.body.classList.toggle('dest-timeline', isTl);
+  els.destTimeline.classList.toggle('sel', isTl);
+  els.destReport.classList.toggle('sel', !isTl);
+  els.destTimeline.querySelector('.dot').classList.toggle('idle', !isTl);
+  els.destReport.querySelector('.dot').classList.toggle('idle', isTl);
+  // publish button label reflects destination
+  if (els.btnPublish) els.btnPublish.textContent = isTl ? '[ ОПУБЛИКОВАТЬ → ЛЕНТА ]' : '[ ОПУБЛИКОВАТЬ → ОБЗОР ]';
+  // when entering report mode the first time, ensure type/reply visibility is correct
+  if (!isTl) updateReplyVisibility();
+  updateCatNote(); updateCounters(); render();
+}
+
+function updateCatNote(){
+  if (!els.catNote) return;
+  const tags = [...state.categories].map(c => CAT_TAGS[c]).filter(Boolean);
+  els.catNote.textContent = tags.length
+    ? '→ авто-вставка в текст: ' + tags.join(' · ')
+    : '→ авто-вставка в текст: (выберите категории)';
+}
+
+// hashtags string built from selected categories (Timeline mode)
+function timelineHashtags(){
+  return [...state.categories]
+    .filter(c => CAT_TAGS[c])
+    .map(c => CAT_TAGS[c])
+    .join(' ');
+}
+
 // =================== HASHTAG AUTOMATION ===================
 function syncAssetClassTag(){
+  if (state.destination === 'timeline') return; // report-only automation
   const cls = els.assetClass.value || 'stocks';
   const wantTag = ASSET_CLASS_TAG[cls] || '#equities';
   const cur = (els.tags.value || '').trim();
@@ -490,6 +631,7 @@ function syncAssetClassTag(){
 }
 
 function syncTickerTag(){
+  if (state.destination === 'timeline') return; // report-only automation
   const ticker = (els.ticker.value||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
   let tokens = (els.tags.value||'').trim().split(/\s+/).filter(Boolean);
   // Remove any old #XYZ tickers (heuristic: all-uppercase alnum, not in known class/system tags)
@@ -601,17 +743,55 @@ window.switchPreview = function(lang){
 
 function render(){
   const lang = state.previewLang;
+  const isTl = state.destination === 'timeline';
+  const body  = lang==='ru' ? els.bodyRu.value.trim() : els.bodyEn.value.trim();
+  const time = new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+  els.topicName.textContent = lang==='ru' ? '// АНАЛИЗ АКТИВОВ И ЗАПРОСЫ' : '// CHART UPDATES AND REQUESTS';
+
+  const imgHtml = state.images.length
+    ? `<div class="img"><img src="${state.images[0].url}" alt=""></div>`
+    : '<div class="img">[ CHART IMAGE ]</div>';
+
+  if (isTl){
+    const headline = (lang==='ru' ? els.headlineRu.value : els.headlineEn.value).trim();
+    const source = (els.source.value||'').trim();
+    const tags = timelineHashtags();
+    if (!headline && !body && state.images.length===0){
+      els.bubbleHost.innerHTML = '<div class="empty-tg">// ЗАПОЛНИТЕ ФОРМУ — ПРЕВЬЮ ПОЯВИТСЯ ЗДЕСЬ</div>';
+      return;
+    }
+    const headHtml = headline ? `<div><span class="ticker">${escapeHtml(headline)}</span></div>` : '';
+    const bodyHtml = body ? `<div class="body-text">${linkify(body)}</div>` : '';
+    const srcLabel = lang==='ru' ? 'Источник' : 'Source';
+    const srcHtml = source ? `<div class="body-text" style="margin-top:10px">${srcLabel}: ${escapeHtml(source)}</div>` : '';
+    const tagsHtml = tags ? `<div class="hashtags">${escapeHtml(tags)}</div>` : '';
+    els.bubbleHost.innerHTML = `
+      <div class="bubble">
+        <div class="arow">
+          <span class="author">BelFed | ${lang==='ru'?'Сообщество':'Community'}</span>
+          <span class="marker">${lang==='ru'?'автор темы':'topic author'}</span>
+        </div>
+        ${state.images.length ? imgHtml : ''}
+        ${headHtml}
+        ${(headline||body) ? '<div style="height:8px"></div>' : ''}
+        ${bodyHtml}
+        ${srcHtml}
+        ${tagsHtml}
+        <div class="meta">${time} ✓✓</div>
+      </div>
+    `;
+    return;
+  }
+
+  // ── REPORT MODE (classic ticker post) ──
   const ticker = (els.ticker.value||'').trim().toUpperCase();
   const company = (els.company.value||'').trim();
   const type = els.type.value;
   const greet = lang==='ru' ? els.greetRu.value.trim() : els.greetEn.value.trim();
-  const body  = lang==='ru' ? els.bodyRu.value.trim() : els.bodyEn.value.trim();
   const tv = els.tv.value.trim();
   const tags = els.tags.value.trim();
   const replyName = els.replyName.value.trim();
   const replyText = els.replyText.value.trim();
-
-  els.topicName.textContent = lang==='ru' ? '// АНАЛИЗ АКТИВОВ И ЗАПРОСЫ' : '// CHART UPDATES AND REQUESTS';
 
   if (!ticker && !body && state.images.length===0){
     els.bubbleHost.innerHTML = '<div class="empty-tg">// ЗАПОЛНИТЕ ФОРМУ — ПРЕВЬЮ ПОЯВИТСЯ ЗДЕСЬ</div>';
@@ -620,16 +800,12 @@ function render(){
 
   const replyHtml = (type==='request' && (replyName||replyText)) ?
     `<div class="reply-quote"><span class="who">${escapeHtml(replyName||'…')}</span>${escapeHtml(replyText||'…')}</div>` : '';
-  const imgHtml = state.images.length
-    ? `<div class="img"><img src="${state.images[0].url}" alt=""></div>`
-    : '<div class="img">[ CHART IMAGE ]</div>';
   const tickerLine = ticker ? `<div><span class="ticker">$${escapeHtml(ticker)}</span>${company?` — ${escapeHtml(company)}`:''}</div>` : '';
   const greetHtml = greet ? `<div>${escapeHtml(greet)}</div>` : '';
   const bodyHtml = body ? `<div class="body-text">${linkify(body)}</div>` : '';
   const chartLabel = lang==='ru' ? 'График' : 'Chart';
   const tvHtml = tv ? `<div class="body-text" style="margin-top:10px">${chartLabel}: <a href="${escapeHtml(tv)}" target="_blank">${escapeHtml(tv)}</a></div>` : '';
   const tagsHtml = tags ? `<div class="hashtags">${escapeHtml(tags)}</div>` : '';
-  const time = new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
 
   els.bubbleHost.innerHTML = `
     ${replyHtml}
@@ -664,7 +840,32 @@ function estimateSlug(){
   const day = String(d.getDate()).padStart(2,'0');
   return `${t}-${y}-${m}-${day}`;
 }
+function slugifyHeadline(h){
+  return (h||'').toLowerCase()
+    .replace(/[^a-z0-9\u0400-\u04ff\s-]/g,'')
+    .trim().replace(/\s+/g,'-').replace(/-+/g,'-').slice(0,60);
+}
 function buildCaption(lang){
+  const base = lang==='ru' ? 'https://belfed.ru' : 'https://belfed.com';
+  // ── TIMELINE MODE ── headline + body + Source + Web link + hashtags (no $TICKER)
+  if (state.destination === 'timeline'){
+    const headline = (lang==='ru' ? els.headlineRu.value : els.headlineEn.value).trim();
+    const body  = (lang==='ru' ? els.bodyRu.value  : els.bodyEn.value ).trim();
+    const source = (els.source.value||'').trim();
+    const tags = timelineHashtags();
+    const slug = (window.__editingSlug && editingId) ? window.__editingSlug
+      : slugifyHeadline(lang==='ru' ? els.headlineRu.value : els.headlineEn.value);
+    const link = slug ? `${base}/analytics.html?post=${encodeURIComponent(slug)}` : '';
+    const lines = [];
+    if (!headline && !body) return '';
+    if (headline){ lines.push(headline); lines.push(''); }
+    if (body)    { lines.push(body);     lines.push(''); }
+    if (source)  { lines.push(`${lang==='ru'?'Источник':'Source'}: ${source}`); lines.push(''); }
+    if (link)    { lines.push(`${lang==='ru'?'Веб':'Web'}: ${link}`); lines.push(''); }
+    if (tags)    { lines.push(tags); }
+    return lines.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+  }
+  // ── REPORT MODE ── classic ticker post
   const ticker = (els.ticker.value||'').trim().toUpperCase();
   const company = (els.company.value||'').trim();
   const greet = (lang==='ru' ? els.greetRu.value : els.greetEn.value).trim();
@@ -674,7 +875,6 @@ function buildCaption(lang){
   const tickerLc = ticker.toLowerCase();
   // Use real saved slug when editing, otherwise estimate.
   const slug = (window.__editingSlug && editingId) ? window.__editingSlug : estimateSlug();
-  const base = lang==='ru' ? 'https://belfed.ru' : 'https://belfed.com';
   const link = (slug && tickerLc) ? `${base}/analysis/${encodeURIComponent(tickerLc)}/${encodeURIComponent(slug)}` : '';
 
   const lines = [];
@@ -734,6 +934,7 @@ function flash(kind, text){
 
 function clearForm(){
   if (!confirm('Очистить форму?')) return;
+  const keepDest = state.destination;
   editingId = null;
   window.__editingSlug = null;
   parentPostId = null;
@@ -744,9 +945,11 @@ function clearForm(){
   els.type.disabled = false;
   els.assetClass.value = 'stocks';
   els.chRu.checked = true; els.chEn.checked = true;
+  state.categories.clear();
+  els.catChips.querySelectorAll('.fchip.on').forEach(c=>c.classList.remove('on'));
   const banner = document.getElementById('parent-banner');
   if (banner) banner.style.display='none';
-  state.images = []; renderThumbs(); updateCounters(); updateReplyVisibility(); render();
+  state.images = []; renderThumbs(); setDestination(keepDest); updateCounters(); updateReplyVisibility(); render();
   history.replaceState(null,'', location.pathname);
 }
 
@@ -774,7 +977,34 @@ async function uploadPendingImages(){
 
 // ================= COLLECT FORM DATA =================
 function collectFormData(){
+  // ── TIMELINE ── headline + body + categories + source, NO ticker/company/asset/greeting/tv
+  if (state.destination === 'timeline'){
+    return {
+      destination: 'timeline',
+      ticker: null,
+      asset_class: null,
+      company_name: null,
+      post_type: 'update',
+      reply_name: null,
+      reply_text: null,
+      greeting_ru: null,
+      greeting_en: null,
+      headline_ru: els.headlineRu.value.trim() || null,
+      headline_en: els.headlineEn.value.trim() || null,
+      body_ru: els.bodyRu.value.trim() || null,
+      body_en: els.bodyEn.value.trim() || null,
+      tradingview_url: null,
+      source: els.source.value.trim() || null,
+      categories: [...state.categories],
+      hashtags: timelineHashtags() || null,
+      publish_to_ru: els.chRu.checked,
+      publish_to_en: els.chEn.checked,
+      parent_post_id: null
+    };
+  }
+  // ── REPORT ── classic ticker post
   return {
+    destination: 'report',
     ticker: (els.ticker.value||'').trim().toUpperCase(),
     asset_class: els.assetClass.value || 'stocks',
     company_name: els.company.value.trim() || null,
@@ -783,9 +1013,13 @@ function collectFormData(){
     reply_text: els.type.value==='request' ? (els.replyText.value.trim() || null) : null,
     greeting_ru: els.greetRu.value.trim() || null,
     greeting_en: els.greetEn.value.trim() || null,
+    headline_ru: null,
+    headline_en: null,
     body_ru: els.bodyRu.value.trim() || null,
     body_en: els.bodyEn.value.trim() || null,
     tradingview_url: els.tv.value.trim() || null,
+    source: null,
+    categories: [],
     hashtags: els.tags.value.trim() || null,
     publish_to_ru: els.chRu.checked,
     publish_to_en: els.chEn.checked,
@@ -794,8 +1028,17 @@ function collectFormData(){
 }
 
 function validate(d){
-  if (!d.ticker) return 'ТИКЕР обязателен';
   if (!d.publish_to_ru && !d.publish_to_en) return 'выберите хотя бы один канал';
+  if (d.destination === 'timeline'){
+    if (!(d.categories && d.categories.length)) return 'выберите хотя бы одну категорию';
+    if (d.publish_to_ru && !d.headline_ru) return 'RU заголовок пуст';
+    if (d.publish_to_en && !d.headline_en) return 'EN заголовок пуст';
+    if (d.publish_to_ru && !d.body_ru) return 'RU тело пусто';
+    if (d.publish_to_en && !d.body_en) return 'EN тело пусто';
+    return null;
+  }
+  // report
+  if (!d.ticker) return 'ТИКЕР обязателен';
   if (d.publish_to_ru && !d.body_ru) return 'RU тело пусто';
   if (d.publish_to_en && !d.body_en) return 'EN тело пусто';
   if (d.post_type==='request' && !d.reply_name && !d.reply_text) return 'reply контекст пуст';
@@ -805,7 +1048,9 @@ function validate(d){
 // ================= SAVE / PUBLISH =================
 async function saveDraft(){
   const data = collectFormData();
-  if (!data.ticker){ flash('err','ТИКЕР обязателен'); return; }
+  if (data.destination === 'timeline'){
+    if (!data.headline_ru && !data.headline_en){ flash('err','заголовок обязателен'); return; }
+  } else if (!data.ticker){ flash('err','ТИКЕР обязателен'); return; }
   els.btnDraft.disabled = true;
   try {
     flash('info','загрузка изображений...');
@@ -902,12 +1147,17 @@ async function publish(){
         } catch (e) { flash('err', 'Сбой выполнения запроса: '+e.message); }
       }
       // reset to fresh form
+      const keepDest = state.destination;
       editingId = null;
       window.__editingSlug = null;
       parentPostId = null;
       document.querySelectorAll('input[type=text],input[type=url],textarea').forEach(i => i.value='');
       els.greetRu.value = 'Анализ по запросу пользователя';
       els.tags.value = '#AnalysisUpdate #equities'; els.type.value='update'; els.type.disabled=false; els.assetClass.value='stocks';
+      // clear timeline state
+      state.categories.clear();
+      els.catChips.querySelectorAll('.fchip.on').forEach(c=>c.classList.remove('on'));
+      setDestination(keepDest);
       const banner = document.getElementById('parent-banner');
       if (banner) banner.style.display='none';
       // strip ?reply_to + ?fulfill_req from URL
@@ -957,14 +1207,14 @@ async function loadHistory(query){
   }
 
   let req = sb.from('analysis_posts')
-    .select('id,ticker,slug,company_name,post_type,reply_name,status,published_at,created_at,publish_to_ru,publish_to_en,message_id_ru,message_id_en')
+    .select('id,destination,ticker,slug,company_name,post_type,reply_name,headline_ru,headline_en,categories,status,published_at,created_at,publish_to_ru,publish_to_en,message_id_ru,message_id_en')
     .neq('status','deleted')
     .order('created_at',{ascending:false});
 
   if (q){
-    // case-insensitive ilike across ticker and company_name
+    // case-insensitive ilike across ticker, company_name, headlines
     const safeQ = q.replace(/[%_\\]/g, m=>'\\'+m);
-    req = req.or(`ticker.ilike.%${safeQ}%,company_name.ilike.%${safeQ}%`).limit(50);
+    req = req.or(`ticker.ilike.%${safeQ}%,company_name.ilike.%${safeQ}%,headline_ru.ilike.%${safeQ}%,headline_en.ilike.%${safeQ}%`).limit(50);
   } else {
     req = req.limit(20);
   }
@@ -984,20 +1234,32 @@ async function loadHistory(query){
     els.searchMeta.textContent = `найдено: ${data.length}${data.length>=50?'+':''}`;
   }
   els.history.innerHTML = data.map(p => {
+    const isTl = (p.destination || (p.ticker ? 'report' : 'timeline')) === 'timeline';
     const d = new Date(p.published_at || p.created_at);
     const dStr = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getFullYear()).slice(-2)} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
     const channels = [p.publish_to_ru?'RU':'', p.publish_to_en?'EN':''].filter(Boolean).join('+');
-    const ti = p.post_type==='request' ? `reply to ${p.reply_name||'…'}` : (p.company_name || '');
-    const tickerHtml = q ? highlightMatch(p.ticker, q) : escapeHtml(p.ticker);
-    const tiHtml = q ? highlightMatch(ti, q) : escapeHtml(ti);
-    // Build live-page URL. Default = current admin host (belfed.ru). If post wasn't
-    // published to the current locale but only to the other one, link to that domain.
-    const tickerLc = (p.ticker||'').toLowerCase();
+    // ── timeline vs report display ──
+    let tickerHtml, tiHtml, liveUrl, liveHost;
     const onRu = location.hostname.includes('belfed.ru') || location.hostname === 'localhost';
-    let liveHost = onRu ? 'belfed.ru' : 'belfed.com';
-    if (onRu && !p.publish_to_ru && p.publish_to_en) liveHost = 'belfed.com';
-    if (!onRu && !p.publish_to_en && p.publish_to_ru) liveHost = 'belfed.ru';
-    const liveUrl = `https://${liveHost}/analysis/${encodeURIComponent(tickerLc)}/${encodeURIComponent(p.slug||'')}`;
+    if (isTl){
+      const headline = p.headline_ru || p.headline_en || '—';
+      const cats = (p.categories||[]).join(' · ');
+      tickerHtml = '<span class="tl-badge">ЛЕНТА</span>';
+      tiHtml = (q ? highlightMatch(headline, q) : escapeHtml(headline)) + (cats ? ` <span class="hi-cats">${escapeHtml(cats)}</span>` : '');
+      liveHost = onRu ? 'belfed.ru' : 'belfed.com';
+      if (onRu && !p.publish_to_ru && p.publish_to_en) liveHost = 'belfed.com';
+      if (!onRu && !p.publish_to_en && p.publish_to_ru) liveHost = 'belfed.ru';
+      liveUrl = `https://${liveHost}/analytics.html?post=${encodeURIComponent(p.slug||'')}`;
+    } else {
+      const ti = p.post_type==='request' ? `reply to ${p.reply_name||'…'}` : (p.company_name || '');
+      tickerHtml = '$' + (q ? highlightMatch(p.ticker, q) : escapeHtml(p.ticker));
+      tiHtml = q ? highlightMatch(ti, q) : escapeHtml(ti);
+      const tickerLc = (p.ticker||'').toLowerCase();
+      liveHost = onRu ? 'belfed.ru' : 'belfed.com';
+      if (onRu && !p.publish_to_ru && p.publish_to_en) liveHost = 'belfed.com';
+      if (!onRu && !p.publish_to_en && p.publish_to_ru) liveHost = 'belfed.ru';
+      liveUrl = `https://${liveHost}/analysis/${encodeURIComponent(tickerLc)}/${encodeURIComponent(p.slug||'')}`;
+    }
     const openBtn = (p.status==='published' && p.slug)
       ? `<a class="icon-btn" href="${liveUrl}" target="_blank" rel="noopener" title="Открыть пост на сайте (${liveHost})">⧉</a>`
       : `<button class="icon-btn" disabled title="Черновик — нет публичной страницы">⧉</button>`;
@@ -1009,9 +1271,11 @@ async function loadHistory(query){
     const resendBtn = showResend
       ? `<button class="icon-btn warn" data-act="resend" data-id="${p.id}" title="Дослать в TG: ${missingLangs}">↻</button>`
       : '';
+    // reply/update flow is report-only (parent-child); hide for timeline
+    const replyBtn = isTl ? '' : `<button class="icon-btn" data-act="reply" data-id="${p.id}" title="Опубликовать обновление (ответ)">↩</button>`;
     return `
       <div class="hi-item">
-        <div class="tk">$${tickerHtml}</div>
+        <div class="tk">${tickerHtml}</div>
         <div>
           <div class="ti"><span class="status-pill ${p.status}">${p.status}</span>${tiHtml}</div>
           <div class="ex">${dStr} · ${channels}</div>
@@ -1019,7 +1283,7 @@ async function loadHistory(query){
         <div class="ax">
           ${openBtn}
           ${resendBtn}
-          <button class="icon-btn" data-act="reply" data-id="${p.id}" title="Опубликовать обновление (ответ)">↩</button>
+          ${replyBtn}
           <button class="icon-btn" data-act="edit" data-id="${p.id}" title="Редактировать">✎</button>
           <button class="icon-btn danger" data-act="del" data-id="${p.id}" title="Удалить">×</button>
         </div>
@@ -1041,6 +1305,8 @@ async function loadIntoEditor(id){
   editingId = id;
   window.__editingSlug = data.slug || null;
   parentPostId = data.parent_post_id || null;
+  // Restore destination + matching fields
+  setDestination(data.destination || (data.ticker ? 'report' : 'timeline'));
   els.ticker.value = data.ticker || '';
   els.assetClass.value = data.asset_class || 'stocks';
   els.company.value = data.company_name || '';
@@ -1049,12 +1315,24 @@ async function loadIntoEditor(id){
   els.replyText.value = data.reply_text || '';
   els.greetRu.value = data.greeting_ru || '';
   els.greetEn.value = data.greeting_en || '';
+  els.headlineRu.value = data.headline_ru || '';
+  els.headlineEn.value = data.headline_en || '';
+  els.source.value = data.source || '';
   els.bodyRu.value = data.body_ru || '';
   els.bodyEn.value = data.body_en || '';
   els.tv.value = data.tradingview_url || '';
   els.tags.value = data.hashtags || '';
   els.chRu.checked = !!data.publish_to_ru;
   els.chEn.checked = !!data.publish_to_en;
+  // Rebuild category chip state from data.categories[]
+  state.categories.clear();
+  els.catChips.querySelectorAll('.fchip').forEach(c=>c.classList.remove('on'));
+  (data.categories || []).forEach(cat => {
+    state.categories.add(cat);
+    const chip = els.catChips.querySelector(`.fchip[data-cat="${cat}"]`);
+    if (chip) chip.classList.add('on');
+  });
+  updateCatNote();
   state.images = (data.image_paths||[]).map(path => ({
     path, isUploaded:true,
     url: `${SUPABASE_URL}/storage/v1/object/public/analysis-images/${path}`
@@ -1076,7 +1354,8 @@ async function loadIntoEditor(id){
     const banner = document.getElementById('parent-banner'); if (banner) banner.style.display='none';
   }
   renderThumbs(); updateCounters(); updateReplyVisibility(); render();
-  flash('info', `Пост ${data.ticker} загружен для редактирования`);
+  const label = data.ticker || data.headline_ru || data.headline_en || 'без заголовка';
+  flash('info', `Пост ${label} загружен для редактирования`);
   window.scrollTo({top:0, behavior:'smooth'});
 }
 
@@ -1157,13 +1436,16 @@ async function deletePost(id){
 }
 
 function clearFormSilent(){
+  const keepDest = state.destination;
   window.__editingSlug = null;
   parentPostId = null;
   document.querySelectorAll('input[type=text],input[type=url],textarea').forEach(i => i.value='');
   els.greetRu.value = 'Анализ по запросу пользователя';
   els.tags.value='#AnalysisUpdate #equities'; els.type.value='update'; els.type.disabled=false; els.assetClass.value='stocks';
+  state.categories.clear();
+  els.catChips.querySelectorAll('.fchip.on').forEach(c=>c.classList.remove('on'));
   const banner = document.getElementById('parent-banner'); if (banner) banner.style.display='none';
-  state.images=[]; renderThumbs(); updateCounters(); updateReplyVisibility(); render();
+  state.images=[]; renderThumbs(); setDestination(keepDest); updateCounters(); updateReplyVisibility(); render();
 }
 
 checkAdminAndShow();

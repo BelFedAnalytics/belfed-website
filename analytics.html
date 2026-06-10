@@ -60,6 +60,53 @@ a.card{text-decoration:none;color:#000}
 .pager button{font-family:'Courier New',monospace;font-size:11px;letter-spacing:2px;padding:8px 18px;background:#fff;border:1px solid #000;cursor:pointer}
 .pager button:disabled{opacity:0.4;cursor:not-allowed}
 
+/* ===== Timeline / Reports segment toggle ===== */
+.seg{display:flex;gap:30px;margin-bottom:22px;border-bottom:1px solid #ddd}
+.seg button{font-family:'Courier New',monospace;font-size:12px;letter-spacing:3px;font-weight:bold;padding:0 2px 9px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;color:#aaa;display:flex;align-items:center;gap:8px;text-transform:uppercase;transition:color .15s}
+.seg button:hover{color:#555}
+.seg button.active{color:#000;border-bottom-color:#000}
+.seg .dot{width:7px;height:7px;border-radius:50%;background:#bbb;display:inline-block}
+.seg button.active .dot{background:#1e7d34;animation:blink 1.4s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(30,125,52,.5)}50%{opacity:.35;box-shadow:0 0 0 3px rgba(30,125,52,0)}}
+.view{display:none}.view.show{display:block}
+
+/* ===== Timeline filter bar + minimal search ===== */
+.tl-bar{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:26px;flex-wrap:wrap}
+.tl-filter{display:flex;flex-wrap:wrap;gap:20px;padding-bottom:2px}
+.tl-filter button{font-family:'Courier New',monospace;font-size:11px;letter-spacing:2px;background:none;border:none;padding:2px 0;cursor:pointer;color:#aaa;text-transform:uppercase;border-bottom:1px solid transparent;transition:color .15s}
+.tl-filter button:hover{color:#555}
+.tl-filter button.active{color:#000;border-bottom-color:#000}
+.tl-search{display:flex;align-items:center;gap:7px;border-bottom:1px solid #d9d4c7;padding:3px 2px}
+.tl-search input{font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;border:none;background:none;outline:none;color:#000;width:150px}
+.tl-search input::placeholder{color:#b3ab98;letter-spacing:1px}
+.tl-search:focus-within{border-bottom-color:#000}
+
+/* ===== Timeline feed ===== */
+.tl-count{font-size:11px;letter-spacing:1px;opacity:.6;margin-bottom:16px}
+.tl{position:relative;margin-left:4px;padding-left:24px;max-width:720px}
+.tl::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:1px;background:#d9d4c7}
+.item{position:relative;margin-bottom:34px}
+.item::before{content:'';position:absolute;left:-24px;top:8px;width:5px;height:5px;border-radius:50%;background:#cfc8b8;transform:translateX(-2px)}
+.item .meta{font-size:10px;letter-spacing:2px;color:#b3ab98;margin-bottom:7px;text-transform:uppercase}
+.ic{display:flex;flex-direction:column;gap:11px}
+.phead{font-weight:bold;font-size:15.5px;line-height:1.35;letter-spacing:.2px;margin-bottom:8px}
+.ic p{font-size:13.5px;line-height:1.7;white-space:pre-wrap}
+.ic .chart{width:100%;max-width:560px;aspect-ratio:16/8;background:#0a0a0a;border:1px solid #000;overflow:hidden}
+.ic .chart img{width:100%;height:100%;object-fit:cover;display:block}
+.tags{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.tags span{font-size:9.5px;letter-spacing:1.5px;color:#9a927e;text-transform:uppercase}
+.tags span::before{content:"#"}
+.ifoot{display:flex;justify-content:space-between;align-items:center;font-size:10px;letter-spacing:1px;color:#9a927e;padding-top:3px;gap:12px;flex-wrap:wrap}
+.src{text-transform:none}
+.src b{color:#6b6555;font-weight:bold;letter-spacing:1px}
+.copy{font-family:'Courier New',monospace;font-size:10px;letter-spacing:1px;background:none;border:none;color:#9a927e;cursor:pointer;display:flex;align-items:center;gap:5px;padding:4px 2px;transition:color .15s}
+.copy:hover{color:#000}
+.copy svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.6}
+.copy.done{color:#1e7d34}
+.tl-more{display:flex;justify-content:center;margin-top:10px}
+.tl-more button{font-family:'Courier New',monospace;font-size:11px;letter-spacing:2px;padding:8px 18px;background:#fff;border:1px solid #000;cursor:pointer}
+.tl-more button:disabled{opacity:0.4;cursor:not-allowed}
+
 @media (max-width:600px){
   body{padding:18px 14px}
   .filter-group input,.filter-group select{min-width:100%;width:100%}
@@ -72,6 +119,17 @@ a.card{text-decoration:none;color:#000}
   .sub-nav{justify-content:center;row-gap:4px}
   .sub-nav a{font-size:11px;letter-spacing:1px;padding:9px 10px}
   .cards-grid{grid-template-columns:1fr}
+  .seg{gap:26px;justify-content:flex-start}
+  .tl-bar{flex-direction:column;align-items:stretch;gap:14px;margin-bottom:20px}
+  .tl-filter{gap:14px 18px;overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;padding-bottom:8px}
+  .tl-filter button{white-space:nowrap}
+  .tl-search{width:100%}
+  .tl-search input{width:100%}
+  .tl{padding-left:18px;margin-left:2px}
+  .item::before{left:-18px}
+  .item{margin-bottom:28px}
+  .ic p{font-size:15px;line-height:1.75}
+  .ic .chart{max-width:100%}
 }
 </style>
 </head>
@@ -94,6 +152,36 @@ a.card{text-decoration:none;color:#000}
 <a href="/trades.html" data-i18n="navArchive">[ АРХИВ ]</a>
 </nav>
 
+<!-- Timeline / Reports segment -->
+<div class="seg">
+  <button id="segTl" class="active" onclick="setSeg('tl')"><span class="dot"></span><span data-i18n="segTimeline">ЛЕНТА</span></button>
+  <button id="segRep" onclick="setSeg('rep')"><span data-i18n="segReports">ОБЗОРЫ</span></button>
+</div>
+
+<!-- ===== TIMELINE VIEW ===== -->
+<div class="view show" id="viewTl">
+  <div class="tl-bar">
+    <div class="tl-filter" id="tlFilter">
+      <button class="active" data-cat="all" data-i18n="catAll">ВСЁ</button>
+      <button data-cat="macro">MACRO</button>
+      <button data-cat="crypto">CRYPTO</button>
+      <button data-cat="equities">EQUITIES</button>
+      <button data-cat="volatility">VOLATILITY</button>
+      <button data-cat="world">WORLD</button>
+      <button data-cat="commodities">COMMODITIES</button>
+    </div>
+    <div class="tl-search">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#b3ab98" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="tlSearch" type="text" placeholder="Поиск по постам…">
+    </div>
+  </div>
+  <div class="tl-count" id="tlCount"></div>
+  <div class="tl" id="tlFeed"></div>
+  <div class="tl-more"><button id="tlMoreBtn" onclick="tlLoadMore()" style="display:none"></button></div>
+</div>
+
+<!-- ===== REPORTS VIEW ===== -->
+<div class="view" id="viewRep">
 <div class="filters">
   <div class="filters-row">
     <div class="filter-group">
@@ -142,6 +230,7 @@ a.card{text-decoration:none;color:#000}
   <button id="prevBtn" onclick="changePage(-1)" disabled>← НАЗАД</button>
   <button id="nextBtn" onclick="changePage(1)" disabled>ВПЕРЁД →</button>
 </div>
+</div><!-- /viewRep -->
 
 <div class="disclaimer">
 <b data-i18n="disclaimerTitle">// DISCLAIMER</b><br>
@@ -155,8 +244,11 @@ a.card{text-decoration:none;color:#000}
 const ANON_KEY = SUPABASE_KEY;
 const sb = supaClient;
 const LIST_URL = SUPABASE_URL + '/functions/v1/analytics-list';
+const TIMELINE_URL = SUPABASE_URL + '/functions/v1/timeline-list';
 let authReady = false;
 let authedSession = null;
+let hasAccess = false;
+let activeSeg = 'tl'; // 'tl' (timeline, default) | 'rep' (reports)
 
 const PAGE_SIZE = 12;
 let state = {
@@ -170,6 +262,9 @@ let state = {
   tag: '',
 };
 
+const TL_PAGE = 15;
+let tlState = { offset: 0, total: 0, q: '', category: 'all', loading: false, loaded: false };
+
 const I18N = {
   ru: {
     title: '— BELFED ANALYTICS —',
@@ -177,6 +272,16 @@ const I18N = {
     navAnalytics: '[ АНАЛИТИКА ]',
     navAssetAnalysis: '[ АНАЛИЗ АКТИВОВ ]',
     navArchive: '[ АРХИВ ]',
+    segTimeline: 'ЛЕНТА',
+    segReports: 'ОБЗОРЫ',
+    catAll: 'ВСЁ',
+    tlSearchPh: 'Поиск по постам…',
+    tlSource: 'Источник',
+    tlCopy: 'КОПИРОВАТЬ',
+    tlCopied: '✓ СКОПИРОВАНО',
+    tlEmpty: 'НЕТ ПОСТОВ',
+    tlMore: 'ПОКАЗАТЬ ЕЩЁ',
+    tlFound: 'ПОСТОВ',
     fSearch: '// ПОИСК',
     fAsset: '// КЛАСС АКТИВОВ',
     fSector: '// СЕКТОР',
@@ -202,6 +307,16 @@ const I18N = {
     navAnalytics: '[ ANALYTICS ]',
     navAssetAnalysis: '[ ASSET ANALYSIS ]',
     navArchive: '[ ARCHIVE ]',
+    segTimeline: 'TIMELINE',
+    segReports: 'REPORTS',
+    catAll: 'ALL',
+    tlSearchPh: 'Search posts…',
+    tlSource: 'Source',
+    tlCopy: 'COPY LINK',
+    tlCopied: '✓ COPIED',
+    tlEmpty: 'NO POSTS',
+    tlMore: 'SHOW MORE',
+    tlFound: 'POSTS',
     fSearch: '// SEARCH',
     fAsset: '// ASSET CLASS',
     fSector: '// SECTOR',
@@ -241,7 +356,9 @@ function setLang(lang) {
   document.getElementById('langRu').classList.toggle('active', lang === 'ru');
   document.getElementById('langEn').classList.toggle('active', lang === 'en');
   applyI18n();
-  fetchList();
+  // Re-render the active view in the new language
+  if (activeSeg === 'tl') { tlState.offset = 0; fetchTimeline(false); }
+  else { fetchList(); }
 }
 
 function applyI18n() {
@@ -252,6 +369,10 @@ function applyI18n() {
   });
   const search = document.getElementById('fSearch');
   if (search) search.placeholder = t.placeholderSearch;
+  const tlSearch = document.getElementById('tlSearch');
+  if (tlSearch) tlSearch.placeholder = t.tlSearchPh;
+  const tlMore = document.getElementById('tlMoreBtn');
+  if (tlMore) tlMore.textContent = t.tlMore;
   document.getElementById('prevBtn').textContent = t.prev;
   document.getElementById('nextBtn').textContent = t.next;
 }
@@ -345,6 +466,166 @@ function renderCards(items) {
   });
 }
 
+// ============ TIMELINE ============
+function setSeg(seg) {
+  activeSeg = seg;
+  document.getElementById('viewTl').classList.toggle('show', seg === 'tl');
+  document.getElementById('viewRep').classList.toggle('show', seg === 'rep');
+  document.getElementById('segTl').classList.toggle('active', seg === 'tl');
+  document.getElementById('segRep').classList.toggle('active', seg === 'rep');
+  if (seg === 'tl' && hasAccess && !tlState.loaded) { tlState.offset = 0; fetchTimeline(false); }
+  if (seg === 'rep' && hasAccess && !window.__repLoaded) { window.__repLoaded = true; fetchList(); }
+}
+
+function fmtTlDate(iso, lang) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const monthsRu = ['ЯНВ','ФЕВ','МАР','АПР','МАЙ','ИЮН','ИЮЛ','АВГ','СЕН','ОКТ','НОЯ','ДЕК'];
+  const monthsEn = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const mo = (lang === 'ru' ? monthsRu : monthsEn)[d.getMonth()];
+  const day = String(d.getDate()).padStart(2,'0');
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mm = String(d.getMinutes()).padStart(2,'0');
+  return `${day} ${mo} ${d.getFullYear()} · ${hh}:${mm}`;
+}
+
+function copyTlLink(btn, slug) {
+  const t = I18N[state.lang];
+  const host = (state.lang === 'ru') ? 'belfed.ru' : 'belfed.com';
+  const url = `https://${host}/analytics.html?post=${encodeURIComponent(slug)}`;
+  const done = () => {
+    const orig = btn.innerHTML;
+    btn.classList.add('done');
+    btn.innerHTML = t.tlCopied;
+    setTimeout(() => { btn.classList.remove('done'); btn.innerHTML = orig; }, 1600);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(done).catch(done);
+  } else {
+    const ta = document.createElement('textarea'); ta.value = url;
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta); done();
+  }
+}
+window.copyTlLink = copyTlLink;
+
+function renderTimeline(items, append) {
+  const feed = document.getElementById('tlFeed');
+  const t = I18N[state.lang];
+  if (!append) feed.innerHTML = '';
+  if (!append && (!items || items.length === 0)) {
+    feed.innerHTML = `<div class="empty">// ${t.tlEmpty}</div>`;
+    return;
+  }
+  const html = (items || []).map(p => {
+    const headline = (state.lang === 'ru' ? p.headline_ru : (p.headline_en || p.headline_ru)) || '';
+    const body = (state.lang === 'ru' ? p.body_ru : (p.body_en || p.body_ru)) || '';
+    const meta = fmtTlDate(p.published_at || p.created_at, state.lang);
+    const cats = (p.categories || []);
+    const tagsHtml = cats.length
+      ? `<div class="tags">${cats.map(c => `<span>${escapeHtml(c)}</span>`).join('')}</div>` : '';
+    let chartHtml = '';
+    const imgs = p.image_paths || [];
+    if (imgs.length) {
+      const src = `${SUPABASE_URL}/storage/v1/object/public/analysis-images/${imgs[0]}`;
+      chartHtml = `<div class="chart"><img src="${escapeHtml(src)}" alt="" loading="lazy"></div>`;
+    }
+    const srcHtml = p.source
+      ? `<span class="src">${t.tlSource}: <b>${escapeHtml(p.source)}</b></span>`
+      : '<span></span>';
+    const copyBtn = `<button class="copy" onclick="copyTlLink(this,'${escapeHtml(p.slug || '')}')"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="1.5"/><path d="M5 15V5a1.5 1.5 0 0 1 1.5-1.5H15"/></svg>${t.tlCopy}</button>`;
+    return `
+      <div class="item" data-slug="${escapeHtml(p.slug || '')}">
+        <div class="meta">${escapeHtml(meta)}</div>
+        <div class="ic">
+          ${headline ? `<div class="phead">${escapeHtml(headline)}</div>` : ''}
+          ${body ? `<p>${escapeHtml(body)}</p>` : ''}
+          ${chartHtml}
+          ${tagsHtml}
+          <div class="ifoot">${srcHtml}${copyBtn}</div>
+        </div>
+      </div>`;
+  }).join('');
+  if (append) feed.insertAdjacentHTML('beforeend', html);
+  else feed.innerHTML = html;
+  maybeScrollToPost();
+}
+
+// Deep-link: ?post=<slug> opens Timeline and scrolls/highlights that post.
+function maybeScrollToPost() {
+  const slug = new URLSearchParams(location.search).get('post');
+  if (!slug) return;
+  const el = document.querySelector(`#tlFeed .item[data-slug="${CSS.escape(slug)}"]`);
+  if (el) {
+    el.style.transition = 'background .3s';
+    el.style.background = '#fffbe5';
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => { el.style.background = ''; }, 2200);
+  }
+}
+
+async function fetchTimeline(append) {
+  const t = I18N[state.lang];
+  if (tlState.loading) return;
+  if (!hasAccess || !authedSession) { renderTimelineLocked(); return; }
+  tlState.loading = true;
+  if (!append) {
+    document.getElementById('tlCount').textContent = '// ' + t.loading;
+    document.getElementById('tlFeed').innerHTML = `<div class="loading">// ${t.loading}</div>`;
+  }
+  const params = new URLSearchParams();
+  params.set('limit', String(TL_PAGE));
+  params.set('offset', String(tlState.offset));
+  if (tlState.q && tlState.q.length >= 2) params.set('q', tlState.q);
+  if (tlState.category && tlState.category !== 'all') params.set('category', tlState.category);
+  try {
+    const res = await fetch(TIMELINE_URL + '?' + params.toString(), {
+      headers: { 'apikey': ANON_KEY, 'authorization': 'Bearer ' + authedSession.access_token }
+    });
+    const json = await res.json();
+    if (res.status === 403 || json.error === 'subscription_required') { renderTimelineLocked(); return; }
+    if (!json.ok) throw new Error(json.error || 'unknown');
+    tlState.total = json.total || 0;
+    tlState.loaded = true;
+    renderTimeline(json.items, append);
+    const shown = tlState.offset + (json.items ? json.items.length : 0);
+    document.getElementById('tlCount').textContent = `// ${t.tlFound}: ${tlState.total}`;
+    const moreBtn = document.getElementById('tlMoreBtn');
+    if (shown < tlState.total) { moreBtn.style.display = ''; moreBtn.disabled = false; moreBtn.textContent = t.tlMore; }
+    else { moreBtn.style.display = 'none'; }
+  } catch (e) {
+    document.getElementById('tlFeed').innerHTML = `<div class="empty">// ERROR: ${escapeHtml(String(e.message || e))}</div>`;
+    document.getElementById('tlCount').textContent = '';
+  } finally {
+    tlState.loading = false;
+  }
+}
+
+function renderTimelineLocked() {
+  const feed = document.getElementById('tlFeed');
+  const title = state.lang === 'ru' ? 'Доступ только для подписчиков' : 'Subscribers only';
+  const body = state.lang === 'ru'
+    ? 'Оформите пробный доступ или подписку, чтобы видеть ленту.'
+    : 'Activate a trial or subscription to view the timeline.';
+  const cta = state.lang === 'ru' ? 'Перейти в личный кабинет' : 'Open member area';
+  document.getElementById('tlCount').textContent = '';
+  document.getElementById('tlMoreBtn').style.display = 'none';
+  feed.innerHTML =
+    '<div class="empty" style="padding:60px 20px;text-align:center;border:1px solid #000;background:#fff;letter-spacing:normal;opacity:1">' +
+      '<div style="font-size:13px;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">' + title + '</div>' +
+      '<div style="font-size:13px;margin-bottom:24px;opacity:0.8">' + body + '</div>' +
+      '<a href="/members.html" style="display:inline-block;padding:12px 24px;border:1px solid #000;color:#000;text-decoration:none;font-size:11px;letter-spacing:2px;text-transform:uppercase">' + cta + '</a>' +
+    '</div>';
+}
+
+function tlLoadMore() {
+  tlState.offset += TL_PAGE;
+  fetchTimeline(true);
+}
+window.tlLoadMore = tlLoadMore;
+window.setSeg = setSeg;
+
 async function fetchList() {
   const t = I18N[state.lang];
   document.getElementById('resultsCount').textContent = '// ' + t.loading;
@@ -429,6 +710,23 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchList();
   });
 
+  // Timeline filter buttons
+  document.getElementById('tlFilter').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-cat]');
+    if (!btn) return;
+    document.querySelectorAll('#tlFilter button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    tlState.category = btn.getAttribute('data-cat');
+    tlState.offset = 0;
+    fetchTimeline(false);
+  });
+  // Timeline search
+  document.getElementById('tlSearch').addEventListener('input', debounce(e => {
+    tlState.q = e.target.value.trim();
+    tlState.offset = 0;
+    fetchTimeline(false);
+  }, 350));
+
   document.body.style.visibility = 'visible';
   // Не вызываем fetchList() сразу — ждём коллбэк от belfed-auth.js.
 });
@@ -437,12 +735,17 @@ document.addEventListener('DOMContentLoaded', () => {
 function onAuthReady(profile, session, entitlement) {
   authReady = true;
   authedSession = session;
-  if (!entitlement || !entitlement.access) { renderLocked(); return; }
-  fetchList();
+  hasAccess = !!(entitlement && entitlement.access);
+  if (!hasAccess) { renderTimelineLocked(); renderLocked(); return; }
+  // Load the active segment (Timeline by default). Reports loads lazily on switch.
+  if (activeSeg === 'tl') { fetchTimeline(false); }
+  else { window.__repLoaded = true; fetchList(); }
 }
 function onAuthSignedOut() {
   authReady = true;
   authedSession = null;
+  hasAccess = false;
+  renderTimelineLocked();
   renderLocked();
 }
 </script>
