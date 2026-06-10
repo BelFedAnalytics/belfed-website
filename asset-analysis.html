@@ -747,6 +747,7 @@ async function loadPosts() {
     var res = await supaClient.from('analysis_posts')
       .select('id,ticker,company_name,asset_class,post_type,reply_name,reply_text,greeting_ru,greeting_en,body_ru,body_en,tradingview_url,hashtags,image_paths,published_at,created_at,message_id_ru,message_id_en,parent_post_id,slug')
       .eq('status', 'published')
+      .eq('destination', 'asset')
       .order('published_at', { ascending: false, nullsLast: true })
       .order('created_at', { ascending: false })
       .limit(200);
