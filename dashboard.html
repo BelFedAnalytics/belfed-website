@@ -338,7 +338,12 @@ var CSVURL='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:
 var YAHOO_PROXY='https://script.google.com/macros/s/AKfycbyXYFW0kFYR4aa9mCvX_wew6he08YtaLMjUjEyBUoGi-SSHqhddhVwl1RXDmpKQIZnv/exec';
 // CoinGecko fallback for crypto tickers Yahoo doesn't resolve.
 // Key = ticker as it appears in the Sheet (uppercase). Value = CoinGecko coin id.
-var COINGECKO_MAP={'TAO':'bittensor','RENDER':'render-token','RNDR':'render-token'};
+// NOTE: This map is used only to *decide* whether to attempt CoinGecko fallback
+// on the Equities tab. The authoritative ticker→coin map lives on the server
+// in supabase/functions/crypto-price/index.ts. On the Crypto tab we always go
+// directly to crypto-price and ignore Yahoo entirely (Yahoo returns stock
+// symbols with the same letters, e.g. VVV → Valvoline instead of Venice token).
+var COINGECKO_MAP={'TAO':'bittensor','RENDER':'render-token','RNDR':'render-token','VVV':'venice-token'};
 var allTrades=[];var livePrices={};
 function mskTime(){return new Date().toLocaleString('en-GB',{timeZone:'Europe/Moscow',year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})+' MSK';}
 function parseNum(v){if(v===null||v===undefined||v==='')return NaN;var s=String(v).trim().replace(/ /g,'').replace(/,/g,'.');return parseFloat(s);}
@@ -360,6 +365,37 @@ function buildTrades(rows){var headerIdx=-1;for(var i=0;i<rows.length;i++){var r
 var openTrades=trades.filter(function(t){return isActiveStatus(t.status);});
 var uniqueTickers=[...new Set(openTrades.map(function(t){return t.ticker;}))];
 var note=document.getElementById('priceNote');
+var isCrypto=(currentTab==='crypto');
+
+// On the Crypto tab, skip Yahoo entirely and go straight to CoinGecko via
+// our edge function. Yahoo will happily return a stock with the same ticker
+// (e.g. VVV → Valvoline Inc. $37 instead of Venice token $14), which is wrong.
+if(isCrypto){
+  note.textContent='Fetching live prices via CoinGecko...';
+  try{
+    var cgUrl='https://obujqvqqmyfcfflhqvud.supabase.co/functions/v1/crypto-price?tickers='+encodeURIComponent(uniqueTickers.join(','));
+    console.log('[BFD prices] crypto tab — crypto-price url:',cgUrl);
+    var cgRes=await fetch(cgUrl,{cache:'no-store'});
+    console.log('[BFD prices] crypto-price status:',cgRes.status);
+    if(!cgRes.ok)throw new Error('crypto-price HTTP '+cgRes.status);
+    var cgData=await cgRes.json();
+    console.log('[BFD prices] crypto-price data:',cgData);
+    var fetched=0;
+    uniqueTickers.forEach(function(t){
+      var entry=cgData[t.toUpperCase()];
+      if(entry&&entry.price>0){livePrices[t]=entry.price;fetched++;}
+    });
+    openTrades.forEach(function(t){if(livePrices[t.ticker])t.livePrice=livePrices[t.ticker];});
+    var missingTickers=uniqueTickers.filter(function(t){return !livePrices[t];});
+    var srcNote='Цены: CoinGecko';
+    if(missingTickers.length){srcNote+=' — нет данных для: '+missingTickers.join(', ')+' (добавьте маппинг в crypto-price edge function)';}
+    note.textContent=fetched>0?srcNote+' ('+fetched+'/'+uniqueTickers.length+' тикеров)':'Не удалось получить крипто-цены: '+missingTickers.join(', ');
+  }catch(err){console.error('[BFD prices] CoinGecko error:',err);note.textContent='Ошибка получения крипто-цен: '+err.message;}
+  renderOpenTrades(allTrades);renderOpenedThisWeek(allTrades);renderAlerts(allTrades);renderActionable(allTrades);
+  return;
+}
+
+// Equities tab: Yahoo proxy with CoinGecko fallback for stragglers.
 if(!YAHOO_PROXY){note.textContent='Yahoo proxy not configured';return;}
 note.textContent='Fetching live prices via Yahoo Finance...';
 try{
@@ -379,7 +415,6 @@ var cgFetched=0;var cgError=null;
 console.log('[BFD prices] yahoo got:',Object.keys(livePrices),'missing for cg:',missing);
 if(missing.length){
   try{
-    // Call our Supabase edge function (CoinGecko proxy) — bypasses any geo-blocks of CoinGecko's CDN.
     var cgUrl='https://obujqvqqmyfcfflhqvud.supabase.co/functions/v1/crypto-price?tickers='+encodeURIComponent(missing.join(','));
     console.log('[BFD prices] crypto-price url:',cgUrl);
     var cgRes=await fetch(cgUrl,{cache:'no-store'});
@@ -494,6 +529,9 @@ box.innerHTML=alerts.map(function(a){return '<div class="alert-item">'+a+'</div>
 }
 function switchTab(tab){
 currentTab=tab;
+// Reset cached live prices when switching tabs so a stale stock price (e.g.
+// Yahoo's VVV → Valvoline) can't leak into the Crypto tab and vice versa.
+livePrices={};
 document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
 event.target.classList.add('active');
 GID=tab==='crypto'?CRYPTO_GID:'0';
