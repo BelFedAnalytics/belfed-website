@@ -1,0 +1,1765 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BELFED ANALYTICS — АДМИН: РЕДАКТОР</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background-color:#f5f2eb;font-family:'Courier New',Courier,monospace;color:#000;padding:24px 20px;line-height:1.6;font-size:14px;visibility:hidden}
+body.ready{visibility:visible}
+.container{max-width:1200px;margin:0 auto}
+header{position:relative;text-align:center;margin-bottom:24px;padding-bottom:14px;border-bottom:1px solid #000}
+header h2{font-size:14px;letter-spacing:4px;font-weight:bold;margin-bottom:8px}
+header h2 a{color:#000;text-decoration:none}
+header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
+.admin-badge{display:inline-block;background:#c50000;color:#fff;padding:2px 10px;font-size:10px;letter-spacing:2px;margin-left:8px}
+.admin-nav{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;background:#000;padding:10px 14px;margin:-24px -20px 24px}
+.admin-nav a{font-family:'Courier New',monospace;font-size:11px;letter-spacing:2px;padding:6px 14px;color:#f5f2eb;text-decoration:none;border:1px solid transparent}
+.admin-nav a:hover{border-color:#f5f2eb}
+.admin-nav a.active{background:#f5f2eb;color:#000;border-color:#f5f2eb}
+.admin-nav .sep{color:#666;padding:6px 0}
+
+#loginScreen{position:fixed;inset:0;background:#f5f2eb;display:flex;align-items:center;justify-content:center;z-index:10}
+.login-box{background:#fff;border:1px solid #000;padding:30px;width:340px}
+.login-box h3{font-size:13px;letter-spacing:3px;margin-bottom:20px;text-align:center}
+.login-box input{width:100%;font-family:'Courier New',monospace;padding:10px;border:1px solid #000;background:#f5f2eb;font-size:13px;margin-bottom:10px}
+.login-box button{width:100%;font-family:'Courier New',monospace;padding:10px;border:1px solid #000;background:#000;color:#f5f2eb;cursor:pointer;font-size:12px;letter-spacing:2px}
+
+.toolbar{display:flex;gap:8px;justify-content:flex-end;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.btn{font-family:'Courier New',monospace;font-size:11px;letter-spacing:2px;padding:8px 16px;border:1px solid #000;background:#fff;cursor:pointer;color:#000;text-decoration:none;display:inline-block}
+.btn:hover{background:#f0ede4}
+.btn.primary{background:#000;color:#f5f2eb}
+.btn.primary:hover{background:#222}
+.btn.danger{background:#c50000;color:#fff;border-color:#c50000}
+.btn.success{background:#1a7a1a;color:#fff;border-color:#1a7a1a}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+
+.layout{display:grid;grid-template-columns:1fr 360px;gap:20px}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+
+.editor{background:#fff;border:1px solid #000;padding:0}
+.lang-tabs{display:flex;border-bottom:1px solid #000}
+.lang-tabs button{flex:1;font-family:'Courier New',monospace;font-size:12px;letter-spacing:2px;padding:10px;background:none;border:none;border-right:1px solid #000;cursor:pointer;font-weight:bold}
+.lang-tabs button:last-child{border-right:none}
+.lang-tabs button.active{background:#000;color:#f5f2eb}
+
+/* ── DESTINATION TOGGLE (Timeline / Report) ── */
+.dest-toggle{display:flex;border-bottom:1px solid #000}
+.dest-toggle button{flex:1;font-family:'Courier New',monospace;font-size:12px;letter-spacing:2px;padding:12px 10px;background:#f0ece1;border:none;border-right:1px solid #000;cursor:pointer;font-weight:bold;color:#888;display:flex;align-items:center;justify-content:center;gap:8px}
+.dest-toggle button:last-child{border-right:none}
+.dest-toggle button.sel{background:#000;color:#f5f2eb}
+.dest-toggle .dot{width:8px;height:8px;border-radius:50%;background:#1a7a1a;display:inline-block}
+.dest-toggle .dot.idle{background:#bbb;animation:none}
+.dest-toggle button.sel .dot{animation:blinkdot 1.2s ease-in-out infinite}
+@keyframes blinkdot{0%,100%{opacity:1}50%{opacity:0.25}}
+/* fields shown depending on destination mode */
+#timeline-fields{display:none}
+.tl-cat-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.tl-cat-chips button{font-family:'Courier New',monospace;font-size:10px;letter-spacing:1px;padding:5px 10px;border:1px solid #000;background:#fff;cursor:pointer;text-transform:uppercase}
+.tl-cat-chips button.on{background:#000;color:#f5f2eb}
+.tl-hashtags{font-family:'Courier New',monospace;font-size:11px;color:#1a7a1a;margin-top:6px;letter-spacing:1px}
+.editor-pad{padding:20px}
+
+.field{margin-bottom:16px}
+.field label{display:block;font-size:10px;letter-spacing:2px;opacity:0.7;margin-bottom:4px}
+.field input,.field textarea,.field select{font-family:'Courier New',monospace;width:100%;padding:8px 12px;font-size:13px;border:1px solid #000;background:#f5f2eb;outline:none}
+.field input:focus,.field textarea:focus{background:#fff}
+.field textarea{resize:vertical;min-height:64px}
+
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:700px){.row-2,.row-3{grid-template-columns:1fr}}
+
+.tag-input{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px;border:1px solid #000;background:#f5f2eb;min-height:36px}
+.tag-pill{display:inline-flex;align-items:center;gap:6px;font-size:10px;letter-spacing:1px;padding:3px 8px;background:#000;color:#f5f2eb;text-transform:uppercase}
+.tag-pill .x{cursor:pointer;opacity:0.7}
+.tag-input input{flex:1;border:none;background:transparent;outline:none;font-family:'Courier New',monospace;font-size:12px;min-width:120px}
+
+.section-block{border-top:1px dashed #999;padding-top:18px;margin-top:18px;position:relative}
+.section-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.section-head .label{font-size:11px;letter-spacing:3px;opacity:0.6;font-weight:bold}
+.section-actions{display:flex;gap:6px}
+.icon-btn{font-family:'Courier New',monospace;font-size:10px;padding:4px 8px;border:1px solid #000;background:#fff;cursor:pointer}
+.icon-btn:hover{background:#f0ede4}
+.icon-btn:disabled{opacity:0.3;cursor:not-allowed}
+
+.dropzone{border:2px dashed #000;background:#f5f2eb;padding:30px 18px;text-align:center;cursor:pointer;transition:background 0.15s;position:relative}
+.dropzone:hover{background:#fff}
+.dropzone.dragover{background:#fff;border-color:#1a7a1a}
+.dropzone.has-file{padding:0;border-style:solid;background:#0a0a0a}
+.dropzone .dz-icon{font-size:24px;margin-bottom:6px;opacity:0.5}
+.dropzone .dz-text{font-size:11px;letter-spacing:2px;opacity:0.7}
+.dropzone .dz-sub{font-size:10px;letter-spacing:1px;opacity:0.5;margin-top:4px}
+.dropzone img{width:100%;display:block;max-height:300px;object-fit:contain;background:#000}
+.dropzone .dz-replace{position:absolute;top:8px;right:8px;background:#000;color:#fff;padding:4px 10px;font-size:10px;letter-spacing:1px;cursor:pointer;z-index:2}
+.dropzone .dz-progress{position:absolute;left:0;right:0;bottom:0;background:#1a7a1a;color:#fff;font-size:10px;padding:4px;text-align:center;letter-spacing:1px}
+.dropzone.small{padding:14px 12px}
+.dropzone.small img{max-height:160px}
+.dropzone .dz-remove{position:absolute;top:8px;left:8px;background:#c50000;color:#fff;padding:4px 10px;font-size:10px;letter-spacing:1px;cursor:pointer;z-index:2}
+.charts-list{display:flex;flex-direction:column;gap:14px;margin-bottom:8px}
+.chart-item{border:1px solid #ddd;padding:10px;background:#fafafa}
+.chart-item-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:10px;letter-spacing:2px;opacity:0.6}
+.add-chart-btn{font-family:'Courier New',monospace;font-size:10px;letter-spacing:2px;padding:8px 16px;border:1px dashed #000;background:#f5f2eb;cursor:pointer}
+.add-chart-btn:hover{background:#fff;border-style:solid}
+.add-chart-btn:disabled{opacity:0.3;cursor:not-allowed}
+.toggle-block{display:flex;gap:8px;align-items:center;font-size:11px;letter-spacing:2px;cursor:pointer;padding:6px 0}
+.toggle-block input{transform:scale(1.2)}
+.conclusion-body{display:none}
+.conclusion-body.on{display:block}
+
+.add-section{display:flex;justify-content:center;margin-top:20px}
+.add-section button{font-family:'Courier New',monospace;font-size:11px;letter-spacing:2px;padding:10px 24px;border:1px dashed #000;background:#f5f2eb;cursor:pointer}
+.add-section button:hover{background:#fff;border-style:solid}
+
+.sidebar{position:sticky;top:24px;align-self:start;display:flex;flex-direction:column;gap:14px}
+@media(max-width:900px){.sidebar{position:static}}
+.sidebar-card{background:#fff;border:1px solid #000;padding:16px}
+.sidebar-card h3{font-size:11px;letter-spacing:3px;margin-bottom:10px;border-bottom:1px solid #000;padding-bottom:6px}
+.sidebar-card .row{display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;gap:10px}
+.sidebar-card .row span:first-child{opacity:0.6}
+.status-pill{display:inline-block;font-size:10px;letter-spacing:1px;padding:2px 8px;border:1px solid #000}
+.status-pill.draft{background:#f5f2eb}
+.status-pill.published{background:#1a7a1a;color:#fff;border-color:#1a7a1a}
+
+.help{font-size:10px;line-height:1.5;opacity:0.6;margin-top:6px;font-style:italic}
+.char-counter{font-size:10px;letter-spacing:1px;opacity:0.6;text-align:right;margin-top:2px}
+.char-counter.warn{color:#e6a800}
+.char-counter.over{color:#c50000;font-weight:bold}
+
+.msg{padding:10px 12px;font-size:11px;letter-spacing:1px;border:1px solid #000;margin:10px 0}
+.msg.ok{background:#1a7a1a;color:#fff;border-color:#1a7a1a}
+.msg.err{background:#c50000;color:#fff;border-color:#c50000}
+.msg.info{background:#fffbe5;color:#000}
+
+.lang-pane{display:none}
+.lang-pane.active{display:block}
+
+/* read-only when published */
+.published-lock input,.published-lock textarea,.published-lock select,.published-lock .dropzone{pointer-events:none;opacity:0.7}
+.published-lock .toolbar .btn.unlock{opacity:1;pointer-events:auto}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-box">
+    <h3>// ADMIN LOGIN</h3>
+    <input type="email" id="login-email" placeholder="admin@belfed.com">
+    <input type="password" id="login-password" placeholder="password">
+    <button onclick="signIn()">[ ВОЙТИ ]</button>
+    <div id="login-msg"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+
+<nav class="admin-nav">
+  <a href="/admin.html">[ HUB ]</a>
+  <span class="sep">|</span>
+  <a href="/admin-positions.html">[ POSITIONS ]</a>
+  <a href="/admin-analytics-list.html" class="active">[ ANALYTICS ]</a>
+  <a href="/admin-analysis-posts.html">[ ASSET ANALYSIS ]</a>
+  <a href="/admin-chart-requests.html">[ REQUESTS ]</a>
+  <a href="/admin-roster.html">[ RECONCILIATION ]</a>
+</nav>
+
+<div class="container">
+
+<header>
+  <h2><a href="/admin.html">— BELFED_ ADMIN <span class="admin-badge">ADMIN</span> —</a></h2>
+  <h1 id="page-title">— НОВЫЙ ОТЧЁТ АНАЛИТИКИ —</h1>
+</header>
+
+<div class="toolbar">
+  <a class="btn" href="/admin-analytics-list.html">[ ← К СПИСКУ ]</a>
+  <button class="btn" onclick="signOut()">[ ВЫЙТИ ]</button>
+  <span id="status-indicator"></span>
+  <button class="btn" id="btn-save"     onclick="onSaveDraft()">[ СОХРАНИТЬ ]</button>
+  <button class="btn primary" id="btn-publish" onclick="onPublish()">[ ОПУБЛИКОВАТЬ ]</button>
+</div>
+
+<div id="top-msg"></div>
+
+<div class="layout">
+
+<div class="editor">
+
+  <!-- ───── DESTINATION (Timeline / Report) ───── -->
+  <div class="dest-toggle" id="dest-toggle">
+    <button type="button" id="dest-timeline" class="sel" onclick="setDestination('timeline')"><span class="dot"></span>ЛЕНТА · TIMELINE</button>
+    <button type="button" id="dest-report" onclick="setDestination('report')">ОБЗОР · REPORT</button>
+  </div>
+
+  <div class="lang-tabs">
+    <button id="tab-ru" class="active" onclick="switchLang('ru')">// RU</button>
+    <button id="tab-en" onclick="switchLang('en')">// EN</button>
+  </div>
+
+  <div class="editor-pad">
+
+  <!-- ═════ TIMELINE FIELDS (simple feed post → analysis_posts) ═════ -->
+  <div id="timeline-fields">
+    <div class="field">
+      <label>// КАТЕГОРИЯ · CATEGORY (фильтр ленты)</label>
+      <div class="tl-cat-chips" id="tl-cat-chips"></div>
+      <div class="tl-hashtags" id="tl-hashtags"></div>
+    </div>
+    <!-- RU -->
+    <div class="lang-pane active" data-tl-lang="ru">
+      <div class="field">
+        <label>// ЗАГОЛОВОК · RU</label>
+        <input type="text" id="tl-headline-ru" placeholder="Например, SMR backlog пересобирает ядерный тезис">
+      </div>
+      <div class="field">
+        <label>// ТЕКСТ · RU</label>
+        <textarea id="tl-body-ru" rows="5"></textarea>
+      </div>
+    </div>
+    <!-- EN -->
+    <div class="lang-pane" data-tl-lang="en">
+      <div class="field">
+        <label>// HEADLINE · EN</label>
+        <input type="text" id="tl-headline-en" placeholder="e.g. SMR backlog reframes the nuclear thesis">
+      </div>
+      <div class="field">
+        <label>// BODY · EN</label>
+        <textarea id="tl-body-en" rows="5"></textarea>
+      </div>
+    </div>
+    <div class="field">
+      <label>// ИСТОЧНИК · SOURCE (необязательно)</label>
+      <input type="text" id="tl-source" placeholder="напр. Goldman Sachs Equity Research">
+    </div>
+  </div>
+
+  <!-- ═════ REPORT FIELDS (existing multi-section report editor) ═════ -->
+  <div id="report-fields">
+
+    <div class="row-2">
+      <div class="field">
+        <label>// ДАТА ОТЧЁТА</label>
+        <input type="date" id="f-date">
+      </div>
+      <div class="field">
+        <label>// ТИП</label>
+        <select id="f-type">
+          <option value="daily">DAILY (ежедневный)</option>
+          <option value="weekly">WEEKLY (еженедельный)</option>
+          <option value="flash">FLASH (срочный)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- RU pane -->
+    <div class="lang-pane active" id="pane-ru">
+      <div class="field">
+        <label>// ЗАГОЛОВОК · RU</label>
+        <input type="text" id="f-title-ru" placeholder="Например, Перезагрузка позиций">
+      </div>
+      <div class="field">
+        <label>// ПОДЗАГОЛОВОК · RU</label>
+        <textarea id="f-subtitle-ru"></textarea>
+      </div>
+    </div>
+
+    <!-- EN pane -->
+    <div class="lang-pane" id="pane-en">
+      <div class="field">
+        <label>// TITLE · EN</label>
+        <input type="text" id="f-title-en" placeholder="e.g. Positioning reset">
+      </div>
+      <div class="field">
+        <label>// SUBTITLE · EN</label>
+        <textarea id="f-subtitle-en"></textarea>
+      </div>
+    </div>
+
+    <div class="row-3">
+      <div class="field">
+        <label>// КЛАССЫ АКТИВОВ</label>
+        <div class="tag-input" id="ti-asset">
+          <input placeholder="+ добавить" data-target="asset_classes">
+        </div>
+      </div>
+      <div class="field">
+        <label>// СЕКТОРЫ</label>
+        <div class="tag-input" id="ti-sector">
+          <input placeholder="+ добавить" data-target="sectors">
+        </div>
+      </div>
+      <div class="field">
+        <label>// ТЕГИ</label>
+        <div class="tag-input" id="ti-tag">
+          <input placeholder="+ добавить" data-target="tags">
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>// COVER (опционально, для превью на сайте)</label>
+      <div class="dropzone" id="dz-cover">
+        <div class="dz-icon">⬆</div>
+        <div class="dz-text">[ ПЕРЕТАЩИТЕ ИЛИ КЛИКНИТЕ ]</div>
+        <div class="dz-sub">PNG, JPG, WEBP · до 5 MB</div>
+      </div>
+      <div class="help">Если не загружен — на ленте показывается стилизованный fallback с заголовком.</div>
+    </div>
+
+    <div id="sections-host"></div>
+
+    <div class="add-section">
+      <button onclick="addSection()">[ + ДОБАВИТЬ СЕКЦИЮ ]</button>
+    </div>
+
+    <!-- CONCLUSION (опциональный) -->
+    <div class="section-block" style="margin-top:30px;border-top:2px solid #000;padding-top:24px">
+      <label class="toggle-block">
+        <input type="checkbox" id="cb-conclusion">
+        <span class="label" style="color:#000;opacity:1">// ДОБАВИТЬ ГЛАВНЫЙ ВЫВОД (опционально)</span>
+      </label>
+
+      <div class="conclusion-body" id="conclusion-body">
+        <div class="lang-pane active" data-lang="ru">
+          <div class="field">
+            <label>ЗАГОЛОВОК · RU</label>
+            <input type="text" id="conc-headline-ru" placeholder="Что важно знать сейчас">
+          </div>
+          <div class="field">
+            <label>ТЕКСТ · RU</label>
+            <textarea id="conc-body-ru" rows="5"></textarea>
+          </div>
+        </div>
+        <div class="lang-pane" data-lang="en">
+          <div class="field">
+            <label>HEADLINE · EN</label>
+            <input type="text" id="conc-headline-en" placeholder="Key takeaway">
+          </div>
+          <div class="field">
+            <label>BODY · EN</label>
+            <textarea id="conc-body-en" rows="5"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /#report-fields -->
+
+  </div><!-- /.editor-pad -->
+</div>
+
+<aside class="sidebar">
+
+  <div class="sidebar-card">
+    <h3>// СТАТУС</h3>
+    <div class="row"><span>Статус</span><span id="st-status" class="status-pill draft">ЧЕРНОВИК</span></div>
+    <div class="row"><span>ID</span><span id="st-id" style="font-size:10px">—</span></div>
+    <div class="row"><span>Slug</span><span id="st-slug" style="font-size:10px;word-break:break-all;text-align:right">—</span></div>
+    <div class="row"><span>Создан</span><span id="st-created">—</span></div>
+    <div class="row"><span>Изменён</span><span id="st-updated">—</span></div>
+    <div class="row"><span>Секций</span><span id="st-sections">0</span></div>
+    <div class="row"><span>Языки</span><span id="st-langs">RU ✗  EN ✗</span></div>
+  </div>
+
+  <div class="sidebar-card">
+    <h3>// ПУБЛИКАЦИЯ</h3>
+    <div class="row"><span>RU канал</span><span>📊 Аналитика</span></div>
+    <div class="row"><span>EN канал</span><span>📊 Analytics</span></div>
+    <div class="help">При нажатии «Опубликовать» статус сменится на published. Серия уйдёт в каждый выбранный язык. Тестовый режим = только в личку Артёма.</div>
+    <div style="margin-top:12px;display:flex;gap:14px">
+      <label style="font-size:11px;display:flex;gap:6px;align-items:center;cursor:pointer">
+        <input type="checkbox" id="cb-lang-ru" checked onchange="updatePublishHint()">
+        <span>RU</span>
+      </label>
+      <label style="font-size:11px;display:flex;gap:6px;align-items:center;cursor:pointer">
+        <input type="checkbox" id="cb-lang-en" checked onchange="updatePublishHint()">
+        <span>EN</span>
+      </label>
+    </div>
+    <div style="margin-top:10px">
+      <label style="font-size:11px;display:flex;gap:6px;align-items:center;cursor:pointer">
+        <input type="checkbox" id="cb-test-mode" checked onchange="updatePublishHint()">
+        <span>TEST MODE (в личку Артёма)</span>
+      </label>
+    </div>
+    <div style="margin-top:8px">
+      <label style="font-size:11px;display:flex;gap:6px;align-items:center;cursor:pointer">
+        <input type="checkbox" id="cb-skip-tg" onchange="updatePublishHint()">
+        <span>SKIP TG (только сайт)</span>
+      </label>
+    </div>
+    <div id="publish-hint" class="help" style="margin-top:8px;font-weight:bold"></div>
+    <button class="btn" style="width:100%;margin-top:10px" onclick="onDryRun()">[ DRY-RUN PREVIEW ]</button>
+  </div>
+
+  <div class="sidebar-card">
+    <h3>// ПРЕДПРОСМОТР</h3>
+    <button id="btn-preview-ru" class="btn" style="display:block;width:100%;text-align:center;margin-bottom:6px" onclick="onPreview('ru')">[ ПРЕДПРОСМОТР RU → belfed.ru ]</button>
+    <button id="btn-preview-en" class="btn" style="display:block;width:100%;text-align:center" onclick="onPreview('en')">[ ПРЕДПРОСМОТР EN → belfed.com ]</button>
+    <div class="help">Доступно после первого сохранения. Открывает по одноразовой ссылке (30 мин).</div>
+  </div>
+
+  <div class="sidebar-card">
+    <h3>// EMAIL РАССЫЛКА</h3>
+
+    <div class="row"><span>Премиум активных</span><span id="st-email-prem-count" style="font-size:10px">—</span></div>
+    <div class="row"><span>Лиды активных</span><span id="st-email-leads-count" style="font-size:10px">—</span></div>
+
+    <div style="margin-top:12px;border-top:1px dashed #999;padding-top:10px">
+      <div style="font-size:10px;letter-spacing:1px;color:#666;margin-bottom:6px">АУДИТОРИЯ ДЛЯ РАССЫЛКИ</div>
+      <label style="font-size:11px;display:flex;gap:6px;align-items:center;cursor:pointer">
+        <input type="checkbox" id="cb-email-premium">
+        <span>Премиум <span id="st-email-prem-cb-count" style="color:#888">(0)</span></span>
+      </label>
+      <label style="font-size:11px;display:flex;gap:6px;align-items:center;cursor:pointer;margin-top:6px">
+        <input type="checkbox" id="cb-email-leads">
+        <span>Лиды <span id="st-email-leads-cb-count" style="color:#888">(0)</span></span>
+      </label>
+      <div class="help" style="margin-top:6px">Чекбоксы сохраняются на отчёте — используются и для автоплана при публикации, и для кнопки ниже.</div>
+    </div>
+
+    <div id="email-status" style="font-size:10px;margin-top:10px;color:#888"></div>
+    <div id="email-history" style="font-size:10px;margin-top:6px;color:#444;line-height:1.6"></div>
+
+    <div style="margin-top:12px;border-top:1px dashed #999;padding-top:10px">
+      <button id="btn-email-send-now" class="btn" style="width:100%;font-size:11px;background:#000;color:#f5f2eb" onclick="onEmailSendNow()">[ ОТПРАВИТЬ ПИСЬМА СЕЙЧАС ]</button>
+      <div class="help" style="margin-top:6px">Отправит письма выбранным аудиториям независимо от ТГ и сайта. Подписчики, кому уже отправляли по этому отчёту, пропускаются (включите «Повторно отправить»).</div>
+      <label style="font-size:11px;display:flex;gap:6px;align-items:center;cursor:pointer;margin-top:6px">
+        <input type="checkbox" id="cb-email-force">
+        <span>Повторно отправить тем, кому уже отправляли</span>
+      </label>
+    </div>
+
+    <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:6px">
+      <button id="btn-email-preview-ru" class="btn" style="font-size:10px" onclick="onEmailPreview('ru')">[ ПРЕВЬЮ RU ]</button>
+      <button id="btn-email-preview-en" class="btn" style="font-size:10px" onclick="onEmailPreview('en')">[ ПРЕВЬЮ EN ]</button>
+      <button id="btn-email-test-ru" class="btn" style="font-size:10px" onclick="onEmailTest('ru')">[ ТЕСТ RU → мне ]</button>
+      <button id="btn-email-test-en" class="btn" style="font-size:10px" onclick="onEmailTest('en')">[ ТЕСТ EN → мне ]</button>
+    </div>
+    <div class="help" style="margin-top:6px">Превью открывает HTML письма в новой вкладке. Тест отправляет реальное письмо на ваш admin-email.</div>
+
+    <div style="margin-top:12px;border-top:1px dashed #999;padding-top:10px">
+      <button id="btn-leads-sync" class="btn" style="width:100%;font-size:11px" onclick="onLeadsSync()">[ ОБНОВИТЬ ЛИДОВ ИЗ SHEET ]</button>
+      <div id="leads-sync-status" style="font-size:10px;margin-top:6px;color:#888"></div>
+      <div class="help" style="margin-top:4px">Подтягивает новые email-адреса из Google-таблицы лидов. Уже импортированные строки пропускаются.</div>
+    </div>
+  </div>
+
+  <div class="sidebar-card">
+    <h3>// ОПАСНАЯ ЗОНА</h3>
+    <button class="btn danger" id="btn-delete" style="width:100%" onclick="onDelete()">[ УДАЛИТЬ ОТЧЁТ ]</button>
+    <div class="help">Удаление возможно только пока статус «Черновик».</div>
+  </div>
+
+</aside>
+
+</div>
+</div>
+</div>
+
+<script>
+// ============== Constants ==============
+const SUPABASE_URL  = 'https://obujqvqqmyfcfflhqvud.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9idWpxdnFxbXlmY2ZmbGhxdnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDgxNjYsImV4cCI6MjA4OTkyNDE2Nn0.syl4YBLbf8aBitxyK3gCL51pPYxWjEW99mMTXJaQQ8w';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// ============== State ==============
+// Timeline categories (1:1 with member feed filters) -> hashtag
+const TL_CATEGORIES = [
+  { cat:'macro',       tag:'#macro' },
+  { cat:'crypto',      tag:'#crypto' },
+  { cat:'equities',    tag:'#equities' },
+  { cat:'volatility',  tag:'#volatility' },
+  { cat:'world',       tag:'#world' },
+  { cat:'commodities', tag:'#commodities' },
+];
+
+const state = {
+  destination: 'timeline',   // 'timeline' | 'report'
+  tlCategories: new Set(),   // selected Timeline categories
+  id: null,
+  slug: null,
+  status: 'draft',
+  cover_image_url: null,
+  asset_classes: [],
+  sectors: [],
+  tags: [],
+  sections: [],     // editable user sections (excluding conclusion)
+  conclusion: { id:null, enabled:false, headline_ru:'', headline_en:'', body_ru:'', body_en:'', chart_images:[] },
+  lang: 'ru',
+  created_at: null,
+  updated_at: null,
+};
+
+// ============== Destination (Timeline / Report) ==============
+function setDestination(dest) {
+  state.destination = dest === 'report' ? 'report' : 'timeline';
+  const isTl = state.destination === 'timeline';
+  const btnTl = document.getElementById('dest-timeline');
+  const btnRep = document.getElementById('dest-report');
+  btnTl.classList.toggle('sel', isTl);
+  btnRep.classList.toggle('sel', !isTl);
+  btnTl.querySelector('.dot').classList.toggle('idle', !isTl);
+  document.getElementById('timeline-fields').style.display = isTl ? 'block' : 'none';
+  document.getElementById('report-fields').style.display = isTl ? 'none' : 'block';
+  // page title + publish help reflect mode
+  const title = document.getElementById('page-title');
+  if (title) title.textContent = isTl
+    ? (state.id ? '— ПОСТ ЛЕНТЫ —' : '— НОВЫЙ ПОСТ ЛЕНТЫ —')
+    : (state.id ? '— ОТЧЁТ АНАЛИТИКИ —' : '— НОВЫЙ ОТЧЁТ АНАЛИТИКИ —');
+  if (typeof updatePublishHint === 'function') updatePublishHint();
+}
+
+function renderTlCategoryChips() {
+  const host = document.getElementById('tl-cat-chips');
+  if (!host) return;
+  host.innerHTML = '';
+  TL_CATEGORIES.forEach(({ cat }) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = cat;
+    b.className = state.tlCategories.has(cat) ? 'on' : '';
+    b.onclick = () => {
+      if (state.tlCategories.has(cat)) state.tlCategories.delete(cat);
+      else state.tlCategories.add(cat);
+      renderTlCategoryChips();
+    };
+    host.appendChild(b);
+  });
+  // hashtag preview
+  const hh = document.getElementById('tl-hashtags');
+  if (hh) hh.textContent = tlHashtags() || '';
+}
+
+function tlHashtags() {
+  return TL_CATEGORIES
+    .filter(c => state.tlCategories.has(c.cat))
+    .map(c => c.tag)
+    .join(' ');
+}
+
+// ============== Auth ==============
+async function signIn() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const msg = document.getElementById('login-msg');
+  msg.innerHTML = '';
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) { msg.innerHTML = '<div class="msg err">' + error.message + '</div>'; return; }
+  await checkAdminAndShow();
+}
+async function signOut() { await sb.auth.signOut(); location.reload(); }
+
+async function checkAdminAndShow() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+    return;
+  }
+  const { data: profile } = await sb
+    .from('profiles')
+    .select('subscription_status,email')
+    .eq('id', session.user.id)
+    .maybeSingle();
+  if (!profile || profile.subscription_status !== 'admin') {
+    document.getElementById('login-msg').innerHTML =
+      '<div class="msg err">Access denied — your account is not an admin.</div>';
+    return;
+  }
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+
+  // load existing report if id in URL
+  const url = new URL(location.href);
+  const editId = url.searchParams.get('id');
+  if (editId) await loadReport(editId);
+  else        initBlank();
+
+  renderAll();
+
+  // Destination: ?dest=report opens Report mode; default is Timeline.
+  // Editing an existing report (?id=...) forces Report mode.
+  renderTlCategoryChips();
+  const destParam = url.searchParams.get('dest');
+  setDestination(editId || destParam === 'report' ? 'report' : 'timeline');
+}
+
+// ============== Admin Action ==============
+async function adminAction(payload) {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return { ok:false, error:'no_session' };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/analytics-admin-action`, {
+      method:'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}` },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, data };
+  } catch (e) {
+    return { ok:false, error:String(e) };
+  }
+}
+
+// ============== Init ==============
+function todayISO() {
+  const d = new Date();
+  return d.toISOString().slice(0,10);
+}
+
+function initBlank() {
+  state.id = null;
+  state.slug = null;
+  state.status = 'draft';
+  state.created_at = null;
+  state.updated_at = null;
+  state.sections = [ blankSection(0) ];
+  state.conclusion = { id:null, enabled:false, headline_ru:'', headline_en:'', body_ru:'', body_en:'', chart_images:[] };
+  state.cover_image_url = null;
+  state.asset_classes = [];
+  state.sectors = [];
+  state.tags = [];
+  state.email_send_to_premium = false;
+  state.email_send_to_leads = false;
+  state.email_send_at = null;
+  state.email_sent_at = null;
+
+  document.getElementById('f-date').value = todayISO();
+  document.getElementById('f-type').value = 'daily';
+  const cbP = document.getElementById('cb-email-premium');
+  const cbL = document.getElementById('cb-email-leads');
+  if (cbP) cbP.checked = false;
+  if (cbL) cbL.checked = false;
+  updateEmailStatus();
+}
+
+function blankSection(pos) {
+  return {
+    id:null, position:pos, is_conclusion:false,
+    section_label_ru:`0${pos+1}  `, section_label_en:`0${pos+1}  `,
+    headline_ru:'', headline_en:'',
+    body_ru:'',     body_en:'',
+    chart_images:[],
+  };
+}
+
+// migrate legacy single-chart fields to chart_images array
+function migrateChartImages(s) {
+  if (Array.isArray(s.chart_images) && s.chart_images.length > 0) {
+    return s.chart_images.map(c => ({ url: c.url, caption_ru: c.caption_ru || '', caption_en: c.caption_en || '' }));
+  }
+  if (s.chart_image_url) {
+    return [{ url: s.chart_image_url, caption_ru: s.chart_caption_ru || '', caption_en: s.chart_caption_en || '' }];
+  }
+  return [];
+}
+
+async function loadReport(id) {
+  const r = await adminAction({ action:'get', id });
+  if (!r.ok || !r.data?.report) {
+    showTopMsg('Не удалось загрузить отчёт: ' + (r.data?.error || r.status), 'err');
+    initBlank();
+    return;
+  }
+  const rep = r.data.report;
+  const secs = (r.data.sections || []).slice().sort((a,b)=>a.position-b.position);
+  state.id = rep.id;
+  state.slug = rep.slug;
+  state.status = rep.status;
+  state.cover_image_url = rep.cover_image_url || null;
+  state.asset_classes = rep.asset_classes || [];
+  state.sectors = rep.sectors || [];
+  state.tags = rep.tags || [];
+  state.created_at = rep.created_at;
+  state.updated_at = rep.updated_at;
+  state.email_send_to_premium = !!rep.email_send_to_premium;
+  state.email_send_to_leads = !!rep.email_send_to_leads;
+  state.email_send_at = rep.email_send_at || null;
+  state.email_sent_at = rep.email_sent_at || null;
+  const cbP = document.getElementById('cb-email-premium');
+  const cbL = document.getElementById('cb-email-leads');
+  if (cbP) cbP.checked = state.email_send_to_premium;
+  if (cbL) cbL.checked = state.email_send_to_leads;
+  updateEmailStatus();
+
+  document.getElementById('f-date').value     = (rep.report_date || todayISO()).slice(0,10);
+  document.getElementById('f-type').value     = rep.report_type || 'daily';
+  document.getElementById('f-title-ru').value    = rep.title_ru || '';
+  document.getElementById('f-title-en').value    = rep.title_en || '';
+  document.getElementById('f-subtitle-ru').value = rep.subtitle_ru || '';
+  document.getElementById('f-subtitle-en').value = rep.subtitle_en || '';
+
+  // split body sections vs conclusion
+  state.sections = secs.filter(s => !s.is_conclusion).map((s,i)=>({
+    ...s,
+    position:i,
+    chart_images: migrateChartImages(s),
+  }));
+  if (state.sections.length === 0) state.sections = [ blankSection(0) ];
+
+  const conc = secs.find(s => s.is_conclusion);
+  const hasConc = !!(conc && (conc.headline_ru || conc.headline_en || conc.body_ru || conc.body_en));
+  if (conc) {
+    state.conclusion = {
+      id: conc.id,
+      enabled: hasConc,
+      headline_ru: conc.headline_ru || '',
+      headline_en: conc.headline_en || '',
+      body_ru:     conc.body_ru || '',
+      body_en:     conc.body_en || '',
+      chart_images: migrateChartImages(conc),
+    };
+  } else {
+    state.conclusion = { id:null, enabled:false, headline_ru:'', headline_en:'', body_ru:'', body_en:'', chart_images:[] };
+  }
+  document.getElementById('cb-conclusion').checked = state.conclusion.enabled;
+  document.getElementById('conclusion-body').classList.toggle('on', state.conclusion.enabled);
+  document.getElementById('conc-headline-ru').value = state.conclusion.headline_ru;
+  document.getElementById('conc-headline-en').value = state.conclusion.headline_en;
+  document.getElementById('conc-body-ru').value     = state.conclusion.body_ru;
+  document.getElementById('conc-body-en').value     = state.conclusion.body_en;
+
+  document.getElementById('page-title').textContent = `— РЕДАКТИРОВАНИЕ: ${rep.title_ru || rep.title_en || '(без названия)'} —`;
+}
+
+// ============== Render ==============
+function renderAll() {
+  renderTags('ti-asset', state.asset_classes);
+  renderTags('ti-sector', state.sectors);
+  renderTags('ti-tag', state.tags);
+  renderCover();
+  renderSections();
+  renderStatus();
+  document.body.classList.add('ready');
+}
+
+function renderStatus() {
+  const pill = document.getElementById('st-status');
+  pill.className = 'status-pill ' + state.status;
+  pill.textContent = state.status === 'published' ? 'ОПУБЛИКОВАН' : 'ЧЕРНОВИК';
+  document.getElementById('st-id').textContent       = state.id || '—';
+  document.getElementById('st-slug').textContent     = state.slug || '—';
+  document.getElementById('st-created').textContent  = state.created_at ? fmtTs(state.created_at) : '—';
+  document.getElementById('st-updated').textContent  = state.updated_at ? fmtTs(state.updated_at) : '—';
+  const concOn = document.getElementById('cb-conclusion')?.checked;
+  document.getElementById('st-sections').textContent = state.sections.length + (concOn ? ' + ВЫВОД' : '');
+  const ruOK = !!document.getElementById('f-title-ru').value.trim();
+  const enOK = !!document.getElementById('f-title-en').value.trim();
+  document.getElementById('st-langs').textContent = `RU ${ruOK?'✓':'✗'}   EN ${enOK?'✓':'✗'}`;
+
+  // preview buttons enable/disable
+  const btnRu = document.getElementById('btn-preview-ru');
+  const btnEn = document.getElementById('btn-preview-en');
+  const enabled = !!state.id;
+  for (const b of [btnRu, btnEn]) {
+    if (!b) continue;
+    b.disabled = !enabled;
+    b.style.opacity = enabled ? '1' : '0.4';
+    b.style.pointerEvents = enabled ? 'auto' : 'none';
+  }
+
+  document.getElementById('btn-delete').disabled = !state.id || state.status === 'published';
+  if (typeof updatePublishHint === 'function') updatePublishHint();
+}
+
+function fmtTs(iso) {
+  const d = new Date(iso);
+  return d.toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+function renderTags(hostId, list) {
+  const host = document.getElementById(hostId);
+  host.querySelectorAll('.tag-pill').forEach(n => n.remove());
+  const input = host.querySelector('input');
+  list.forEach(tag => {
+    const pill = document.createElement('span');
+    pill.className = 'tag-pill';
+    pill.innerHTML = `${escapeHtml(tag)} <span class="x">×</span>`;
+    pill.querySelector('.x').onclick = () => {
+      const arr = state[input.dataset.target];
+      const i = arr.indexOf(tag);
+      if (i >= 0) arr.splice(i, 1);
+      renderTags(hostId, arr);
+      renderStatus();
+    };
+    host.insertBefore(pill, input);
+  });
+}
+
+function setupTagInputs() {
+  document.querySelectorAll('.tag-input input').forEach(inp => {
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        const v = inp.value.trim().replace(/,$/, '');
+        if (!v) return;
+        const arr = state[inp.dataset.target];
+        if (!arr.includes(v)) arr.push(v);
+        inp.value = '';
+        renderTags(inp.parentElement.id, arr);
+        renderStatus();
+      }
+    });
+  });
+}
+
+// ============== Cover ==============
+function renderCover() {
+  // Сбрасываем накопленные обработчики click/drag…, клонируя узел. Предотвращает двойные срабатывания при повторных renderCover()
+  let dz = document.getElementById('dz-cover');
+  const fresh = dz.cloneNode(false); // без детей — innerHTML ниже всё перезапишет
+  dz.parentNode.replaceChild(fresh, dz);
+  dz = fresh;
+  if (state.cover_image_url) {
+    dz.classList.add('has-file');
+    dz.innerHTML = `
+      <img src="${state.cover_image_url}" alt="">
+      <div class="dz-remove"  title="Удалить обложку">[ × УДАЛИТЬ ]</div>
+      <div class="dz-replace" title="Загрузить другую">[ ЗАМЕНИТЬ ]</div>
+    `;
+    // Кнопка удаления — отдельный обработчик, клик НЕ должен открывать file picker.
+    const rm = dz.querySelector('.dz-remove');
+    rm.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!confirm('Удалить обложку отчёта?')) return;
+      state.cover_image_url = null;
+      renderCover();
+    });
+  } else {
+    dz.classList.remove('has-file');
+    dz.innerHTML = `
+      <div class="dz-icon">⬆</div>
+      <div class="dz-text">[ ПЕРЕТАЩИТЕ ИЛИ КЛИКНИТЕ ]</div>
+      <div class="dz-sub">PNG, JPG, WEBP · до 5 MB</div>
+    `;
+  }
+  attachDz(dz, async (file) => {
+    const url = await uploadImage(file, dz);
+    if (url) { state.cover_image_url = url; renderCover(); }
+  });
+}
+
+// ============== Sections ==============
+function renderSections() {
+  const host = document.getElementById('sections-host');
+  host.innerHTML = '';
+  state.sections.forEach((sec, i) => {
+    sec.position = i;
+    host.appendChild(renderSectionBlock(sec, i));
+  });
+}
+
+function renderSectionBlock(sec, idx) {
+  const div = document.createElement('div');
+  div.className = 'section-block';
+  div.innerHTML = `
+    <div class="section-head">
+      <span class="label">// СЕКЦИЯ ${String(idx+1).padStart(2,'0')}</span>
+      <div class="section-actions">
+        <button class="icon-btn" data-act="up"   ${idx===0 ? 'disabled' : ''}>↑</button>
+        <button class="icon-btn" data-act="down" ${idx===state.sections.length-1 ? 'disabled' : ''}>↓</button>
+        <button class="icon-btn" data-act="del">УДАЛИТЬ</button>
+      </div>
+    </div>
+
+    <div class="lang-pane ${state.lang==='ru'?'active':''}" data-lang="ru">
+      <div class="row-2">
+        <div class="field"><label>МЕТКА · RU</label>
+          <input type="text" data-bind="section_label_ru" value="${escapeAttr(sec.section_label_ru||'')}"></div>
+        <div class="field"><label>ЗАГОЛОВОК · RU</label>
+          <input type="text" data-bind="headline_ru" value="${escapeAttr(sec.headline_ru||'')}"></div>
+      </div>
+      <div class="field"><label>ТЕКСТ · RU</label>
+        <textarea data-bind="body_ru" rows="4">${escapeHtml(sec.body_ru||'')}</textarea>
+        <div class="char-counter" data-counter="body_ru">0 / 900</div>
+      </div>
+    </div>
+
+    <div class="lang-pane ${state.lang==='en'?'active':''}" data-lang="en">
+      <div class="row-2">
+        <div class="field"><label>LABEL · EN</label>
+          <input type="text" data-bind="section_label_en" value="${escapeAttr(sec.section_label_en||'')}"></div>
+        <div class="field"><label>HEADLINE · EN</label>
+          <input type="text" data-bind="headline_en" value="${escapeAttr(sec.headline_en||'')}"></div>
+      </div>
+      <div class="field"><label>BODY · EN</label>
+        <textarea data-bind="body_en" rows="4">${escapeHtml(sec.body_en||'')}</textarea>
+        <div class="char-counter" data-counter="body_en">0 / 900</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>// ГРАФИКИ (до 5, опционально) · CHARTS · в TG отправятся как альбом</label>
+      <div class="charts-list" data-charts></div>
+      <button type="button" class="add-chart-btn" data-add-chart>[ + ДОБАВИТЬ ГРАФИК ]</button>
+    </div>
+  `;
+
+  // wire bindings
+  div.querySelectorAll('[data-bind]').forEach(el => {
+    const k = el.dataset.bind;
+    el.addEventListener('input', () => { sec[k] = el.value; updateCounters(div, sec); renderStatus(); });
+  });
+
+  // counters
+  updateCounters(div, sec);
+
+  // actions
+  div.querySelector('[data-act="up"]').onclick   = () => moveSection(idx, -1);
+  div.querySelector('[data-act="down"]').onclick = () => moveSection(idx,  1);
+  div.querySelector('[data-act="del"]').onclick  = () => deleteSection(idx);
+
+  // multi-charts list
+  if (!Array.isArray(sec.chart_images)) sec.chart_images = [];
+  renderChartsList(div, sec);
+
+  return div;
+}
+
+const MAX_CHARTS = 5;
+
+function renderChartsList(sectionDiv, sec) {
+  const host = sectionDiv.querySelector('[data-charts]');
+  const addBtn = sectionDiv.querySelector('[data-add-chart]');
+  host.innerHTML = '';
+  sec.chart_images.forEach((ci, i) => {
+    host.appendChild(renderChartItem(sec, ci, i));
+  });
+  if (sec.chart_images.length === 0) {
+    // initial empty dropzone — invite to add first chart
+    const empty = document.createElement('div');
+    empty.className = 'dropzone small';
+    empty.innerHTML = `<div class="dz-icon">⬆</div><div class="dz-text">[ DROP CHART HERE ]</div><div class="dz-sub">PNG, JPG · до 5 MB</div>`;
+    attachDz(empty, async (file) => {
+      const url = await uploadImage(file, empty);
+      if (url) {
+        sec.chart_images.push({ url, caption_ru:'', caption_en:'' });
+        renderChartsList(sectionDiv, sec);
+      }
+    });
+    host.appendChild(empty);
+  }
+  addBtn.disabled = sec.chart_images.length >= MAX_CHARTS;
+  addBtn.textContent = sec.chart_images.length >= MAX_CHARTS
+    ? `[ МАКСИМУМ ${MAX_CHARTS} ГРАФИКОВ ]`
+    : `[ + ДОБАВИТЬ ГРАФИК (${sec.chart_images.length}/${MAX_CHARTS}) ]`;
+  addBtn.onclick = () => {
+    if (sec.chart_images.length >= MAX_CHARTS) return;
+    // open file picker via a temp dropzone
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = 'image/png,image/jpeg,image/webp,image/gif';
+    inp.onchange = async () => {
+      if (!inp.files[0]) return;
+      // create a temp dz container only for progress display
+      const tempDz = document.createElement('div');
+      tempDz.className = 'dropzone small';
+      host.appendChild(tempDz);
+      const url = await uploadImage(inp.files[0], tempDz);
+      tempDz.remove();
+      if (url) {
+        sec.chart_images.push({ url, caption_ru:'', caption_en:'' });
+        renderChartsList(sectionDiv, sec);
+      }
+    };
+    inp.click();
+  };
+}
+
+function renderChartItem(sec, ci, idx) {
+  const item = document.createElement('div');
+  item.className = 'chart-item';
+  item.innerHTML = `
+    <div class="chart-item-head">
+      <span>// ГРАФИК ${idx+1}</span>
+      <div style="display:flex;gap:6px">
+        <button type="button" class="icon-btn" data-act="chart-up"   ${idx===0?'disabled':''}>↑</button>
+        <button type="button" class="icon-btn" data-act="chart-down" ${idx===sec.chart_images.length-1?'disabled':''}>↓</button>
+        <button type="button" class="icon-btn" data-act="chart-del">УДАЛИТЬ</button>
+      </div>
+    </div>
+    <div class="dropzone small has-file" data-chart-dz>
+      <img src="${ci.url}">
+      <div class="dz-replace">[ ЗАМЕНИТЬ ]</div>
+    </div>
+    <div class="row-2" style="margin-top:10px">
+      <div class="field"><label>ПОДПИСЬ · RU</label>
+        <input type="text" data-chart-cap="caption_ru" value="${escapeAttr(ci.caption_ru||'')}" placeholder="// ГРАФИК: ..."></div>
+      <div class="field"><label>CAPTION · EN</label>
+        <input type="text" data-chart-cap="caption_en" value="${escapeAttr(ci.caption_en||'')}" placeholder="// CHART: ..."></div>
+    </div>
+  `;
+  // wire captions
+  item.querySelectorAll('[data-chart-cap]').forEach(el => {
+    const k = el.dataset.chartCap;
+    el.addEventListener('input', () => { ci[k] = el.value; });
+  });
+  // replace via dropzone
+  const dz = item.querySelector('[data-chart-dz]');
+  attachDz(dz, async (file) => {
+    const url = await uploadImage(file, dz);
+    if (url) {
+      ci.url = url;
+      // re-render this item to show new image
+      const sectionDiv = item.closest('.section-block');
+      renderChartsList(sectionDiv, sec);
+    }
+  });
+  // actions
+  item.querySelector('[data-act="chart-up"]').onclick = () => {
+    if (idx === 0) return;
+    const tmp = sec.chart_images[idx];
+    sec.chart_images[idx] = sec.chart_images[idx-1];
+    sec.chart_images[idx-1] = tmp;
+    const sectionDiv = item.closest('.section-block');
+    renderChartsList(sectionDiv, sec);
+  };
+  item.querySelector('[data-act="chart-down"]').onclick = () => {
+    if (idx === sec.chart_images.length-1) return;
+    const tmp = sec.chart_images[idx];
+    sec.chart_images[idx] = sec.chart_images[idx+1];
+    sec.chart_images[idx+1] = tmp;
+    const sectionDiv = item.closest('.section-block');
+    renderChartsList(sectionDiv, sec);
+  };
+  item.querySelector('[data-act="chart-del"]').onclick = () => {
+    sec.chart_images.splice(idx, 1);
+    const sectionDiv = item.closest('.section-block');
+    renderChartsList(sectionDiv, sec);
+  };
+  return item;
+}
+
+// v18: TG_BODY_LIMIT — безопасный лимит для body, чтобы caption под альбомом
+// влез в Telegram caption limit (1024). Учитывает headline + part_label + @BelfedBot.
+const TG_BODY_LIMIT = 900;
+const TG_BODY_WARN  = 800;
+
+function updateCounters(el, sec) {
+  el.querySelectorAll('[data-counter]').forEach(cnt => {
+    const k = cnt.dataset.counter;
+    const len = (sec[k]||'').length;
+    cnt.textContent = `${len} / ${TG_BODY_LIMIT} символов (TG caption)`;
+    cnt.className = 'char-counter' + (len > TG_BODY_LIMIT ? ' over' : (len > TG_BODY_WARN ? ' warn' : ''));
+  });
+}
+
+// v18: проверка длины body перед сохранением/публикацией.
+// v19: принимает langs (по умолчанию ['ru','en']) — проверяет только выбранные языки.
+// Возвращает массив с описанием превышений, либо пустой массив.
+function findBodyOverflows(langs) {
+  const checkRu = !langs || langs.includes('ru');
+  const checkEn = !langs || langs.includes('en');
+  const overflows = [];
+  state.sections.forEach((sec, i) => {
+    const ruLen = (sec.body_ru||'').length;
+    const enLen = (sec.body_en||'').length;
+    if (checkRu && ruLen > TG_BODY_LIMIT) overflows.push(`Секция ${i+1} (RU): ${ruLen}/${TG_BODY_LIMIT}`);
+    if (checkEn && enLen > TG_BODY_LIMIT) overflows.push(`Секция ${i+1} (EN): ${enLen}/${TG_BODY_LIMIT}`);
+  });
+  if (state.conclusion && state.conclusion.enabled) {
+    const cRuLen = (state.conclusion.body_ru||'').length;
+    const cEnLen = (state.conclusion.body_en||'').length;
+    if (checkRu && cRuLen > TG_BODY_LIMIT) overflows.push(`Главный вывод (RU): ${cRuLen}/${TG_BODY_LIMIT}`);
+    if (checkEn && cEnLen > TG_BODY_LIMIT) overflows.push(`Главный вывод (EN): ${cEnLen}/${TG_BODY_LIMIT}`);
+  }
+  return overflows;
+}
+
+function moveSection(i, dir) {
+  const j = i + dir;
+  if (j < 0 || j >= state.sections.length) return;
+  const tmp = state.sections[i];
+  state.sections[i] = state.sections[j];
+  state.sections[j] = tmp;
+  renderSections();
+}
+
+function deleteSection(i) {
+  if (state.sections.length <= 1) { showTopMsg('Должна остаться хотя бы одна секция.', 'err'); return; }
+  state.sections.splice(i, 1);
+  renderSections();
+}
+
+function addSection() {
+  state.sections.push(blankSection(state.sections.length));
+  renderSections();
+}
+
+// ============== Lang switch ==============
+function switchLang(lang) {
+  state.lang = lang;
+  document.getElementById('tab-ru').classList.toggle('active', lang==='ru');
+  document.getElementById('tab-en').classList.toggle('active', lang==='en');
+  document.querySelectorAll('.lang-pane').forEach(p => {
+    p.classList.toggle('active', p.dataset.lang === lang || p.dataset.tlLang === lang || (!p.dataset.lang && !p.dataset.tlLang && p.id === 'pane-'+lang));
+  });
+  renderSections();
+  renderStatus();
+}
+
+// ============== Upload ==============
+async function uploadImage(file, dz) {
+  if (!file) return null;
+  if (file.size > 5 * 1024 * 1024) { showTopMsg('Файл больше 5MB.', 'err'); return null; }
+  const ct = file.type || 'image/png';
+  if (!/^image\/(png|jpe?g|webp|gif)$/.test(ct)) { showTopMsg('Только PNG, JPG, WEBP, GIF.', 'err'); return null; }
+
+  // 1. ask backend for signed url
+  const r = await adminAction({ action:'upload', filename:file.name, content_type:ct });
+  if (!r.ok || !r.data?.signed_url) {
+    showTopMsg('Upload init failed: ' + (r.data?.error || r.status), 'err');
+    return null;
+  }
+
+  // 2. PUT to signed url
+  showProgress(dz, 'UPLOADING…');
+  try {
+    const put = await fetch(r.data.signed_url, {
+      method:'PUT',
+      headers: { 'Content-Type': ct },
+      body: file,
+    });
+    if (!put.ok) {
+      const t = await put.text().catch(()=>'');
+      showProgress(dz, null);
+      showTopMsg('PUT failed ' + put.status + ' ' + t.slice(0,100), 'err');
+      return null;
+    }
+  } catch (e) {
+    showProgress(dz, null);
+    showTopMsg('PUT error: ' + e.message, 'err');
+    return null;
+  }
+  showProgress(dz, null);
+  return r.data.public_url;
+}
+
+function showProgress(dz, txt) {
+  let p = dz.querySelector('.dz-progress');
+  if (txt) {
+    if (!p) { p = document.createElement('div'); p.className='dz-progress'; dz.appendChild(p); }
+    p.textContent = txt;
+  } else if (p) {
+    p.remove();
+  }
+}
+
+function attachDz(dz, handler) {
+  dz.addEventListener('click', () => {
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = 'image/png,image/jpeg,image/webp,image/gif';
+    inp.onchange = () => { if (inp.files[0]) handler(inp.files[0]); };
+    inp.click();
+  });
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.classList.remove('dragover');
+    if (e.dataTransfer.files[0]) handler(e.dataTransfer.files[0]);
+  });
+}
+
+// ============== Save / Publish ==============
+function buildPayload(status) {
+  const date_ru = document.getElementById('f-date').value;
+  const sections = state.sections.map((s, i) => {
+    const charts = (s.chart_images || []).filter(c => c && c.url);
+    return {
+      position: i,
+      is_conclusion: false,
+      section_label_ru: s.section_label_ru || `0${i+1}`,
+      section_label_en: s.section_label_en || `0${i+1}`,
+      headline_ru: s.headline_ru || '',
+      headline_en: s.headline_en || '',
+      body_ru:     s.body_ru || '',
+      body_en:     s.body_en || '',
+      chart_images: charts,
+      // legacy mirror for first chart (back-compat with old views/clients)
+      chart_image_url:  charts[0]?.url || null,
+      chart_caption_ru: charts[0]?.caption_ru || '',
+      chart_caption_en: charts[0]?.caption_en || '',
+    };
+  });
+  // conclusion as last section — only if checkbox is on
+  state.conclusion.enabled = document.getElementById('cb-conclusion').checked;
+  if (state.conclusion.enabled) {
+    state.conclusion.headline_ru = document.getElementById('conc-headline-ru').value;
+    state.conclusion.headline_en = document.getElementById('conc-headline-en').value;
+    state.conclusion.body_ru     = document.getElementById('conc-body-ru').value;
+    state.conclusion.body_en     = document.getElementById('conc-body-en').value;
+    const concCharts = (state.conclusion.chart_images || []).filter(c => c && c.url);
+    sections.push({
+      position: sections.length,
+      is_conclusion: true,
+      section_label_ru: 'ГЛАВНЫЙ ВЫВОД',
+      section_label_en: 'KEY TAKEAWAY',
+      headline_ru: state.conclusion.headline_ru,
+      headline_en: state.conclusion.headline_en,
+      body_ru:     state.conclusion.body_ru,
+      body_en:     state.conclusion.body_en,
+      chart_images: concCharts,
+      chart_image_url:  concCharts[0]?.url || null,
+      chart_caption_ru: concCharts[0]?.caption_ru || '',
+      chart_caption_en: concCharts[0]?.caption_en || '',
+    });
+  }
+
+  const payload = {
+    action: 'save',
+    id: state.id || undefined,
+    slug: state.slug || undefined,
+    report_date: date_ru,
+    report_type: document.getElementById('f-type').value,
+    title_ru:    document.getElementById('f-title-ru').value,
+    title_en:    document.getElementById('f-title-en').value,
+    subtitle_ru: document.getElementById('f-subtitle-ru').value,
+    subtitle_en: document.getElementById('f-subtitle-en').value,
+    asset_classes: state.asset_classes,
+    sectors:       state.sectors,
+    tags:          state.tags,
+    cover_image_url: state.cover_image_url || null,
+    email_send_to_premium: !!document.getElementById('cb-email-premium')?.checked,
+    email_send_to_leads:   !!document.getElementById('cb-email-leads')?.checked,
+    status,
+    sections,
+  };
+  return payload;
+}
+
+function updateEmailStatus() {
+  const el = document.getElementById('email-status');
+  if (!el) return;
+  if (state.email_sent_at) {
+    const d = new Date(state.email_sent_at);
+    el.textContent = '✓ Авто-отправка выполнена: ' + d.toLocaleString('ru-RU');
+    el.style.color = '#1a7a1a';
+  } else if (state.email_send_at) {
+    const d = new Date(state.email_send_at);
+    el.textContent = '⏰ Авто-отправка запланирована: ' + d.toLocaleString('ru-RU');
+    el.style.color = '#888';
+  } else {
+    el.textContent = '';
+  }
+  // Also refresh email_stats (counts + per-report history)
+  loadEmailStats();
+}
+
+async function loadEmailStats() {
+  const histEl = document.getElementById('email-history');
+  const cbPCnt = document.getElementById('st-email-prem-cb-count');
+  const cbLCnt = document.getElementById('st-email-leads-cb-count');
+  const stP    = document.getElementById('st-email-prem-count');
+  const stL    = document.getElementById('st-email-leads-count');
+  if (!state.id) {
+    if (histEl) histEl.textContent = '';
+    return;
+  }
+  const r = await adminAction({ action: 'email_stats', report_id: state.id });
+  if (!r.ok || !r.data?.ok) {
+    if (histEl) { histEl.textContent = 'Не удалось загрузить статистику'; histEl.style.color = '#a33'; }
+    return;
+  }
+  const c = r.data.audience_counts || {};
+  const premTotal  = (c.premium_ru || 0) + (c.premium_en || 0);
+  const leadsTotal = (c.leads_ru   || 0) + (c.leads_en   || 0);
+  if (stP)    stP.textContent    = `${premTotal} (${c.premium_ru || 0} RU / ${c.premium_en || 0} EN)`;
+  if (stL)    stL.textContent    = `${leadsTotal} (${c.leads_ru || 0} RU / ${c.leads_en || 0} EN)`;
+  if (cbPCnt) cbPCnt.textContent = `(${premTotal})`;
+  if (cbLCnt) cbLCnt.textContent = `(${leadsTotal})`;
+
+  // History per segment for current report
+  const seg = r.data.segment_summary || { premium: {sent:0,failed:0,skipped:0,last_sent_at:null}, leads: {sent:0,failed:0,skipped:0,last_sent_at:null} };
+  function fmt(seg, label) {
+    const total = seg.sent + seg.failed + seg.skipped;
+    if (total === 0) return `— ${label}: не отправлялось`;
+    const ts = seg.last_sent_at ? new Date(seg.last_sent_at).toLocaleString('ru-RU') : '';
+    return `✓ ${label}: ${seg.sent} отправлено · ${seg.failed} неудач · ${seg.skipped} пропущено <span style="color:#888">· ${ts}</span>`;
+  }
+  if (histEl) {
+    histEl.innerHTML = [fmt(seg.premium, 'Премиум'), fmt(seg.leads, 'Лиды')].join('<br>');
+    histEl.style.color = '#444';
+  }
+}
+
+async function onEmailSendNow() {
+  if (!state.id) { showTopMsg('Сначала сохраните отчёт', 'err'); return; }
+  const audiences = [];
+  if (document.getElementById('cb-email-premium')?.checked) audiences.push('premium');
+  if (document.getElementById('cb-email-leads')?.checked)   audiences.push('leads');
+  if (audiences.length === 0) { showTopMsg('Выберите хотя бы одну аудиторию', 'err'); return; }
+  const force = !!document.getElementById('cb-email-force')?.checked;
+  const msg = 'Отправить письма аудиториям [' + audiences.join(', ') + ']' + (force ? ' (ПОВТОРНО)' : '') + '?';
+  if (!confirm(msg)) return;
+  const btn = document.getElementById('btn-email-send-now');
+  if (btn) btn.disabled = true;
+  showTopMsg('Отправка…', 'info');
+  const r = await adminAction({ action: 'email_send_now', report_id: state.id, audiences, force });
+  if (btn) btn.disabled = false;
+  if (!r.ok || r.data?.ok !== true) {
+    showTopMsg('Отправка не удалась: ' + (r.data?.error || r.status), 'err');
+    return;
+  }
+  const d = r.data;
+  const sent = d.sent || 0;
+  const failed = d.failed || 0;
+  const skipped = d.skipped || 0;
+  showTopMsg(`✓ Отправлено: ${sent} · неудач: ${failed} · пропущено: ${skipped}`, 'ok');
+  await loadEmailStats();
+}
+
+async function onLeadsSync() {
+  const st = document.getElementById('leads-sync-status');
+  const btn = document.getElementById('btn-leads-sync');
+  if (btn) btn.disabled = true;
+  if (st) { st.textContent = 'Синхронизация…'; st.style.color = '#888'; }
+  const r = await adminAction({ action: 'leads_sync' });
+  if (btn) btn.disabled = false;
+  if (!r.ok || r.data?.ok !== true) {
+    if (st) { st.textContent = 'Ошибка: ' + (r.data?.error || r.status); st.style.color = '#a33'; }
+    showTopMsg('Sync не удался', 'err');
+    return;
+  }
+  const d = r.data;
+  const dec = d.decisions || {};
+  const imp = dec.imported || 0;
+  const ghost = dec.skipped_ghost || 0;
+  const dup = dec.skipped_dup || 0;
+  const test = dec.skipped_test || 0;
+  const unsub = dec.skipped_unsub || 0;
+  const already = dec.already_in_log || 0;
+  if (st) {
+    st.textContent = `✓ Импортировано: ${imp} · ghost: ${ghost} · дубли: ${dup} · test: ${test} · unsub: ${unsub} · уже сверено: ${already}`;
+    st.style.color = imp > 0 ? '#1a7a1a' : '#444';
+  }
+  showTopMsg(`Sync OK: +${imp} лидов`, 'ok');
+  await loadEmailStats();
+}
+
+async function onEmailPreview(lang) {
+  if (!state.id) { showTopMsg('Сначала сохраните отчёт', 'err'); return; }
+  showTopMsg('Рендер email…', 'info');
+  const r = await adminAction({ action: 'email_preview', report_id: state.id, language: lang });
+  if (!r.ok || !r.data?.html) {
+    showTopMsg('Ошибка рендера: ' + (r.data?.error || r.status), 'err');
+    return;
+  }
+  const w = window.open('', '_blank');
+  if (!w) { showTopMsg('Разрешите всплывающие окна', 'err'); return; }
+  w.document.open();
+  w.document.write(r.data.html);
+  w.document.close();
+  showTopMsg('Email превью открыто в новой вкладке', 'ok');
+}
+
+async function onEmailTest(lang) {
+  if (!state.id) { showTopMsg('Сначала сохраните отчёт', 'err'); return; }
+  if (!confirm('Отправить тестовое ' + lang.toUpperCase() + ' письмо на ваш admin-email?')) return;
+  showTopMsg('Отправка теста…', 'info');
+  const r = await adminAction({ action: 'email_test', report_id: state.id, language: lang });
+  if (!r.ok || r.data?.ok !== true) {
+    showTopMsg('Ошибка теста: ' + (r.data?.error || r.status), 'err');
+    return;
+  }
+  showTopMsg('Тестовое письмо отправлено ✓', 'ok');
+}
+
+// ============== Timeline post (→ analysis_posts) ==============
+function collectTimelineData(status) {
+  const headlineRu = document.getElementById('tl-headline-ru').value.trim();
+  const headlineEn = document.getElementById('tl-headline-en').value.trim();
+  const bodyRu = document.getElementById('tl-body-ru').value.trim();
+  const bodyEn = document.getElementById('tl-body-en').value.trim();
+  const source = document.getElementById('tl-source').value.trim();
+  const cats = Array.from(state.tlCategories);
+  return {
+    destination: 'timeline',
+    ticker: null,
+    company_name: null,
+    post_type: null,
+    greeting_ru: null, greeting_en: null,
+    tradingview_url: null,
+    headline_ru: headlineRu || null,
+    headline_en: headlineEn || null,
+    body_ru: bodyRu || null,
+    body_en: bodyEn || null,
+    source: source || null,
+    categories: cats,
+    hashtags: tlHashtags() || null,
+    publish_to_ru: document.getElementById('cb-lang-ru').checked,
+    publish_to_en: document.getElementById('cb-lang-en').checked,
+    status: status,
+  };
+}
+
+function validateTimeline(forPublish) {
+  const d = collectTimelineData('draft');
+  if (!d.categories.length) return 'выберите хотя бы одну категорию';
+  if (!d.headline_ru && !d.headline_en) return 'введите заголовок (RU или EN)';
+  if (forPublish) {
+    const skipTg = document.getElementById('cb-skip-tg').checked;
+    if (!d.publish_to_ru && !d.publish_to_en) return 'выберите хотя бы один язык (RU/EN)';
+    if (d.publish_to_ru && !d.headline_ru) return 'RU заголовок пуст';
+    if (d.publish_to_en && !d.headline_en) return 'EN заголовок пуст';
+  }
+  return null;
+}
+
+async function saveTimelinePost(returnId) {
+  const err = validateTimeline(false);
+  if (err) { showTopMsg('Не сохранено: ' + err, 'err'); return null; }
+  document.getElementById('btn-save').disabled = true;
+  showTopMsg('Сохранение…', 'info');
+  const payload = collectTimelineData(state.status === 'published' ? 'published' : 'draft');
+  try {
+    let id = state.id;
+    if (id) {
+      const { error } = await sb.from('analysis_posts').update(payload).eq('id', id);
+      if (error) throw error;
+    } else {
+      const { data, error } = await sb.from('analysis_posts').insert(payload).select('id,slug').maybeSingle();
+      if (error) throw error;
+      id = data.id; state.id = id; state.slug = data.slug || null;
+    }
+    document.getElementById('btn-save').disabled = false;
+    showTopMsg('Сохранено ✓', 'ok');
+    renderStatus();
+    return id;
+  } catch (e) {
+    document.getElementById('btn-save').disabled = false;
+    showTopMsg('Сохранение не удалось: ' + (e.message || e), 'err');
+    return null;
+  }
+}
+
+async function publishTimelinePost() {
+  const err = validateTimeline(true);
+  if (err) { showTopMsg('Нельзя опубликовать: ' + err, 'err'); return; }
+  const test = document.getElementById('cb-test-mode').checked;
+  const skipTg = document.getElementById('cb-skip-tg').checked;
+  const chans = [
+    document.getElementById('cb-lang-ru').checked ? 'RU' : '',
+    document.getElementById('cb-lang-en').checked ? 'EN' : '',
+  ].filter(Boolean).join('+');
+  const tgPart = skipTg ? 'Только сайт (TG пропущен)' : 'Пост ' + chans + ' уйдёт в TG' + (test ? ' (test → личка)' : ' (PROD → каналы)');
+  if (!confirm('Опубликовать пост в ленту?\n• ' + tgPart)) return;
+
+  document.getElementById('btn-publish').disabled = true;
+
+  // SITE-ONLY (skip TG): save the row directly as published -> appears on site feed.
+  if (skipTg) {
+    state.status = 'published';
+    const idOnly = await saveTimelinePost(true);
+    document.getElementById('btn-publish').disabled = false;
+    if (!idOnly) return;
+    showTopMsg('Опубликовано на сайте ✓ (TG пропущен)', 'ok');
+    renderStatus();
+    return;
+  }
+
+  // TG PATH: save as DRAFT first (analysis-publish rejects already-published rows,
+  // then flips status to 'published' itself after a successful TG send).
+  state.status = 'draft';
+  const id = await saveTimelinePost(true);
+  if (!id) { document.getElementById('btn-publish').disabled = false; return; }
+
+  // broadcast to Telegram via analysis-publish edge fn (handles slug, TG text, web link, sets status=published)
+  showTopMsg('Публикация в Telegram…', 'info');
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/analysis-publish`, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}`, 'apikey': SUPABASE_ANON },
+      body: JSON.stringify({ action: 'publish', post_id: id }),
+    });
+    const data = await res.json().catch(() => ({}));
+    document.getElementById('btn-publish').disabled = false;
+    if (!res.ok || data.ok === false || data.error) {
+      showTopMsg('TG публикация не удалась: ' + (data.error || res.status) + ' (но пост уже на сайте)', 'err');
+      return;
+    }
+    if (data.slug) state.slug = data.slug;
+    showTopMsg('Опубликовано ✓ ' + chans + ' (сайт + Telegram)', 'ok');
+    renderStatus();
+  } catch (e) {
+    document.getElementById('btn-publish').disabled = false;
+    showTopMsg('TG публикация не удалась: ' + (e.message || e) + ' (но пост уже на сайте)', 'err');
+  }
+}
+
+async function onSaveDraft() {
+  if (state.destination === 'timeline') return saveTimelinePost(false);
+  document.getElementById('btn-save').disabled = true;
+  showTopMsg('Сохранение…', 'info');
+  const r = await adminAction(buildPayload(state.status === 'published' ? 'published' : 'draft'));
+  document.getElementById('btn-save').disabled = false;
+  if (!r.ok || !r.data?.report_id) {
+    showTopMsg('Сохранение не удалось: ' + (r.data?.error || r.status), 'err');
+    return;
+  }
+  await syncFromBackend(r.data.report_id);
+  showTopMsg('Сохранено ✓', 'ok');
+}
+
+// v19: собирает выбранные языки из чекбоксов (без выбора — пустой массив).
+function selectedLangs() {
+  const langs = [];
+  if (document.getElementById('cb-lang-ru').checked) langs.push('ru');
+  if (document.getElementById('cb-lang-en').checked) langs.push('en');
+  return langs;
+}
+
+// v19: обновляет хинт под чекбоксами в сайдбаре.
+function updatePublishHint() {
+  const host = document.getElementById('publish-hint');
+  if (!host) return;
+  const skipTg = document.getElementById('cb-skip-tg').checked;
+  const test = document.getElementById('cb-test-mode').checked;
+  if (skipTg) {
+    host.textContent = '→ Только сайт (TG пропущен)';
+    host.style.color = '#666';
+    return;
+  }
+  const langs = selectedLangs();
+  if (langs.length === 0) {
+    host.textContent = '→ Ни одного языка не выбрано — публикация в TG будет заблокирована';
+    host.style.color = '#b00';
+    return;
+  }
+  const labels = langs.map(l => l.toUpperCase()).join('+');
+  host.textContent = `→ В TG уйдёт: ${labels} ${test ? '(test → личка)' : '(PROD → каналы)'}`;
+  host.style.color = test ? '#a47800' : '#1a7a1a';
+}
+
+async function onPublish() {
+  if (state.destination === 'timeline') return publishTimelinePost();
+  const skipTg = document.getElementById('cb-skip-tg').checked;
+  const langs = selectedLangs();
+
+  // v19: если TG не пропущен — должен быть выбран хотя бы 1 язык.
+  if (!skipTg && langs.length === 0) {
+    alert('Выберите хотя бы один язык (RU или EN) или включите SKIP TG.');
+    return;
+  }
+
+  // v18+v19: блокируем публикацию в TG если body превышает лимит для выбранных языков.
+  if (!skipTg) {
+    const overflows = findBodyOverflows(langs);
+    if (overflows.length) {
+      alert('Текст превышает безопасный лимит ' + TG_BODY_LIMIT + ' символов в:\n\n' + overflows.join('\n') + '\n\nСократите текст или включите «SKIP TG».');
+      return;
+    }
+  }
+
+  const test = document.getElementById('cb-test-mode').checked;
+  const tgPart = skipTg
+    ? 'TG отправка пропущена'
+    : 'Серия ' + langs.map(l => l.toUpperCase()).join('+') + ' уйдёт в TG' + (test ? ' (test)' : ' (PROD)');
+  if (!confirm('Опубликовать отчёт?\n• Статус сменится на published\n• ' + tgPart)) return;
+
+  document.getElementById('btn-publish').disabled = true;
+  showTopMsg('Сохранение…', 'info');
+  const saveR = await adminAction(buildPayload('published'));
+  if (!saveR.ok || !saveR.data?.report_id) {
+    document.getElementById('btn-publish').disabled = false;
+    showTopMsg('Сохранение не удалось: ' + (saveR.data?.error || saveR.status), 'err');
+    return;
+  }
+  await syncFromBackend(saveR.data.report_id);
+
+  if (skipTg) {
+    showTopMsg('Сохранено и опубликовано на сайте. TG пропущен.', 'ok');
+    document.getElementById('btn-publish').disabled = false;
+    return;
+  }
+
+  showTopMsg('Публикация в Telegram…', 'info');
+  const pubR = await adminAction({
+    action: 'publish',
+    report_id: state.id,
+    langs,
+    test_mode: test,
+  });
+  document.getElementById('btn-publish').disabled = false;
+  if (!pubR.ok) {
+    showTopMsg('Публикация в TG не удалась: ' + (pubR.data?.error || pubR.status) + ' (но сохранение прошло)', 'err');
+    return;
+  }
+  const langsLabel = langs.map(l => l.toUpperCase()).join('+');
+  showTopMsg(`Опубликовано ✓ ${langsLabel} ` + (test ? '(TEST в личку)' : '(PROD в каналы)'), 'ok');
+}
+
+async function onDryRun() {
+  if (!state.id) { showTopMsg('Сначала сохраните черновик.', 'err'); return; }
+  const langs = selectedLangs();
+  if (langs.length === 0) {
+    showTopMsg('Выберите RU и/или EN для Dry-run.', 'err');
+    return;
+  }
+  showTopMsg('Dry-run превью…', 'info');
+  const r = await adminAction({ action:'publish', report_id:state.id, dry_run:true, langs, test_mode:document.getElementById('cb-test-mode').checked });
+  if (!r.ok) {
+    const msg = (r.data && (r.data.error || r.data.message)) || ('HTTP '+r.status);
+    showTopMsg('Dry-run не удался: '+msg, 'err');
+    console.error('[DRY RUN ERROR]', r);
+    return;
+  }
+  console.log('[DRY RUN]', r.data);
+  // Render a compact summary in a modal-ish overlay so the user actually sees it.
+  showDryRunSummary(r.data);
+  showTopMsg('Dry-run готов — см. окно предпросмотра', 'ok');
+}
+
+function showDryRunSummary(data) {
+  let host = document.getElementById('dryrun-modal');
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'dryrun-modal';
+    host.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px';
+    host.addEventListener('click', e => { if (e.target === host) host.remove(); });
+    document.body.appendChild(host);
+  }
+  const safe = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  // Render Telegram-style HTML preview: convert <b>, <i>, <code>, \n -> <br> while escaping the rest.
+  function tgRender(html) {
+    // 1) escape everything
+    let s = safe(html || '');
+    // 2) un-escape allowed inline tags
+    s = s
+      .replace(/&lt;b&gt;/g, '<b>').replace(/&lt;\/b&gt;/g, '</b>')
+      .replace(/&lt;i&gt;/g, '<i>').replace(/&lt;\/i&gt;/g, '</i>')
+      .replace(/&lt;u&gt;/g, '<u>').replace(/&lt;\/u&gt;/g, '</u>')
+      .replace(/&lt;s&gt;/g, '<s>').replace(/&lt;\/s&gt;/g, '</s>')
+      .replace(/&lt;code&gt;/g, '<code>').replace(/&lt;\/code&gt;/g, '</code>')
+      .replace(/&lt;tg-spoiler&gt;/g, '<span style="background:#444;color:#444">').replace(/&lt;\/tg-spoiler&gt;/g, '</span>')
+      .replace(/&lt;a href=&quot;([^&]+)&quot;&gt;/g, '<a href="$1" target="_blank" rel="noopener">').replace(/&lt;\/a&gt;/g, '</a>');
+    // 3) literal \n in escaped text -> <br>
+    s = s.replace(/\\n/g, '<br>').replace(/\n/g, '<br>');
+    return s;
+  }
+
+  const results = (data && (data.results || data.langs)) || {};
+  let langsHtml = '';
+  for (const lang of Object.keys(results)) {
+    const L = results[lang] || {};
+    const cover = L.cover_preview || L.cover || '';
+    const sections = L.section_previews || L.sections || [];
+    let parts = '';
+    if (cover) {
+      parts += `<div style="border:1px solid #ccc;padding:12px;margin:10px 0;background:#fff;border-radius:4px"><div style="font:11px monospace;color:#888;margin-bottom:8px">// COVER</div><div style="font:13px/1.5 -apple-system,system-ui,sans-serif">${tgRender(cover)}</div></div>`;
+    }
+    if (Array.isArray(sections)) {
+      sections.forEach((sec, i) => {
+        const cap = sec.caption || sec.text || '';
+        const cc = sec.chart_count != null ? sec.chart_count : (sec.charts || 0);
+        const chartsLabel = cc === 0 ? 'без графика' : (cc === 1 ? '1 график' : cc + ' графика(ов) — album');
+        parts += `<div style="border:1px solid #ccc;padding:12px;margin:10px 0;background:#fff;border-radius:4px"><div style="font:11px monospace;color:#888;margin-bottom:8px">// СЕКЦИЯ ${i+1} · ${safe(chartsLabel)}</div><div style="font:13px/1.5 -apple-system,system-ui,sans-serif">${tgRender(cap)}</div></div>`;
+      });
+    }
+    if (!parts) parts = `<pre style="white-space:pre-wrap;font:12px/1.4 monospace;background:#f5f5f5;padding:10px">${safe(JSON.stringify(L, null, 2))}</pre>`;
+    langsHtml += `<details open style="margin-bottom:18px;border-top:2px solid #000;padding-top:10px"><summary style="font:bold 13px monospace;letter-spacing:2px;cursor:pointer">// ${lang.toUpperCase()}</summary>${parts}</details>`;
+  }
+  if (!langsHtml) langsHtml = `<pre style="white-space:pre-wrap;font:12px monospace">${safe(JSON.stringify(data, null, 2))}</pre>`;
+  host.innerHTML = `<div style="background:#f5f2eb;max-width:900px;width:100%;max-height:90vh;overflow:auto;padding:24px;border:1px solid #000"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:1px solid #000;padding-bottom:10px"><h2 style="margin:0;font:bold 14px monospace;letter-spacing:2px">// DRY-RUN PREVIEW — КАК БУДЕТ ВЫГЛЯДЕТЬ В TELEGRAM</h2><button onclick="document.getElementById('dryrun-modal').remove()" style="border:1px solid #000;background:#fff;padding:4px 10px;cursor:pointer;font:11px monospace">CLOSE</button></div>${langsHtml}</div>`;
+}
+
+async function onPreview(lang) {
+  if (!state.id) { showTopMsg('Сначала сохраните черновик.', 'err'); return; }
+  showTopMsg('Готовлю ссылку предпросмотра…', 'info');
+  const r = await adminAction({ action:'preview_token', report_id:state.id });
+  if (!r.ok || !r.data || !r.data.ok) {
+    const msg = (r.data && (r.data.error || r.data.message)) || ('HTTP '+r.status);
+    showTopMsg('Не удалось получить токен: '+msg, 'err');
+    return;
+  }
+  const slug = r.data.slug || state.slug || '';
+  const token = r.data.token;
+  const host = lang === 'ru' ? 'https://belfed.ru' : 'https://belfed.com';
+  const url = `${host}/analytics-view.html?slug=${encodeURIComponent(slug)}&lang=${lang}&preview_token=${encodeURIComponent(token)}`;
+  window.open(url, '_blank');
+  showTopMsg('Ссылка открыта в новой вкладке (30 мин)', 'ok');
+}
+
+async function onDelete() {
+  if (!state.id) return;
+  if (!confirm('Удалить отчёт навсегда? (Только черновики.)')) return;
+  const r = await adminAction({ action:'delete', report_id:state.id });
+  if (!r.ok) { showTopMsg('Удаление не удалось: '+(r.data?.error||r.status), 'err'); return; }
+  location.href = '/admin-analytics-list.html';
+}
+
+async function syncFromBackend(reportId) {
+  // analytics-save returns just {report_id, slug}; refetch full state via analytics-get
+  const r = await adminAction({ action:'get', id:reportId });
+  if (!r.ok || !r.data?.report) {
+    // partial: at least keep the id we know
+    state.id = reportId;
+    const u = new URL(location.href);
+    u.searchParams.set('id', reportId);
+    history.replaceState({}, '', u);
+    renderStatus();
+    return;
+  }
+  const rep = r.data.report;
+  state.id = rep.id;
+  state.slug = rep.slug;
+  state.status = rep.status;
+  state.created_at = rep.created_at;
+  state.updated_at = rep.updated_at;
+  // resync section ids by position
+  const secs = (r.data.sections||[]).slice().sort((a,b)=>a.position-b.position);
+  const bodySecs = secs.filter(s=>!s.is_conclusion);
+  bodySecs.forEach((s,i)=>{ if (state.sections[i]) state.sections[i].id = s.id; });
+  const conc = secs.find(s=>s.is_conclusion);
+  if (conc) state.conclusion.id = conc.id;
+
+  const u = new URL(location.href);
+  u.searchParams.set('id', rep.id);
+  history.replaceState({}, '', u);
+  // v19: если отчёт уже published — снимаем оба чекбокса языков,
+  // чтобы каждый язык при повторной публикации выбирался сознательно.
+  if (rep.status === 'published') {
+    const ruCb = document.getElementById('cb-lang-ru');
+    const enCb = document.getElementById('cb-lang-en');
+    if (ruCb) ruCb.checked = false;
+    if (enCb) enCb.checked = false;
+  }
+  renderStatus();
+}
+
+// ============== Helpers ==============
+function showTopMsg(text, kind) {
+  const host = document.getElementById('top-msg');
+  host.innerHTML = `<div class="msg ${kind||''}">${escapeHtml(text)}</div>`;
+  if (kind === 'ok' || kind === 'info') {
+    setTimeout(() => { if (host.firstElementChild?.textContent === text) host.innerHTML = ''; }, 4000);
+  }
+}
+function escapeHtml(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s) { return escapeHtml(s); }
+
+// conclusion checkbox toggle
+function setupConclusionToggle() {
+  const cb = document.getElementById('cb-conclusion');
+  const body = document.getElementById('conclusion-body');
+  cb.addEventListener('change', () => {
+    state.conclusion.enabled = cb.checked;
+    body.classList.toggle('on', cb.checked);
+    renderStatus();
+  });
+}
+
+// ============== Boot ==============
+setupTagInputs();
+setupConclusionToggle();
+['f-title-ru','f-title-en'].forEach(id => document.getElementById(id).addEventListener('input', renderStatus));
+checkAdminAndShow();
+</script>
+</body>
+</html>
