@@ -59,6 +59,17 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 .tl-cat-chips button{font-family:'Courier New',monospace;font-size:10px;letter-spacing:1px;padding:5px 10px;border:1px solid #000;background:#fff;cursor:pointer;text-transform:uppercase}
 .tl-cat-chips button.on{background:#000;color:#f5f2eb}
 .tl-hashtags{font-family:'Courier New',monospace;font-size:11px;color:#1a7a1a;margin-top:6px;letter-spacing:1px}
+/* Timeline RU/EN side-by-side (one page, no tab switch) */
+.tl-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.tl-grid .tl-col{border:1px solid #000;background:#fbf9f3;padding:14px}
+.tl-grid .tl-col-head{font-size:10px;letter-spacing:2px;font-weight:bold;opacity:0.7;margin-bottom:12px;border-bottom:1px dashed #999;padding-bottom:8px}
+@media(max-width:760px){.tl-grid{grid-template-columns:1fr}}
+/* Timeline chart thumbs (multi-image upload) */
+.thumbs{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+.thumb{position:relative;width:120px;height:80px;border:1px solid #000;background:#000;overflow:hidden}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .ix{position:absolute;top:0;left:0;background:#000;color:#f5f2eb;font-size:10px;padding:1px 5px;letter-spacing:1px}
+.thumb .x{position:absolute;top:0;right:0;background:#c50000;color:#fff;border:none;width:18px;height:18px;line-height:1;cursor:pointer;font-size:12px;padding:0}
 .editor-pad{padding:20px}
 
 .field{margin-bottom:16px}
@@ -206,31 +217,51 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
       <div class="tl-cat-chips" id="tl-cat-chips"></div>
       <div class="tl-hashtags" id="tl-hashtags"></div>
     </div>
-    <!-- RU -->
-    <div class="lang-pane active" data-tl-lang="ru">
-      <div class="field">
-        <label>// ЗАГОЛОВОК · RU</label>
-        <input type="text" id="tl-headline-ru" placeholder="Например, SMR backlog пересобирает ядерный тезис">
+
+    <!-- ── RU + EN side-by-side on one page (no tab switch) ── -->
+    <div class="tl-grid">
+      <!-- RU column -->
+      <div class="tl-col">
+        <div class="tl-col-head">// RU · РУССКИЙ</div>
+        <div class="field">
+          <label>// ЗАГОЛОВОК · RU</label>
+          <input type="text" id="tl-headline-ru" placeholder="Например, SMR backlog пересобирает ядерный тезис">
+        </div>
+        <div class="field">
+          <label>// ТЕКСТ · RU</label>
+          <textarea id="tl-body-ru" rows="6"></textarea>
+        </div>
       </div>
-      <div class="field">
-        <label>// ТЕКСТ · RU</label>
-        <textarea id="tl-body-ru" rows="5"></textarea>
+      <!-- EN column -->
+      <div class="tl-col">
+        <div class="tl-col-head">// EN · ENGLISH</div>
+        <div class="field">
+          <label>// HEADLINE · EN</label>
+          <input type="text" id="tl-headline-en" placeholder="e.g. SMR backlog reframes the nuclear thesis">
+        </div>
+        <div class="field">
+          <label>// BODY · EN</label>
+          <textarea id="tl-body-en" rows="6"></textarea>
+        </div>
       </div>
     </div>
-    <!-- EN -->
-    <div class="lang-pane" data-tl-lang="en">
-      <div class="field">
-        <label>// HEADLINE · EN</label>
-        <input type="text" id="tl-headline-en" placeholder="e.g. SMR backlog reframes the nuclear thesis">
-      </div>
-      <div class="field">
-        <label>// BODY · EN</label>
-        <textarea id="tl-body-en" rows="5"></textarea>
-      </div>
-    </div>
+
+    <!-- ── Shared meta (RU/EN) ── -->
     <div class="field">
       <label>// ИСТОЧНИК · SOURCE (необязательно)</label>
       <input type="text" id="tl-source" placeholder="напр. Goldman Sachs Equity Research">
+    </div>
+
+    <!-- ── Chart / image upload (shared RU/EN → analysis-images → image_paths) ── -->
+    <div class="field">
+      <label>// ГРАФИК · CHART (1–4 файла, первый — главный)</label>
+      <div class="dropzone" id="tl-dropzone">
+        <div class="dz-icon">⬆</div>
+        <div class="dz-text">[ ПЕРЕТАЩИТЕ ИЛИ КЛИКНИТЕ · DRAG &amp; DROP OR CLICK ]</div>
+        <div class="dz-sub">PNG, JPG, WEBP · до 5 MB · первое изображение станет главным</div>
+        <input type="file" id="tl-files" accept="image/png,image/jpeg,image/webp,image/gif" multiple style="display:none">
+      </div>
+      <div class="thumbs" id="tl-thumbs"></div>
     </div>
   </div>
 
@@ -478,6 +509,7 @@ const TL_CATEGORIES = [
 const state = {
   destination: 'timeline',   // 'timeline' | 'report'
   tlCategories: new Set(),   // selected Timeline categories
+  tlImages: [],              // Timeline chart images [{file,url,name,isUploaded,path}]
   id: null,
   slug: null,
   status: 'draft',
@@ -503,6 +535,9 @@ function setDestination(dest) {
   btnTl.querySelector('.dot').classList.toggle('idle', !isTl);
   document.getElementById('timeline-fields').style.display = isTl ? 'block' : 'none';
   document.getElementById('report-fields').style.display = isTl ? 'none' : 'block';
+  // Timeline shows RU + EN side-by-side on one page, so the RU/EN tab switch is hidden.
+  const langTabs = document.querySelector('.lang-tabs');
+  if (langTabs) langTabs.style.display = isTl ? 'none' : 'flex';
   // page title + publish help reflect mode
   const title = document.getElementById('page-title');
   if (title) title.textContent = isTl
@@ -537,6 +572,73 @@ function tlHashtags() {
     .filter(c => state.tlCategories.has(c.cat))
     .map(c => c.tag)
     .join(' ');
+}
+
+// ============== Timeline chart images ==============
+const TL_MAX_IMAGES = 4;
+
+function tlAddFiles(list) {
+  [...list].forEach(f => {
+    if (state.tlImages.length >= TL_MAX_IMAGES) return;
+    if (!/^image\/(png|jpe?g|webp|gif)$/.test(f.type || '')) { showTopMsg('Только PNG, JPG, WEBP, GIF.', 'err'); return; }
+    if (f.size > 5 * 1024 * 1024) { showTopMsg('Файл больше 5MB.', 'err'); return; }
+    state.tlImages.push({ file: f, url: URL.createObjectURL(f), name: f.name, isUploaded: false, path: null });
+  });
+  tlRenderThumbs();
+}
+
+function tlRenderThumbs() {
+  const host = document.getElementById('tl-thumbs');
+  if (!host) return;
+  host.innerHTML = state.tlImages.map((im, i) => `
+    <div class="thumb">
+      <img src="${im.url}" alt="">
+      <span class="ix">${i === 0 ? 'ГЛ' : (i + 1)}</span>
+      <button type="button" class="x" data-i="${i}" title="Удалить">×</button>
+    </div>`).join('');
+  host.querySelectorAll('.x').forEach(b => b.addEventListener('click', () => {
+    state.tlImages.splice(+b.dataset.i, 1);
+    tlRenderThumbs();
+  }));
+}
+
+// Uploads any pending Timeline images to the analysis-images bucket,
+// returns an array of storage paths (member feed renders image_paths[0]).
+async function tlUploadPendingImages() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) throw new Error('no_session');
+  const userId = session.user.id;
+  const paths = [];
+  for (let i = 0; i < state.tlImages.length; i++) {
+    const im = state.tlImages[i];
+    if (im.isUploaded && im.path) { paths.push(im.path); continue; }
+    if (!im.file) continue;
+    const ext = (im.file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const path = `${userId}/${Date.now()}_${i}.${ext || 'jpg'}`;
+    const { error } = await sb.storage.from('analysis-images').upload(path, im.file, {
+      cacheControl: '3600', upsert: false, contentType: im.file.type || 'image/jpeg'
+    });
+    if (error) throw new Error('upload_failed: ' + error.message);
+    im.isUploaded = true; im.path = path;
+    paths.push(path);
+  }
+  return paths;
+}
+
+function wireTimelineDropzone() {
+  const dz = document.getElementById('tl-dropzone');
+  const inp = document.getElementById('tl-files');
+  if (!dz || !inp || dz.dataset.wired) return;
+  dz.dataset.wired = '1';
+  dz.addEventListener('click', () => inp.click());
+  inp.addEventListener('change', () => { if (inp.files.length) tlAddFiles(inp.files); inp.value = ''; });
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.classList.remove('dragover');
+    if (e.dataTransfer.files.length) tlAddFiles(e.dataTransfer.files);
+  });
 }
 
 // ============== Auth ==============
@@ -582,6 +684,8 @@ async function checkAdminAndShow() {
   // Destination: ?dest=report opens Report mode; default is Timeline.
   // Editing an existing report (?id=...) forces Report mode.
   renderTlCategoryChips();
+  wireTimelineDropzone();
+  tlRenderThumbs();
   const destParam = url.searchParams.get('dest');
   setDestination(editId || destParam === 'report' ? 'report' : 'timeline');
 }
@@ -1417,6 +1521,10 @@ async function saveTimelinePost(returnId) {
   showTopMsg('Сохранение…', 'info');
   const payload = collectTimelineData(state.status === 'published' ? 'published' : 'draft');
   try {
+    // upload any pending chart images first → store storage paths in image_paths
+    showTopMsg('Загрузка изображений…', 'info');
+    payload.image_paths = await tlUploadPendingImages();
+    showTopMsg('Сохранение…', 'info');
     let id = state.id;
     if (id) {
       const { error } = await sb.from('analysis_posts').update(payload).eq('id', id);
