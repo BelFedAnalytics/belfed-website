@@ -776,6 +776,7 @@ async function uploadPendingImages(){
 function collectFormData(){
   return {
     ticker: (els.ticker.value||'').trim().toUpperCase(),
+    destination: 'asset',
     asset_class: els.assetClass.value || 'stocks',
     company_name: els.company.value.trim() || null,
     post_type: els.type.value,
