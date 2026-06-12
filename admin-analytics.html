@@ -230,6 +230,7 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
         <div class="field">
           <label>// ТЕКСТ · RU</label>
           <textarea id="tl-body-ru" rows="6"></textarea>
+          <div class="char-counter" id="tl-cap-ru">0 / 1024 (TG подпись RU)</div>
         </div>
       </div>
       <!-- EN column -->
@@ -242,6 +243,7 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
         <div class="field">
           <label>// BODY · EN</label>
           <textarea id="tl-body-en" rows="6"></textarea>
+          <div class="char-counter" id="tl-cap-en">0 / 1024 (TG caption EN)</div>
         </div>
       </div>
     </div>
@@ -544,6 +546,7 @@ function setDestination(dest) {
     ? (state.id ? '— ПОСТ ЛЕНТЫ —' : '— НОВЫЙ ПОСТ ЛЕНТЫ —')
     : (state.id ? '— ОТЧЁТ АНАЛИТИКИ —' : '— НОВЫЙ ОТЧЁТ АНАЛИТИКИ —');
   if (typeof updatePublishHint === 'function') updatePublishHint();
+  if (isTl && typeof updateTimelineCounters === 'function') updateTimelineCounters();
 }
 
 function renderTlCategoryChips() {
@@ -565,6 +568,7 @@ function renderTlCategoryChips() {
   // hashtag preview
   const hh = document.getElementById('tl-hashtags');
   if (hh) hh.textContent = tlHashtags() || '';
+  if (typeof updateTimelineCounters === 'function') updateTimelineCounters();
 }
 
 function tlHashtags() {
@@ -639,6 +643,64 @@ function wireTimelineDropzone() {
     dz.classList.remove('dragover');
     if (e.dataTransfer.files.length) tlAddFiles(e.dataTransfer.files);
   });
+  // live TG caption counters
+  ['tl-headline-ru','tl-body-ru','tl-headline-en','tl-body-en','tl-source']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener('input', updateTimelineCounters); });
+}
+
+// ============== Timeline TG caption length ==============
+// Mirrors analysis-publish buildText() so the counter matches the real TG caption.
+// TG caption limit with a photo = 1024 chars. Timeline posts always carry a chart,
+// so we count against 1024 (headline + body + Source line + Web permalink + hashtags).
+const TL_TG_CAPTION_LIMIT = 1024;
+const TL_TG_CAPTION_WARN  = 950;
+
+function tlSlugEstimate(lang) {
+  // mirrors edge slugifyText(headline_en||headline_ru) + '-YYYY-MM-DD'
+  const hEn = (document.getElementById('tl-headline-en').value || '').trim();
+  const hRu = (document.getElementById('tl-headline-ru').value || '').trim();
+  const stem = (hEn || hRu || 'post')
+    .toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim()
+    .replace(/\s+/g, '-').replace(/-+/g, '-').slice(0, 48).replace(/^-+|-+$/g, '') || 'post';
+  const d = new Date();
+  const ymd = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+  return `${stem}-${ymd}`;
+}
+
+// Builds the exact TG caption text for one language, same order/labels as the edge fn.
+function tlBuildCaption(lang) {
+  const headline = (lang === 'ru'
+    ? (document.getElementById('tl-headline-ru').value || '')
+    : (document.getElementById('tl-headline-en').value || '')).trim();
+  const body = (lang === 'ru'
+    ? (document.getElementById('tl-body-ru').value || '')
+    : (document.getElementById('tl-body-en').value || '')).trim();
+  const source = (document.getElementById('tl-source').value || '').trim();
+  const hashtags = (tlHashtags() || '').trim();
+  const lines = [];
+  if (headline) { lines.push(headline); lines.push(''); }
+  if (body) { lines.push(body); lines.push(''); }
+  if (source) { lines.push((lang === 'ru' ? 'Источник' : 'Source') + ': ' + source); lines.push(''); }
+  // Web permalink (always added on publish once slug exists; estimate the slug now)
+  const base = lang === 'ru' ? 'https://belfed.ru' : 'https://belfed.com';
+  const slug = (state.slug && state.slug.trim()) ? state.slug.trim() : tlSlugEstimate(lang);
+  lines.push((lang === 'ru' ? 'Веб' : 'Web') + ': ' + base + '/analytics.html?post=' + encodeURIComponent(slug));
+  lines.push('');
+  if (hashtags) { lines.push(hashtags); }
+  return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function tlSetCounter(elId, len) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const isRu = elId.endsWith('-ru');
+  el.textContent = `${len} / ${TL_TG_CAPTION_LIMIT} ` + (isRu ? '(TG подпись RU)' : '(TG caption EN)');
+  el.className = 'char-counter' + (len > TL_TG_CAPTION_LIMIT ? ' over' : (len > TL_TG_CAPTION_WARN ? ' warn' : ''));
+}
+
+function updateTimelineCounters() {
+  tlSetCounter('tl-cap-ru', tlBuildCaption('ru').length);
+  tlSetCounter('tl-cap-en', tlBuildCaption('en').length);
 }
 
 // ============== Auth ==============
@@ -1510,6 +1572,17 @@ function validateTimeline(forPublish) {
     if (!d.publish_to_ru && !d.publish_to_en) return 'выберите хотя бы один язык (RU/EN)';
     if (d.publish_to_ru && !d.headline_ru) return 'RU заголовок пуст';
     if (d.publish_to_en && !d.headline_en) return 'EN заголовок пуст';
+    // TG caption limit guard (only when actually sending to TG)
+    if (!skipTg) {
+      if (d.publish_to_ru) {
+        const lenRu = tlBuildCaption('ru').length;
+        if (lenRu > TL_TG_CAPTION_LIMIT) return `RU подпись для TG слишком длинная: ${lenRu}/${TL_TG_CAPTION_LIMIT}. Сократите текст.`;
+      }
+      if (d.publish_to_en) {
+        const lenEn = tlBuildCaption('en').length;
+        if (lenEn > TL_TG_CAPTION_LIMIT) return `EN подпись для TG слишком длинная: ${lenEn}/${TL_TG_CAPTION_LIMIT}. Сократите текст.`;
+      }
+    }
   }
   return null;
 }
