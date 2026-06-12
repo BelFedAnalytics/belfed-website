@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BELFED ANALYTICS — АДМИН: СПИСОК</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background-color:#f5f2eb;font-family:'Courier New',Courier,monospace;color:#000;padding:24px 20px;line-height:1.6;font-size:14px;visibility:hidden}
+body.ready{visibility:visible}
+.container{max-width:1200px;margin:0 auto}
+header{position:relative;text-align:center;margin-bottom:24px;padding-bottom:14px;border-bottom:1px solid #000}
+header h2{font-size:14px;letter-spacing:4px;font-weight:bold;margin-bottom:8px}
+header h2 a{color:#000;text-decoration:none}
+header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
+.admin-badge{display:inline-block;background:#c50000;color:#fff;padding:2px 10px;font-size:10px;letter-spacing:2px;margin-left:8px}
+
+#loginScreen{position:fixed;inset:0;background:#f5f2eb;display:flex;align-items:center;justify-content:center;z-index:10}
+.login-box{background:#fff;border:1px solid #000;padding:30px;width:340px}
+.login-box h3{font-size:13px;letter-spacing:3px;margin-bottom:20px;text-align:center}
+.login-box input{width:100%;font-family:'Courier New',monospace;padding:10px;border:1px solid #000;background:#f5f2eb;font-size:13px;margin-bottom:10px}
+.login-box button{width:100%;font-family:'Courier New',monospace;padding:10px;border:1px solid #000;background:#000;color:#f5f2eb;cursor:pointer;font-size:12px;letter-spacing:2px}
+
+.toolbar{display:flex;gap:8px;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.toolbar-right{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font-family:'Courier New',monospace;font-size:11px;letter-spacing:2px;padding:8px 16px;border:1px solid #000;background:#fff;cursor:pointer;color:#000;text-decoration:none;display:inline-block}
+.btn:hover{background:#f0ede4}
+.btn.primary{background:#000;color:#f5f2eb}
+.btn.danger{background:#c50000;color:#fff;border-color:#c50000}
+
+.filters{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.filters input,.filters select{font-family:'Courier New',monospace;padding:6px 10px;border:1px solid #000;background:#fff;font-size:12px}
+
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #000}
+th,td{padding:10px;border-bottom:1px solid #000;text-align:left;font-size:12px;vertical-align:top}
+th{background:#000;color:#f5f2eb;letter-spacing:2px;font-size:10px;font-weight:normal}
+tr:last-child td{border-bottom:none}
+tr:hover{background:#f9f6ee}
+td.title{max-width:340px}
+td.title b{font-size:13px;display:block;margin-bottom:2px}
+td.title small{opacity:0.6;font-size:10px}
+td.actions{white-space:nowrap}
+td.actions .btn{padding:5px 10px;font-size:10px;letter-spacing:1px;margin-right:4px}
+
+.status-pill{display:inline-block;font-size:10px;letter-spacing:1px;padding:2px 8px;border:1px solid #000}
+.status-pill.draft{background:#f5f2eb}
+.status-pill.published{background:#1a7a1a;color:#fff;border-color:#1a7a1a}
+.status-pill.archived{background:#999;color:#fff;border-color:#999}
+
+.empty{padding:60px 20px;text-align:center;background:#fff;border:1px solid #000;font-size:12px;letter-spacing:2px;opacity:0.6}
+
+.msg{padding:10px 12px;font-size:11px;letter-spacing:1px;border:1px solid #000;margin:10px 0}
+.msg.ok{background:#1a7a1a;color:#fff;border-color:#1a7a1a}
+.msg.err{background:#c50000;color:#fff;border-color:#c50000}
+.msg.info{background:#fffbe5;color:#000}
+
+.admin-nav{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;background:#000;padding:10px 14px;margin:-24px -20px 24px}
+.admin-nav a{font-family:'Courier New',monospace;font-size:11px;letter-spacing:2px;padding:6px 14px;color:#f5f2eb;text-decoration:none;border:1px solid transparent}
+.admin-nav a:hover{border-color:#f5f2eb}
+.admin-nav a.active{background:#f5f2eb;color:#000;border-color:#f5f2eb}
+.admin-nav .sep{color:#666;padding:6px 0}
+
+.tabs{display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid #000}
+.tabs button{font-family:'Courier New',monospace;font-size:12px;letter-spacing:2px;padding:10px 22px;border:1px solid #000;border-bottom:none;background:#f5f2eb;cursor:pointer;color:#000;margin-right:-1px;margin-bottom:-1px}
+.tabs button.sel{background:#000;color:#f5f2eb}
+td.cats small{display:inline-block;background:#f0ede4;border:1px solid #000;padding:1px 6px;margin:1px 3px 1px 0;font-size:9px;letter-spacing:1px}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-box">
+    <h3>// ADMIN LOGIN</h3>
+    <input type="email" id="login-email" placeholder="admin@belfed.com">
+    <input type="password" id="login-password" placeholder="password">
+    <button onclick="signIn()">[ ВОЙТИ ]</button>
+    <div id="login-msg"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+
+<nav class="admin-nav">
+  <a href="/admin.html">[ HUB ]</a>
+  <span class="sep">|</span>
+  <a href="/admin-positions.html">[ POSITIONS ]</a>
+  <a href="/admin-analytics-list.html" class="active">[ ANALYTICS ]</a>
+  <a href="/admin-analysis-posts.html">[ ASSET ANALYSIS ]</a>
+  <a href="/admin-chart-requests.html">[ REQUESTS ]</a>
+  <a href="/admin-roster.html">[ RECONCILIATION ]</a>
+</nav>
+
+<div class="container">
+
+<header>
+  <h2><a href="/admin.html">— BELFED_ ADMIN <span class="admin-badge">ADMIN</span> —</a></h2>
+  <h1 id="page-h1">— АНАЛИТИКА: СПИСОК ОТЧЁТОВ —</h1>
+</header>
+
+<div class="tabs">
+  <button id="tab-reports"  class="sel" onclick="setTab('reports')">[ ОТЧЁТЫ ]</button>
+  <button id="tab-timeline" onclick="setTab('timeline')">[ ЛЕНТА ]</button>
+</div>
+
+<div class="toolbar">
+  <div>
+    <button class="btn" onclick="signOut()">[ ВЫЙТИ ]</button>
+  </div>
+  <div class="toolbar-right">
+    <a id="btn-new" class="btn primary" href="/admin-analytics.html?dest=report">[ + НОВЫЙ ОТЧЁТ ]</a>
+  </div>
+</div>
+
+<div class="filters">
+  <input type="text" id="f-q" placeholder="поиск..." style="width:220px" oninput="debouncedReload()">
+  <select id="f-status" onchange="reload()">
+    <option value="all">Все статусы</option>
+    <option value="draft">Черновик</option>
+    <option value="published">Опубликован</option>
+    <option value="archived">Архив</option>
+  </select>
+  <select id="f-type" onchange="reload()">
+    <option value="">Все типы</option>
+    <option value="daily">DAILY</option>
+    <option value="weekly">WEEKLY</option>
+    <option value="flash">FLASH</option>
+  </select>
+</div>
+
+<div id="msg-host"></div>
+
+<div id="list-host"></div>
+
+</div>
+</div>
+
+<script>
+const SUPABASE_URL  = 'https://obujqvqqmyfcfflhqvud.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9idWpxdnFxbXlmY2ZmbGhxdnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDgxNjYsImV4cCI6MjA4OTkyNDE2Nn0.syl4YBLbf8aBitxyK3gCL51pPYxWjEW99mMTXJaQQ8w';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+async function signIn() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) { document.getElementById('login-msg').innerHTML = '<div class="msg err">' + error.message + '</div>'; return; }
+  await checkAdminAndShow();
+}
+async function signOut() { await sb.auth.signOut(); location.reload(); }
+
+async function checkAdminAndShow() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+    document.body.classList.add('ready');
+    return;
+  }
+  const { data: profile } = await sb.from('profiles').select('subscription_status,email').eq('id', session.user.id).maybeSingle();
+  if (!profile || profile.subscription_status !== 'admin') {
+    document.getElementById('login-msg').innerHTML = '<div class="msg err">Access denied — your account is not an admin.</div>';
+    document.body.classList.add('ready');
+    return;
+  }
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.body.classList.add('ready');
+  reload();
+}
+
+async function adminAction(payload) {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return { ok:false, error:'no_session' };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/analytics-admin-action`, {
+      method:'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}` },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(()=>({}));
+    return { ok: res.ok, status: res.status, data };
+  } catch (e) {
+    return { ok:false, error:String(e) };
+  }
+}
+
+// ===== Tabs: 'reports' (analytics_reports) | 'timeline' (analysis_posts) =====
+let currentTab = 'reports';
+
+function setTab(tab) {
+  currentTab = (tab === 'timeline') ? 'timeline' : 'reports';
+  document.getElementById('tab-reports').classList.toggle('sel', currentTab === 'reports');
+  document.getElementById('tab-timeline').classList.toggle('sel', currentTab === 'timeline');
+
+  const isTl = currentTab === 'timeline';
+  // Type filter only applies to Reports; hide it for Timeline.
+  document.getElementById('f-type').style.display = isTl ? 'none' : '';
+  document.getElementById('page-h1').textContent = isTl
+    ? '— ЛЕНТА: ПОСТЫ —'
+    : '— АНАЛИТИКА: СПИСОК ОТЧЁТОВ —';
+  const btnNew = document.getElementById('btn-new');
+  btnNew.textContent = isTl ? '[ + НОВЫЙ ПОСТ ]' : '[ + НОВЫЙ ОТЧЁТ ]';
+  btnNew.href = isTl ? '/admin-analytics.html' : '/admin-analytics.html?dest=report';
+  reload();
+}
+
+let timer;
+function debouncedReload() { clearTimeout(timer); timer = setTimeout(reload, 250); }
+
+async function reload() {
+  if (currentTab === 'timeline') return reloadTimeline();
+  return reloadReports();
+}
+
+async function reloadReports() {
+  const host = document.getElementById('list-host');
+  host.innerHTML = '<div class="empty">Загрузка…</div>';
+  const r = await adminAction({
+    action:'list',
+    query: {
+      q: document.getElementById('f-q').value.trim(),
+      status: document.getElementById('f-status').value,
+      type:   document.getElementById('f-type').value,
+      limit: 100,
+    }
+  });
+  if (!r.ok) { host.innerHTML = `<div class="empty">Ошибка: ${r.data?.error||r.status}</div>`; return; }
+  const items = r.data?.items || [];
+  if (items.length === 0) { host.innerHTML = '<div class="empty">— Ничего не найдено —</div>'; return; }
+
+  host.innerHTML = `
+    <table>
+      <thead><tr>
+        <th style="width:14%">ДАТА</th>
+        <th style="width:8%">ТИП</th>
+        <th>ЗАГОЛОВОК</th>
+        <th style="width:14%">СТАТУС</th>
+        <th style="width:24%">ДЕЙСТВИЯ</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  `;
+  const tb = document.getElementById('rows');
+  items.forEach(it => tb.appendChild(renderRow(it)));
+}
+
+// ===== Timeline posts (analysis_posts, destination='timeline') =====
+// Read directly via the anon client; admin RLS (admin_all_analysis_posts /
+// analysis_posts_admin_read) lets an authenticated admin read drafts too.
+async function reloadTimeline() {
+  const host = document.getElementById('list-host');
+  host.innerHTML = '<div class="empty">Загрузка…</div>';
+
+  const q       = document.getElementById('f-q').value.trim().toLowerCase();
+  const statusF = document.getElementById('f-status').value;
+
+  let query = sb.from('analysis_posts')
+    .select('id,slug,status,headline_ru,headline_en,categories,report_slug,created_at,updated_at,published_at')
+    .eq('destination', 'timeline')
+    .order('created_at', { ascending: false })
+    .limit(200);
+  if (statusF && statusF !== 'all') query = query.eq('status', statusF);
+
+  const { data, error } = await query;
+  if (error) { host.innerHTML = `<div class="empty">Ошибка: ${escapeHtml(error.message)}</div>`; return; }
+
+  let items = data || [];
+  if (q) {
+    items = items.filter(it =>
+      (it.headline_ru || '').toLowerCase().includes(q) ||
+      (it.headline_en || '').toLowerCase().includes(q) ||
+      (it.slug || '').toLowerCase().includes(q));
+  }
+  if (items.length === 0) { host.innerHTML = '<div class="empty">— Ничего не найдено —</div>'; return; }
+
+  host.innerHTML = `
+    <table>
+      <thead><tr>
+        <th style="width:14%">ДАТА</th>
+        <th style="width:16%">КАТЕГОРИИ</th>
+        <th>ЗАГОЛОВОК</th>
+        <th style="width:14%">СТАТУС</th>
+        <th style="width:24%">ДЕЙСТВИЯ</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  `;
+  const tb = document.getElementById('rows');
+  items.forEach(it => tb.appendChild(renderTimelineRow(it)));
+}
+
+function renderTimelineRow(it) {
+  const tr = document.createElement('tr');
+  const date  = (it.created_at || '').slice(0,10);
+  const title = it.headline_ru || it.headline_en || '(без заголовка)';
+  const subEn = (it.headline_en && it.headline_ru) ? it.headline_en : '';
+  const slug  = it.slug || '';
+  const cats  = Array.isArray(it.categories) ? it.categories : [];
+  const fromReport = !!it.report_slug;
+
+  const catsHtml = cats.length
+    ? cats.map(c => `<small>${escapeHtml(c)}</small>`).join('')
+    : '<small style="opacity:.5">—</small>';
+
+  tr.innerHTML = `
+    <td>${escapeHtml(date)}${fromReport ? '<br><small style="opacity:.5">из отчёта</small>' : ''}</td>
+    <td class="cats">${catsHtml}</td>
+    <td class="title">
+      <b>${escapeHtml(title)}</b>
+      ${subEn ? `<small>${escapeHtml(subEn.slice(0,120))}${subEn.length>120?'…':''}</small>` : ''}
+      <small style="display:block;margin-top:4px;font-family:monospace">${escapeHtml(slug)}</small>
+    </td>
+    <td><span class="status-pill ${it.status}">${labelStatus(it.status)}</span></td>
+    <td class="actions">
+      <a class="btn" href="/admin-analytics.html?id=${encodeURIComponent(it.id)}&type=timeline">[ РЕД ]</a>
+      ${(slug && it.status === 'published') ? `<a class="btn" target="_blank" href="/analytics.html?post=${encodeURIComponent(slug)}">[ САЙТ ]</a>` : ''}
+      ${it.status === 'draft' ? `<button class="btn danger" data-act="del" data-id="${it.id}">[ × ]</button>` : ''}
+    </td>
+  `;
+  const del = tr.querySelector('[data-act="del"]');
+  if (del) del.onclick = () => deleteTimelineRow(it.id);
+  return tr;
+}
+
+async function deleteTimelineRow(id) {
+  if (!confirm('Удалить черновик поста навсегда?')) return;
+  const { error } = await sb.from('analysis_posts').delete().eq('id', id).eq('status', 'draft');
+  if (error) { topMsg('Удаление не удалось: ' + error.message, 'err'); return; }
+  topMsg('Удалено', 'ok');
+  reload();
+}
+
+function renderRow(it) {
+  const tr = document.createElement('tr');
+  const date = (it.report_date || '').slice(0,10);
+  const type = (it.report_type||'').toUpperCase();
+  const title = it.title_ru || it.title_en || '(без названия)';
+  const sub   = it.subtitle_ru || it.subtitle_en || '';
+  const slug  = it.slug || '';
+
+  tr.innerHTML = `
+    <td>${escapeHtml(date)}</td>
+    <td>${escapeHtml(type)}</td>
+    <td class="title">
+      <b>${escapeHtml(title)}</b>
+      <small>${escapeHtml(sub.slice(0,120))}${sub.length>120?'…':''}</small>
+      <small style="display:block;margin-top:4px;font-family:monospace">${escapeHtml(slug)}</small>
+    </td>
+    <td><span class="status-pill ${it.status}">${labelStatus(it.status)}</span></td>
+    <td class="actions">
+      <a class="btn" href="/admin-analytics.html?id=${encodeURIComponent(it.id)}">[ РЕД ]</a>
+      ${slug ? `<a class="btn" target="_blank" href="/analytics-view.html?slug=${encodeURIComponent(slug)}">[ САЙТ ]</a>` : ''}
+      ${it.status === 'draft' ? `<button class="btn danger" data-act="del" data-id="${it.id}">[ × ]</button>` : ''}
+    </td>
+  `;
+  const del = tr.querySelector('[data-act="del"]');
+  if (del) del.onclick = () => deleteRow(it.id);
+  return tr;
+}
+
+async function deleteRow(id) {
+  if (!confirm('Удалить черновик навсегда?')) return;
+  const r = await adminAction({ action:'delete', report_id:id });
+  if (!r.ok) { topMsg('Удаление не удалось: '+(r.data?.error||r.status),'err'); return; }
+  topMsg('Удалено','ok');
+  reload();
+}
+
+function labelStatus(s) {
+  return ({ draft:'ЧЕРНОВИК', published:'ОПУБЛИКОВАН', archived:'АРХИВ' }[s] || s.toUpperCase());
+}
+function topMsg(text, kind) {
+  const host = document.getElementById('msg-host');
+  host.innerHTML = `<div class="msg ${kind}">${escapeHtml(text)}</div>`;
+  if (kind === 'ok' || kind === 'info') setTimeout(()=>{host.innerHTML='';}, 3000);
+}
+function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+checkAdminAndShow();
+</script>
+</body>
+</html>

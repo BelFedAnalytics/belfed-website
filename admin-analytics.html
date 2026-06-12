@@ -735,21 +735,36 @@ async function checkAdminAndShow() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
 
-  // load existing report if id in URL
+  // load existing report / timeline post if id in URL
   const url = new URL(location.href);
   const editId = url.searchParams.get('id');
-  if (editId) await loadReport(editId);
-  else        initBlank();
+  // ?type=timeline => load a Timeline post (analysis_posts); otherwise treat ?id as a Report.
+  const editType = url.searchParams.get('type');
+  const isTimelineEdit = editType === 'timeline';
+
+  if (editId && isTimelineEdit) {
+    initBlank();             // reset report-side state to a clean baseline
+    await loadTimelinePost(editId);
+  } else if (editId) {
+    await loadReport(editId);
+  } else {
+    initBlank();
+  }
 
   renderAll();
 
-  // Destination: ?dest=report opens Report mode; default is Timeline.
-  // Editing an existing report (?id=...) forces Report mode.
+  // Destination: ?type=timeline opens Timeline mode for an existing post;
+  // editing an existing Report (?id=... without type) forces Report mode;
+  // ?dest=report opens a blank Report; default for new posts is Timeline.
   renderTlCategoryChips();
   wireTimelineDropzone();
   tlRenderThumbs();
   const destParam = url.searchParams.get('dest');
-  setDestination(editId || destParam === 'report' ? 'report' : 'timeline');
+  let dest;
+  if (isTimelineEdit) dest = 'timeline';
+  else if (editId)    dest = 'report';
+  else                dest = destParam === 'report' ? 'report' : 'timeline';
+  setDestination(dest);
 }
 
 // ============== Admin Action ==============
@@ -888,6 +903,67 @@ async function loadReport(id) {
   document.getElementById('conc-body-en').value     = state.conclusion.body_en;
 
   document.getElementById('page-title').textContent = `— РЕДАКТИРОВАНИЕ: ${rep.title_ru || rep.title_en || '(без названия)'} —`;
+}
+
+// ============== Load existing Timeline post (analysis_posts) ==============
+// Resolves a stored chart image (either a full public URL from the
+// analytics-charts bucket, or a storage path in the analysis-images bucket)
+// to a displayable thumbnail URL.
+function tlResolveImageUrl(p) {
+  if (!p) return null;
+  if (/^https?:\/\//i.test(p)) return p;
+  const { data } = sb.storage.from('analysis-images').getPublicUrl(p);
+  return data?.publicUrl || null;
+}
+
+async function loadTimelinePost(id) {
+  const { data: post, error } = await sb
+    .from('analysis_posts')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+  if (error || !post) {
+    showTopMsg('Не удалось загрузить пост ленты: ' + (error?.message || 'не найден'), 'err');
+    initBlank();
+    return;
+  }
+
+  // core state
+  state.destination = 'timeline';
+  state.id      = post.id;
+  state.slug    = post.slug || null;
+  state.status  = post.status || 'draft';
+  state.created_at = post.created_at || null;
+  state.updated_at = post.updated_at || null;
+
+  // text fields
+  document.getElementById('tl-headline-ru').value = post.headline_ru || '';
+  document.getElementById('tl-headline-en').value = post.headline_en || '';
+  document.getElementById('tl-body-ru').value     = post.body_ru || '';
+  document.getElementById('tl-body-en').value     = post.body_en || '';
+  document.getElementById('tl-source').value      = post.source || '';
+
+  // categories -> Set (drives chips + hashtags)
+  state.tlCategories = new Set(Array.isArray(post.categories) ? post.categories : []);
+
+  // publish-to language checkboxes
+  const cbRu = document.getElementById('cb-lang-ru');
+  const cbEn = document.getElementById('cb-lang-en');
+  if (cbRu) cbRu.checked = post.publish_to_ru !== false;
+  if (cbEn) cbEn.checked = post.publish_to_en !== false;
+
+  // existing chart images -> thumbs (already uploaded; keep their stored path/url)
+  const paths = Array.isArray(post.image_paths) ? post.image_paths : [];
+  state.tlImages = paths.map(p => ({
+    file: null,
+    url: tlResolveImageUrl(p),
+    name: (typeof p === 'string' ? p.split('/').pop() : 'image'),
+    isUploaded: true,
+    path: p,
+  })).filter(im => !!im.url);
+
+  document.getElementById('page-title').textContent =
+    `— ПОСТ ЛЕНТЫ: ${post.headline_ru || post.headline_en || '(без заголовка)'} —`;
 }
 
 // ============== Render ==============
