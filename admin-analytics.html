@@ -651,7 +651,7 @@ function wireTimelineDropzone() {
 // ============== Timeline TG caption length ==============
 // Mirrors analysis-publish buildText() so the counter matches the real TG caption.
 // TG caption limit with a photo = 1024 chars. Timeline posts always carry a chart,
-// so we count against 1024 (headline + body + Source line + Web permalink + hashtags).
+// so we count against 1024 (headline + body + Source line + hashtags + referral footer).
 const TL_TG_CAPTION_LIMIT = 1024;
 const TL_TG_CAPTION_WARN  = 950;
 
@@ -681,12 +681,12 @@ function tlBuildCaption(lang) {
   if (headline) { lines.push(headline); lines.push(''); }
   if (body) { lines.push(body); lines.push(''); }
   if (source) { lines.push((lang === 'ru' ? 'Источник' : 'Source') + ': ' + source); lines.push(''); }
-  // Web permalink (always added on publish once slug exists; estimate the slug now)
-  const base = lang === 'ru' ? 'https://belfed.ru' : 'https://belfed.com';
-  const slug = (state.slug && state.slug.trim()) ? state.slug.trim() : tlSlugEstimate(lang);
-  lines.push((lang === 'ru' ? 'Веб' : 'Web') + ': ' + base + '/analytics.html?post=' + encodeURIComponent(slug));
-  lines.push('');
-  if (hashtags) { lines.push(hashtags); }
+  if (hashtags) { lines.push(hashtags); lines.push(''); }
+  // Referral footer — appended on publish (HTML <a> link, but TG counts the
+  // visible text only, so we measure the rendered footer here for an accurate count).
+  lines.push(lang === 'ru'
+    ? '· @BelfedBot · belfed.ru · 7 дней бесплатно'
+    : '· @BelfedBot · belfed.com · 7 days free');
   return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
