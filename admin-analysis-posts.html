@@ -329,6 +329,27 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 
     </div>
 
+    <div class="section-block">
+      <div class="section-head">// ФУТЕР СООБЩЕНИЯ (общий для всех постов)</div>
+      <p style="font-size:10px;letter-spacing:0.5px;opacity:0.6;margin:0 0 10px">Добавляется ПЕРЕД хэштегами во всех публикациях (анализ активов и аналитика). <code>@BelfedBot</code> автоматически станет кликабельной ссылкой.</p>
+
+      <div class="field">
+        <label>// ФУТЕР RU</label>
+        <textarea id="footer-ru" rows="2" placeholder="· @BelfedBot · belfed.ru · 14 дней бесплатно"></textarea>
+      </div>
+
+      <div class="field">
+        <label>// ФУТЕР EN</label>
+        <textarea id="footer-en" rows="2" placeholder="· @BelfedBot · belfed.com · 14 days free"></textarea>
+      </div>
+
+      <div class="actions" style="justify-content:flex-start;gap:10px">
+        <button class="btn" id="btn-footer-load" type="button">[ ЗАГРУЗИТЬ ]</button>
+        <button class="btn primary" id="btn-footer-save" type="button">[ СОХРАНИТЬ ФУТЕР ]</button>
+        <span id="footer-msg" style="font-size:10px;letter-spacing:0.5px;opacity:0.7"></span>
+      </div>
+    </div>
+
   </div>
 
   <!-- ───── SIDEBAR ───── -->
@@ -379,6 +400,74 @@ const state = { previewLang:'ru', images:[] }; // images: {file?, url, path?, is
 const ASSET_CLASS_TAG = { stocks:'#equities', crypto:'#crypto', commodities:'#commodities', fx:'#fx' };
 const ALL_CLASS_TAGS = new Set(Object.values(ASSET_CLASS_TAG));
 
+// =================== FOOTER (referral) ===================
+// Plain-text footer appended BEFORE hashtags in every post. Mirrors the edge fn.
+// Stored globally in the config table (keys footer_ru / footer_en) via the edge fn.
+const FOOTER_FALLBACK = {
+  ru: '· @BelfedBot · belfed.ru · 14 дней бесплатно',
+  en: '· @BelfedBot · belfed.com · 14 days free'
+};
+// Current in-memory footers (filled from config on load; fall back to defaults).
+let footerCache = { ru: FOOTER_FALLBACK.ru, en: FOOTER_FALLBACK.en };
+// What the preview/caption should reflect: the live edited textarea if present,
+// else the cached/saved footer.
+function footerText(lang){
+  const el = lang==='ru' ? (els.footerRu||document.getElementById('footer-ru'))
+                         : (els.footerEn||document.getElementById('footer-en'));
+  const v = el ? (el.value||'').trim() : '';
+  if (v) return v;
+  return (footerCache[lang]||FOOTER_FALLBACK[lang]||'').trim();
+}
+
+// Read the saved footers from config via the edge fn (admin-auth) and fill the
+// textareas. fillInputs=true overwrites the textareas even if user typed something.
+async function loadFooters(fillInputs){
+  try {
+    const session = (await sb.auth.getSession()).data.session;
+    if (!session) return;
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/analysis-publish`, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}` },
+      body: JSON.stringify({ action:'get_footers' })
+    });
+    const j = await res.json();
+    if (!res.ok || j.error) { if (fillInputs && els.footerMsg) els.footerMsg.textContent = 'ошибка загрузки: '+(j.error||res.status); return; }
+    footerCache.ru = (j.footer_ru||FOOTER_FALLBACK.ru);
+    footerCache.en = (j.footer_en||FOOTER_FALLBACK.en);
+    if (els.footerRu && (fillInputs || !els.footerRu.value.trim())) els.footerRu.value = footerCache.ru;
+    if (els.footerEn && (fillInputs || !els.footerEn.value.trim())) els.footerEn.value = footerCache.en;
+    if (fillInputs && els.footerMsg){ els.footerMsg.textContent = 'загружено'; setTimeout(()=>{ if(els.footerMsg) els.footerMsg.textContent=''; }, 2500); }
+    updateCounters(); render();
+  } catch (e) { if (fillInputs && els.footerMsg) els.footerMsg.textContent = 'сбой загрузки: '+(e.message||e); }
+}
+
+// Persist the footers (both languages) to config via the edge fn.
+async function saveFooters(){
+  const ru = (els.footerRu?.value||'').trim();
+  const en = (els.footerEn?.value||'').trim();
+  if (!ru && !en){ if (els.footerMsg) els.footerMsg.textContent = 'футер пуст'; return; }
+  if (els.btnFooterSave) els.btnFooterSave.disabled = true;
+  if (els.footerMsg) els.footerMsg.textContent = 'сохранение...';
+  try {
+    const session = (await sb.auth.getSession()).data.session;
+    if (!session){ if (els.footerMsg) els.footerMsg.textContent = 'нет сессии'; return; }
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/analysis-publish`, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}` },
+      body: JSON.stringify({ action:'save_footers', footer_ru: ru, footer_en: en })
+    });
+    const j = await res.json();
+    if (!res.ok || j.error){ if (els.footerMsg) els.footerMsg.textContent = 'ошибка: '+(j.error||res.status); return; }
+    footerCache.ru = j.footer_ru||ru;
+    footerCache.en = j.footer_en||en;
+    if (els.footerRu) els.footerRu.value = footerCache.ru;
+    if (els.footerEn) els.footerEn.value = footerCache.en;
+    if (els.footerMsg){ els.footerMsg.textContent = 'футер сохранён — применится к новым и редактируемым постам'; setTimeout(()=>{ if(els.footerMsg) els.footerMsg.textContent=''; }, 4000); }
+    updateCounters(); render();
+  } catch (e) { if (els.footerMsg) els.footerMsg.textContent = 'сбой: '+(e.message||e); }
+  finally { if (els.btnFooterSave) els.btnFooterSave.disabled = false; }
+}
+
 // =================== AUTH ===================
 async function signIn(){
   const email = $('#login-email').value.trim();
@@ -419,6 +508,8 @@ function initEditor(){
     greetRu:$('#greet-ru'), greetEn:$('#greet-en'),
     bodyRu:$('#body-ru'), bodyEn:$('#body-en'),
     tv:$('#tv'), tags:$('#tags'),
+    footerRu:$('#footer-ru'), footerEn:$('#footer-en'),
+    btnFooterLoad:$('#btn-footer-load'), btnFooterSave:$('#btn-footer-save'), footerMsg:$('#footer-msg'),
     cntRu:$('#cnt-ru'), cntEn:$('#cnt-en'),
     files:$('#files'), dropzone:$('#dropzone'), thumbs:$('#thumbs'),
     btnClear:$('#btn-clear'), btnDraft:$('#btn-draft'), btnPublish:$('#btn-publish'),
@@ -428,7 +519,7 @@ function initEditor(){
     searchMeta:$('#search-meta'), historyTitle:$('#history-title')
   });
 
-  ['ticker','company','replyName','replyText','greetRu','greetEn','bodyRu','bodyEn','tv','tags']
+  ['ticker','company','replyName','replyText','greetRu','greetEn','bodyRu','bodyEn','tv','tags','footerRu','footerEn']
     .forEach(k => els[k] && els[k].addEventListener('input', ()=>{ updateCounters(); render(); }));
   els.type.addEventListener('change', ()=>{ updateReplyVisibility(); render(); });
 
@@ -450,6 +541,11 @@ function initEditor(){
   els.btnClear.addEventListener('click', clearForm);
   els.btnDraft.addEventListener('click', saveDraft);
   els.btnPublish.addEventListener('click', publish);
+
+  // footer: load saved footers from config, wire Load/Save buttons
+  if (els.btnFooterLoad) els.btnFooterLoad.addEventListener('click', ()=>loadFooters(true));
+  if (els.btnFooterSave) els.btnFooterSave.addEventListener('click', saveFooters);
+  loadFooters(false);
 
   // SEARCH: debounced input + clear button
   let searchTimer = null;
@@ -629,6 +725,8 @@ function render(){
   const chartLabel = lang==='ru' ? 'График' : 'Chart';
   const tvHtml = tv ? `<div class="body-text" style="margin-top:10px">${chartLabel}: <a href="${escapeHtml(tv)}" target="_blank">${escapeHtml(tv)}</a></div>` : '';
   const tagsHtml = tags ? `<div class="hashtags">${escapeHtml(tags)}</div>` : '';
+  const footerRaw = footerText(lang);
+  const footerHtml = footerRaw ? `<div class="body-text" style="margin-top:10px;opacity:0.85">${linkify(footerRaw)}</div>` : '';
   const time = new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
 
   els.bubbleHost.innerHTML = `
@@ -645,6 +743,7 @@ function render(){
       ${(greet&&body) ? '<div style="height:8px"></div>' : ''}
       ${bodyHtml}
       ${tvHtml}
+      ${footerHtml}
       ${tagsHtml}
       <div class="meta">${time} ✓✓</div>
     </div>
@@ -684,7 +783,8 @@ function buildCaption(lang){
   if (greet){ lines.push(greet); lines.push(''); }
   if (body) { lines.push(body);  lines.push(''); }
   if (tv)   { lines.push(`${lang==='ru'?'График':'Chart'}: ${tv}`); lines.push(''); }
-  if (link) { lines.push(`${lang==='ru'?'Веб':'Web'}: ${link}`); lines.push(''); }
+  const footer = footerText(lang);
+  if (footer) { lines.push(footer); lines.push(''); }
   if (tags) { lines.push(tags); }
   return lines.join('\n').replace(/\n{3,}/g,'\n\n').trim();
 }
