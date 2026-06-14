@@ -15,6 +15,7 @@ body{background-color:#f5f2eb;font-family:'Courier New',Courier,monospace;color:
 header{position:relative;text-align:center;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid #000}
 header h2{font-size:14px;letter-spacing:4px;font-weight:bold;margin-bottom:8px}
 header h1{font-size:18px;letter-spacing:3px;font-weight:bold}
+.header-actions{display:contents}
 .members-link{position:absolute;left:0;top:50%;transform:translateY(-50%);font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;color:#000;text-decoration:none;border:1px solid #000;padding:5px 12px}
 .members-link:hover{background:#000;color:#f5f2eb}
 .header-right{position:absolute;right:0;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:10px}
@@ -164,13 +165,15 @@ a.card{text-decoration:none;color:#000}
 <header>
 <h2><a href="/" style="color:#000;text-decoration:none">— BELFED_ —</a></h2>
 <h1 data-i18n="title">— BELFED ANALYTICS —</h1>
-<a href="/members.html" class="members-link" data-i18n="navCabinet">&larr; КАБИНЕТ</a>
-<div class="header-right">
-  <div class="lang-switch">
-    <button id="langRu" class="active" onclick="setLang('ru')">RU</button>
-    <button id="langEn" onclick="setLang('en')">EN</button>
+<div class="header-actions">
+  <a href="/members.html" class="members-link" data-i18n="navCabinet">&larr; КАБИНЕТ</a>
+  <div class="header-right">
+    <div class="lang-switch">
+      <button id="langRu" class="active" onclick="setLang('ru')">RU</button>
+      <button id="langEn" onclick="setLang('en')">EN</button>
+    </div>
+    <button class="logout-btn" onclick="handleLogout()" data-i18n="navLogout">ВЫЙТИ</button>
   </div>
-  <button class="logout-btn" onclick="handleLogout()" data-i18n="navLogout">ВЫЙТИ</button>
 </div>
 </header>
 
