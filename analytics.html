@@ -9,7 +9,8 @@
 <script src="belfed-auth.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{background-color:#f5f2eb;font-family:'Courier New',Courier,monospace;color:#000;padding:24px 20px;line-height:1.6;font-size:14px;visibility:hidden}
+html{overflow-x:hidden}
+body{background-color:#f5f2eb;font-family:'Courier New',Courier,monospace;color:#000;padding:24px 20px;line-height:1.6;font-size:14px;visibility:hidden;overflow-x:hidden}
 .container{max-width:1200px;margin:0 auto}
 header{position:relative;text-align:center;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid #000}
 header h2{font-size:14px;letter-spacing:4px;font-weight:bold;margin-bottom:8px}
@@ -135,9 +136,11 @@ a.card{text-decoration:none;color:#000}
   .sub-nav a{font-size:11px;letter-spacing:1px;padding:9px 10px}
   .cards-grid{grid-template-columns:1fr}
   .seg{gap:26px;justify-content:flex-start}
-  .tl-bar{flex-direction:column;align-items:stretch;gap:14px;margin-bottom:20px}
-  .tl-filter{gap:14px 18px;overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;padding-bottom:8px}
-  .tl-filter button{white-space:nowrap}
+  .tl-bar{flex-direction:column;align-items:stretch;gap:14px;margin-bottom:20px;width:100%;min-width:0}
+  .tl-filter{display:flex;flex-wrap:nowrap;gap:0;width:100%;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;padding-bottom:8px;scrollbar-width:none;-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 22px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 22px),transparent)}
+  .tl-filter::-webkit-scrollbar{display:none}
+  .tl-filter button{white-space:nowrap;flex:0 0 auto;letter-spacing:1.5px;padding:2px 12px 2px 0;scroll-snap-align:start}
+  .tl-filter button:first-child{padding-left:0}
   .tl-search{width:100%}
   .tl-search input{width:100%}
   .tl{padding-left:18px;margin-left:2px}
