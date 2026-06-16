@@ -683,6 +683,7 @@ function showToast(msg) {
 // Supports:
 //   /analysis/<ticker>/<slug>          (path-based, requires server-side rewrite)
 //   ?slug=<slug>&ticker=<ticker>       (query-based, used by 404.html SPA shim on GitHub Pages)
+//   ?post=<slug>                       (legacy DM link format, kept for backwards-compat)
 //   #<slug>                            (hash-based fallback)
 // Returns: { slug: string, ticker: string|null } or null
 function parsePermalink() {
@@ -693,6 +694,10 @@ function parsePermalink() {
   var qs = new URLSearchParams(location.search);
   if (qs.get('slug')) {
     return { slug: qs.get('slug'), ticker: (qs.get('ticker') || '').toUpperCase() || null };
+  }
+  // 2b. Legacy DM link format: ?post=<slug> (kept for backwards-compat with already-sent DMs)
+  if (qs.get('post')) {
+    return { slug: qs.get('post'), ticker: (qs.get('ticker') || '').toUpperCase() || null };
   }
   // 3. Hash-based: #<slug>
   if (location.hash && location.hash.length > 1) {
