@@ -1,4 +1,8 @@
-// trial-bot-reminders v4 — staged trial reminders at T-5 / T-3 / T-1 days
+// trial-bot-reminders v6 — staged trial reminders at T-5 / T-3 / T-1 days
+//
+// v6: Founding-Member CTA is now an inline keyboard button (⭐) under the
+//     message on every stage; the public track-record link appears only on
+//     the final (T-1) reminder.
 //
 // Reads public.users_for_trial_reminder_staged (one row per due stage),
 // sends the matching bilingual DM with a Telegram-native Tribute payment link,
@@ -41,11 +45,24 @@ function json(data: unknown, status = 200): Response {
   });
 }
 
-async function sendTg(chatId: number | string, text: string): Promise<{ ok: boolean; error?: string }> {
+async function sendTg(
+  chatId: number | string,
+  text: string,
+  button?: { text: string; url: string },
+): Promise<{ ok: boolean; error?: string }> {
+  const payload: Record<string, unknown> = {
+    chat_id: chatId,
+    text,
+    parse_mode: "Markdown",
+    disable_web_page_preview: true,
+  };
+  if (button) {
+    payload.reply_markup = { inline_keyboard: [[{ text: button.text, url: button.url }]] };
+  }
   const r = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown", disable_web_page_preview: true }),
+    body: JSON.stringify(payload),
   });
   const j = await r.json().catch(() => ({ ok: false }));
   if (!j.ok) return { ok: false, error: j.description || "tg error" };
@@ -62,66 +79,70 @@ function fmtDate(iso: string, lang: "ru" | "en"): string {
 // ─── Message texts ───────────────────────────────────────────────
 // T-5: soft heads-up + founding offer. T-3: value reminder. T-1: last-chance urgency.
 
-function msgD5(lang: "ru" | "en", link: string, ends: string): string {
-  if (lang === "en") return (
-    "\u23f3 Your BelFed trial ends on *" + ends + "* (in 5 days).\n\n" +
-    "Stay ahead of the markets with us. As a thank-you to our earliest subscribers, " +
-    "we've opened *50 exclusive Founding Member seats*: a lifetime 30% discount \u2014 *$10.50/mo*, " +
-    "x3 priority asset requests per day, and priority processing.\n\n" +
-    `\ud83d\udcca [See our trade track record \u2192](${STATS_LINK_EN})\n\n` +
-    `[Become a Founding Member \u2192](${link})`
-  );
-  return (
-    "\u23f3 \u0412\u0430\u0448 \u043f\u0440\u043e\u0431\u043d\u044b\u0439 \u0434\u043e\u0441\u0442\u0443\u043f \u043a BelFed \u0437\u0430\u043a\u0430\u043d\u0447\u0438\u0432\u0430\u0435\u0442\u0441\u044f *" + ends + "* (\u0447\u0435\u0440\u0435\u0437 5 \u0434\u043d\u0435\u0439).\n\n" +
-    "\u041e\u043f\u0435\u0440\u0435\u0436\u0430\u0439\u0442\u0435 \u0440\u044b\u043d\u043a\u0438 \u0432\u043c\u0435\u0441\u0442\u0435 \u0441 \u043d\u0430\u043c\u0438. \u0412 \u0437\u043d\u0430\u043a \u0431\u043b\u0430\u0433\u043e\u0434\u0430\u0440\u043d\u043e\u0441\u0442\u0438 \u043d\u0430\u0448\u0438\u043c \u043f\u0435\u0440\u0432\u044b\u043c \u043f\u043e\u0434\u043f\u0438\u0441\u0447\u0438\u043a\u0430\u043c \u043c\u044b \u0432\u044b\u0434\u0435\u043b\u0438\u043b\u0438 *50 \u044d\u043a\u0441\u043a\u043b\u044e\u0437\u0438\u0432\u043d\u044b\u0445 \u043c\u0435\u0441\u0442 Founding Member*: " +
-    "\u043f\u043e\u0436\u0438\u0437\u043d\u0435\u043d\u043d\u0430\u044f \u0441\u043a\u0438\u0434\u043a\u0430 30% \u2014 *1 050 \u20bd/\u043c\u0435\u0441*, x3 \u043f\u0440\u0438\u043e\u0440\u0438\u0442\u0435\u0442\u043d\u044b\u0445 \u0437\u0430\u043f\u0440\u043e\u0441\u0430 \u043d\u0430 \u0430\u043d\u0430\u043b\u0438\u0437 \u0430\u043a\u0442\u0438\u0432\u043e\u0432 \u0432 \u0434\u0435\u043d\u044c \u0438 \u043f\u0440\u0438\u043e\u0440\u0438\u0442\u0435\u0442 \u0432 \u0438\u0445 \u043e\u0431\u0440\u0430\u0431\u043e\u0442\u043a\u0435.\n\n" +
-    `\ud83d\udcca [\u0421\u043c\u043e\u0442\u0440\u0435\u0442\u044c \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0443 \u043d\u0430\u0448\u0438\u0445 \u0441\u0434\u0435\u043b\u043e\u043a \u2192](${STATS_LINK_RU})\n\n` +
-    `[\u0421\u0442\u0430\u0442\u044c Founding Member \u2192](${link})`
-  );
+type Msg = { text: string; btnText: string };
+
+function msgD5(lang: "ru" | "en", ends: string): Msg {
+  if (lang === "en") return {
+    text:
+      "\u23f3 Your BelFed trial ends on *" + ends + "* (in 5 days).\n\n" +
+      "Stay ahead of the markets with us. As a thank-you to our earliest subscribers, " +
+      "we've opened *50 exclusive Founding Member seats*: a lifetime 30% discount \u2014 *$10.50/mo*, " +
+      "x3 priority asset requests per day, and priority processing.",
+    btnText: "\u2b50 Become a Founding Member",
+  };
+  return {
+    text:
+      "\u23f3 \u0412\u0430\u0448 \u043f\u0440\u043e\u0431\u043d\u044b\u0439 \u0434\u043e\u0441\u0442\u0443\u043f \u043a BelFed \u0437\u0430\u043a\u0430\u043d\u0447\u0438\u0432\u0430\u0435\u0442\u0441\u044f *" + ends + "* (\u0447\u0435\u0440\u0435\u0437 5 \u0434\u043d\u0435\u0439).\n\n" +
+      "\u041e\u043f\u0435\u0440\u0435\u0436\u0430\u0439\u0442\u0435 \u0440\u044b\u043d\u043a\u0438 \u0432\u043c\u0435\u0441\u0442\u0435 \u0441 \u043d\u0430\u043c\u0438. \u0412 \u0437\u043d\u0430\u043a \u0431\u043b\u0430\u0433\u043e\u0434\u0430\u0440\u043d\u043e\u0441\u0442\u0438 \u043d\u0430\u0448\u0438\u043c \u043f\u0435\u0440\u0432\u044b\u043c \u043f\u043e\u0434\u043f\u0438\u0441\u0447\u0438\u043a\u0430\u043c \u043c\u044b \u0432\u044b\u0434\u0435\u043b\u0438\u043b\u0438 *50 \u044d\u043a\u0441\u043a\u043b\u044e\u0437\u0438\u0432\u043d\u044b\u0445 \u043c\u0435\u0441\u0442 Founding Member*: " +
+      "\u043f\u043e\u0436\u0438\u0437\u043d\u0435\u043d\u043d\u0430\u044f \u0441\u043a\u0438\u0434\u043a\u0430 30% \u2014 *1 050 \u20bd/\u043c\u0435\u0441*, x3 \u043f\u0440\u0438\u043e\u0440\u0438\u0442\u0435\u0442\u043d\u044b\u0445 \u0437\u0430\u043f\u0440\u043e\u0441\u0430 \u043d\u0430 \u0430\u043d\u0430\u043b\u0438\u0437 \u0430\u043a\u0442\u0438\u0432\u043e\u0432 \u0432 \u0434\u0435\u043d\u044c \u0438 \u043f\u0440\u0438\u043e\u0440\u0438\u0442\u0435\u0442 \u0432 \u0438\u0445 \u043e\u0431\u0440\u0430\u0431\u043e\u0442\u043a\u0435.",
+    btnText: "\u2b50 \u0421\u0442\u0430\u0442\u044c Founding Member",
+  };
 }
 
-function msgD3(lang: "ru" | "en", link: string, ends: string): string {
-  if (lang === "en") return (
-    "\ud83d\udccc Your BelFed trial ends on *" + ends + "* (in 3 days).\n\n" +
-    "What early users lock in forever:\n" +
-    "\u2022 30% lifetime discount \u2014 *$10.50/mo*\n" +
-    "\u2022 3 priority asset requests per day\n" +
-    "\u2022 Account pause (up to 60 days)\n\n" +
-    "Only 50 seats \u2014 and they're going fast. Claim yours.\n\n" +
-    `\ud83d\udcca [See our trade track record \u2192](${STATS_LINK_EN})\n\n` +
-    `[Claim your seat \u2192](${link})`
-  );
-  return (
-    "\ud83d\udccc \u0412\u0430\u0448 \u043f\u0440\u043e\u0431\u043d\u044b\u0439 \u0434\u043e\u0441\u0442\u0443\u043f \u043a BelFed \u0437\u0430\u043a\u0430\u043d\u0447\u0438\u0432\u0430\u0435\u0442\u0441\u044f *" + ends + "* (\u0447\u0435\u0440\u0435\u0437 3 \u0434\u043d\u044f).\n\n" +
-    "\u0427\u0442\u043e \u0440\u0430\u043d\u043d\u0438\u0435 \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0438 \u0444\u0438\u043a\u0441\u0438\u0440\u0443\u044e\u0442 \u0437\u0430 \u0441\u043e\u0431\u043e\u0439 \u043d\u0430\u0432\u0441\u0435\u0433\u0434\u0430:\n" +
-    "\u2022 \u0421\u043a\u0438\u0434\u043a\u0443 30% \u2014 *1 050 \u20bd/\u043c\u0435\u0441*\n" +
-    "\u2022 3 \u043f\u0440\u0438\u043e\u0440\u0438\u0442\u0435\u0442\u043d\u044b\u0445 \u0437\u0430\u043f\u0440\u043e\u0441\u0430 \u043d\u0430 \u0430\u043d\u0430\u043b\u0438\u0437 \u0430\u043a\u0442\u0438\u0432\u043e\u0432 \u0432 \u0434\u0435\u043d\u044c\n" +
-    "\u2022 \u0417\u0430\u043c\u043e\u0440\u043e\u0437\u043a\u0430 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430 \u0434\u043e 60 \u0434\u043d\u0435\u0439\n\n" +
-    "\u041c\u0435\u0441\u0442 \u043d\u0435\u043c\u043d\u043e\u0433\u043e \u2014 50 \u043d\u0430 \u0432\u0441\u0435\u0445. \u0423\u0441\u043f\u0435\u0439\u0442\u0435 \u0437\u0430\u043d\u044f\u0442\u044c \u0441\u0432\u043e\u0451.\n\n" +
-    `\ud83d\udcca [\u0421\u043c\u043e\u0442\u0440\u0435\u0442\u044c \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0443 \u043d\u0430\u0448\u0438\u0445 \u0441\u0434\u0435\u043b\u043e\u043a \u2192](${STATS_LINK_RU})\n\n` +
-    `[\u0417\u0430\u0431\u0440\u0430\u0442\u044c \u043c\u0435\u0441\u0442\u043e \u2192](${link})`
-  );
+function msgD3(lang: "ru" | "en", ends: string): Msg {
+  if (lang === "en") return {
+    text:
+      "\ud83d\udccc Your BelFed trial ends on *" + ends + "* (in 3 days).\n\n" +
+      "What early users lock in forever:\n" +
+      "\u2022 30% lifetime discount \u2014 *$10.50/mo*\n" +
+      "\u2022 3 priority asset requests per day\n" +
+      "\u2022 Account pause (up to 60 days)\n\n" +
+      "Only 50 seats \u2014 and they're going fast. Claim yours.",
+    btnText: "\u2b50 Become a Founding Member",
+  };
+  return {
+    text:
+      "\ud83d\udccc \u0412\u0430\u0448 \u043f\u0440\u043e\u0431\u043d\u044b\u0439 \u0434\u043e\u0441\u0442\u0443\u043f \u043a BelFed \u0437\u0430\u043a\u0430\u043d\u0447\u0438\u0432\u0430\u0435\u0442\u0441\u044f *" + ends + "* (\u0447\u0435\u0440\u0435\u0437 3 \u0434\u043d\u044f).\n\n" +
+      "\u0427\u0442\u043e \u0440\u0430\u043d\u043d\u0438\u0435 \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0438 \u0444\u0438\u043a\u0441\u0438\u0440\u0443\u044e\u0442 \u0437\u0430 \u0441\u043e\u0431\u043e\u0439 \u043d\u0430\u0432\u0441\u0435\u0433\u0434\u0430:\n" +
+      "\u2022 \u0421\u043a\u0438\u0434\u043a\u0443 30% \u2014 *1 050 \u20bd/\u043c\u0435\u0441*\n" +
+      "\u2022 3 \u043f\u0440\u0438\u043e\u0440\u0438\u0442\u0435\u0442\u043d\u044b\u0445 \u0437\u0430\u043f\u0440\u043e\u0441\u0430 \u043d\u0430 \u0430\u043d\u0430\u043b\u0438\u0437 \u0430\u043a\u0442\u0438\u0432\u043e\u0432 \u0432 \u0434\u0435\u043d\u044c\n" +
+      "\u2022 \u0417\u0430\u043c\u043e\u0440\u043e\u0437\u043a\u0430 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430 \u0434\u043e 60 \u0434\u043d\u0435\u0439\n\n" +
+      "\u041c\u0435\u0441\u0442 \u043d\u0435\u043c\u043d\u043e\u0433\u043e \u2014 50 \u043d\u0430 \u0432\u0441\u0435\u0445. \u0423\u0441\u043f\u0435\u0439\u0442\u0435 \u0437\u0430\u043d\u044f\u0442\u044c \u0441\u0432\u043e\u0451.",
+    btnText: "\u2b50 \u0421\u0442\u0430\u0442\u044c Founding Member",
+  };
 }
 
-function msgD1(lang: "ru" | "en", link: string, ends: string): string {
-  if (lang === "en") return (
-    "\ud83d\udd14 Your BelFed trial ends *tomorrow* (" + ends + "). Access to analytics and trading setups closes after that.\n\n" +
-    "Only a few of the 50 exclusive Founding Member seats remain at *$10.50/mo*, locked in for life. Secure yours now to keep your early-user privileges.\n\n" +
-    `\ud83d\udcca [See our trade track record \u2192](${STATS_LINK_EN})\n\n` +
-    `[Upgrade to Founding Member \u2192](${link})`
-  );
-  return (
-    "\ud83d\udd14 \u0412\u0430\u0448 \u043f\u0440\u043e\u0431\u043d\u044b\u0439 \u0434\u043e\u0441\u0442\u0443\u043f \u043a BelFed \u0437\u0430\u043a\u0430\u043d\u0447\u0438\u0432\u0430\u0435\u0442\u0441\u044f *\u0437\u0430\u0432\u0442\u0440\u0430* (" + ends + "). \u041f\u043e\u0441\u043b\u0435 \u044d\u0442\u043e\u0433\u043e \u0434\u043e\u0441\u0442\u0443\u043f \u043a \u0430\u043d\u0430\u043b\u0438\u0442\u0438\u043a\u0435 \u0438 \u0442\u043e\u0440\u0433\u043e\u0432\u044b\u043c \u0441\u0435\u0442\u0430\u043f\u0430\u043c \u0437\u0430\u043a\u0440\u043e\u0435\u0442\u0441\u044f.\n\n" +
-    "\u041e\u0441\u0442\u0430\u043b\u043e\u0441\u044c \u043d\u0435\u0441\u043a\u043e\u043b\u044c\u043a\u043e \u0438\u0437 50 \u044d\u043a\u0441\u043a\u043b\u044e\u0437\u0438\u0432\u043d\u044b\u0445 \u043c\u0435\u0441\u0442 Founding Member \u2014 *1 050 \u20bd/\u043c\u0435\u0441* \u043f\u043e\u0436\u0438\u0437\u043d\u0435\u043d\u043d\u043e. \u0417\u0430\u0431\u0440\u043e\u043d\u0438\u0440\u0443\u0439\u0442\u0435 \u0441\u0432\u043e\u0451 \u0441\u0435\u0439\u0447\u0430\u0441, \u0447\u0442\u043e\u0431\u044b \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043f\u0440\u0438\u0432\u0438\u043b\u0435\u0433\u0438\u0438 \u0440\u0430\u043d\u043d\u0435\u0433\u043e \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f.\n\n" +
-    `\ud83d\udcca [\u0421\u043c\u043e\u0442\u0440\u0435\u0442\u044c \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0443 \u043d\u0430\u0448\u0438\u0445 \u0441\u0434\u0435\u043b\u043e\u043a \u2192](${STATS_LINK_RU})\n\n` +
-    `[\u041f\u0435\u0440\u0435\u0439\u0442\u0438 \u043d\u0430 Founding Member \u2192](${link})`
-  );
+function msgD1(lang: "ru" | "en", ends: string): Msg {
+  if (lang === "en") return {
+    text:
+      "\ud83d\udd14 Your BelFed trial ends *tomorrow* (" + ends + "). Access to analytics and trading setups closes after that.\n\n" +
+      "Only a few of the 50 exclusive Founding Member seats remain at *$10.50/mo*, locked in for life. Secure yours now to keep your early-user privileges.\n\n" +
+      `\ud83d\udcca [See our trade track record \u2192](${STATS_LINK_EN})`,
+    btnText: "\u2b50 Become a Founding Member",
+  };
+  return {
+    text:
+      "\ud83d\udd14 \u0412\u0430\u0448 \u043f\u0440\u043e\u0431\u043d\u044b\u0439 \u0434\u043e\u0441\u0442\u0443\u043f \u043a BelFed \u0437\u0430\u043a\u0430\u043d\u0447\u0438\u0432\u0430\u0435\u0442\u0441\u044f *\u0437\u0430\u0432\u0442\u0440\u0430* (" + ends + "). \u041f\u043e\u0441\u043b\u0435 \u044d\u0442\u043e\u0433\u043e \u0434\u043e\u0441\u0442\u0443\u043f \u043a \u0430\u043d\u0430\u043b\u0438\u0442\u0438\u043a\u0435 \u0438 \u0442\u043e\u0440\u0433\u043e\u0432\u044b\u043c \u0441\u0435\u0442\u0430\u043f\u0430\u043c \u0437\u0430\u043a\u0440\u043e\u0435\u0442\u0441\u044f.\n\n" +
+      "\u041e\u0441\u0442\u0430\u043b\u043e\u0441\u044c \u043d\u0435\u0441\u043a\u043e\u043b\u044c\u043a\u043e \u0438\u0437 50 \u044d\u043a\u0441\u043a\u043b\u044e\u0437\u0438\u0432\u043d\u044b\u0445 \u043c\u0435\u0441\u0442 Founding Member \u2014 *1 050 \u20bd/\u043c\u0435\u0441* \u043f\u043e\u0436\u0438\u0437\u043d\u0435\u043d\u043d\u043e. \u0417\u0430\u0431\u0440\u043e\u043d\u0438\u0440\u0443\u0439\u0442\u0435 \u0441\u0432\u043e\u0451 \u0441\u0435\u0439\u0447\u0430\u0441, \u0447\u0442\u043e\u0431\u044b \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043f\u0440\u0438\u0432\u0438\u043b\u0435\u0433\u0438\u0438 \u0440\u0430\u043d\u043d\u0435\u0433\u043e \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f.\n\n" +
+      `\ud83d\udcca [\u0421\u043c\u043e\u0442\u0440\u0435\u0442\u044c \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0443 \u043d\u0430\u0448\u0438\u0445 \u0441\u0434\u0435\u043b\u043e\u043a \u2192](${STATS_LINK_RU})`,
+    btnText: "\u2b50 \u041f\u0435\u0440\u0435\u0439\u0442\u0438 \u043d\u0430 Founding Member",
+  };
 }
 
-function buildMsg(stage: number, lang: "ru" | "en", link: string, ends: string): string {
-  if (stage === 5) return msgD5(lang, link, ends);
-  if (stage === 3) return msgD3(lang, link, ends);
-  return msgD1(lang, link, ends);
+function buildMsg(stage: number, lang: "ru" | "en", ends: string): Msg {
+  if (stage === 5) return msgD5(lang, ends);
+  if (stage === 3) return msgD3(lang, ends);
+  return msgD1(lang, ends);
 }
 
 // ─── Main handler ───────────────────────────────────────────────
@@ -142,7 +163,8 @@ Deno.serve(async (req: Request) => {
     const lang = forceLang ?? "ru";
     const link = lang === "en" ? FM_LINK_EN : FM_LINK_RU;
     const ends = fmtDate(new Date(Date.now() + forceStage * 86400000).toISOString(), lang);
-    const res = await sendTg(forceTgId, buildMsg(forceStage, lang, link, ends));
+    const m = buildMsg(forceStage, lang, ends);
+    const res = await sendTg(forceTgId, m.text, { text: m.btnText, url: link });
     return json({ ok: res.ok, stage: forceStage, lang, link, error: res.error });
   }
 
@@ -158,7 +180,8 @@ Deno.serve(async (req: Request) => {
     const link = lang === "en" ? FM_LINK_EN : FM_LINK_RU;
     const ends = fmtDate(row.trial_end as string, lang);
     const stage = Number(row.stage);
-    const res = await sendTg(row.telegram_id as string, buildMsg(stage, lang, link, ends));
+    const m = buildMsg(stage, lang, ends);
+    const res = await sendTg(row.telegram_id as string, m.text, { text: m.btnText, url: link });
     if (res.ok) {
       await admin.from("profiles")
         .update({ [SENT_COL[stage]]: new Date().toISOString() })
