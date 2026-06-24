@@ -888,9 +888,19 @@ function renderReqQuota(used, limit, paid) {
 function renderReqList(reqs) {
   var wrap = document.getElementById('reqListWrap');
   var list = document.getElementById('reqList');
-  if (!reqs || !reqs.length) { wrap.style.display = 'none'; list.innerHTML = ''; return; }
+  // Показываем в "// МОИ ЗАПРОСЫ" только заявки за последние 7 дней.
+  // Более старые остаются в базе (видны в админке), но скрыты из
+  // пользовательской панели — список не разрастается.
+  var SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+  var cutoff = Date.now() - SEVEN_DAYS_MS;
+  var recent = (reqs || []).filter(function(r) {
+    if (!r || !r.created_at) return false;
+    var t = new Date(r.created_at).getTime();
+    return isFinite(t) && t >= cutoff;
+  });
+  if (!recent.length) { wrap.style.display = 'none'; list.innerHTML = ''; return; }
   wrap.style.display = 'block';
-  list.innerHTML = reqs.slice(0, 5).map(function(r) {
+  list.innerHTML = recent.slice(0, 5).map(function(r) {
     var link = '';
     if (r.status === 'fulfilled' && r.fulfilled_by_post_id) {
       link = ' <a href="#post-' + escapeHtml(r.fulfilled_by_post_id) + '" style="font-size:10px;text-decoration:underline;color:#000;letter-spacing:0">[СМОТРЕТЬ]</a>';
