@@ -1557,22 +1557,32 @@
     document.body.style.overflow = 'hidden';
   }
   function closeModal(m) {
+    if (!m) return;
     m.classList.remove('open');
     m.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
   }
-  document.querySelectorAll('[data-modal-open]').forEach(function (b) {
-    b.addEventListener('click', function () { openModal(b.dataset.modalOpen + 'Modal'); });
-  });
-  document.querySelectorAll('.modal-backdrop').forEach(function (bk) {
-    bk.addEventListener('click', function (e) {
-      if (e.target === bk || e.target.closest('[data-modal-close]')) closeModal(bk);
+  function initModals() {
+    document.querySelectorAll('[data-modal-open]').forEach(function (b) {
+      if (b.__modalBound) return; b.__modalBound = 1;
+      b.addEventListener('click', function () { openModal(b.dataset.modalOpen + 'Modal'); });
     });
-    // Автозакрытие модалки при клике по любой внешней ссылке внутри
-    bk.querySelectorAll('a[href]').forEach(function (a) {
-      a.addEventListener('click', function () { closeModal(bk); });
+    document.querySelectorAll('.modal-backdrop').forEach(function (bk) {
+      if (bk.__modalBound) return; bk.__modalBound = 1;
+      bk.addEventListener('click', function (e) {
+        if (e.target === bk || e.target.closest('[data-modal-close]')) closeModal(bk);
+      });
+      // Автозакрытие при клике по любой ссылке внутри (вкл. target=_blank)
+      bk.querySelectorAll('a[href]').forEach(function (a) {
+        a.addEventListener('click', function () { closeModal(bk); });
+      });
     });
-  });
+  }
+  // DOM может быть ещё не разобран когда этот inline-скрипт выполняется — биндим дважды для надёжности.
+  initModals();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initModals);
+  }
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') document.querySelectorAll('.modal-backdrop.open').forEach(closeModal);
   });
