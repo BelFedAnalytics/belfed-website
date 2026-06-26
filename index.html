@@ -168,6 +168,23 @@
     .btn-ghost { background: transparent; color: var(--ink); border-color: var(--rule-strong); }
     .btn-ghost:hover { border-color: var(--black); color: var(--black); }
     .btn-sm { padding: 8px 14px; font-size: 11px; }
+    .btn-track {
+      background: var(--green-strong); color: var(--white);
+      border-color: var(--green-strong);
+      padding: 16px 28px; font-size: 13px;
+      box-shadow: 0 4px 18px #1a6b3a1f;
+    }
+    .btn-track:hover {
+      background: var(--black); border-color: var(--black); color: var(--white);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 28px #1a6b3a33;
+    }
+    .btn-track .arrow { display: inline-block; margin-left: 8px; transition: transform .2s ease; }
+    .btn-track:hover .arrow { transform: translateX(4px); }
+    .track-cta-wrap {
+      margin-top: 28px; display: flex; justify-content: center;
+      padding-top: 28px; border-top: 1px dashed var(--rule-strong);
+    }
 
     /* HERO */
     .hero {
@@ -887,7 +904,7 @@
   <ul class="nav-links" role="list">
     <li><a href="#tour" data-spy="tour">Что вы получаете</a></li>
     <li><a href="#how" data-spy="how">Как это работает</a></li>
-    <li><a href="https://belfed.com/trades.html" target="_blank" rel="noopener">История сделок ↗</a></li>
+    <li><a href="/ru/trades.html" target="_blank" rel="noopener">История сделок ↗</a></li>
     <li><a href="#pricing" data-spy="pricing">Тарифы</a></li>
     <li><a href="#faq" data-spy="faq">FAQ</a></li>
   </ul>
@@ -918,7 +935,7 @@
         <p class="hero-sub">Ежедневная аналитика и торговые возможности на мировых рынках акций, криптовалют и биржевых товаров.<br><br>Вся информация в удобном личном кабинете, по email и в Telegram.</p>
         <div class="hero-cta">
           <a href="#pricing" class="btn btn-primary">Начать 14-дневный бесплатный доступ →</a>
-          <a href="https://belfed.com/trades.html" target="_blank" rel="noopener" class="btn btn-ghost">Смотреть публичную историю сделок</a>
+          <a href="/ru/trades.html" target="_blank" rel="noopener" class="btn btn-ghost">Смотреть публичную историю сделок</a>
         </div>
         <div class="hero-trust">
           <span><span class="ck">✓</span> 14 дней бесплатного доступа без карты</span>
@@ -1000,7 +1017,11 @@
       <span class="dot-live"></span>
       <span>Статистика обновляется автоматически в момент закрытия новой сделки.</span>
       <span class="auto-beam" aria-hidden="true"></span>
-      <a href="https://belfed.com/trades.html" target="_blank" rel="noopener" style="color:var(--green-strong);">Полная история сделок →</a>
+    </div>
+    <div class="track-cta-wrap">
+      <a href="/ru/trades.html" target="_blank" rel="noopener" class="btn btn-track">
+        Полная история сделок <span class="arrow">→</span>
+      </a>
     </div>
     <div class="record-foot" style="margin-top:18px;border-top:none;padding-top:0;">
       <span>// Каждый вход, выход и результат публикуются открыто с 2025.</span>
@@ -1405,7 +1426,7 @@
     <p>Присоединяйтесь к инвесторам и трейдерам, которые используют Belfed для ежедневного рыночного контекста и торговых возможностей, которые действительно важны.</p>
     <div class="cta-group">
       <a href="#pricing" class="btn btn-primary">Получить бесплатный доступ →</a>
-      <a href="https://belfed.com/trades.html" target="_blank" rel="noopener" class="btn btn-ghost">Смотреть публичную историю сделок</a>
+      <a href="/ru/trades.html" target="_blank" rel="noopener" class="btn btn-ghost">Смотреть публичную историю сделок</a>
     </div>
   </div>
 </section>
@@ -1420,7 +1441,7 @@
       </div>
       <div class="foot-col">
         <h5>Продукт</h5>
-        <ul><li><a href="#tour">Что вы получаете</a></li><li><a href="#how">Как это работает</a></li><li><a href="#pricing">Тарифы</a></li><li><a href="https://belfed.com/trades.html" target="_blank" rel="noopener">История сделок</a></li><li><a href="#free-analysis">Бесплатный анализ</a></li></ul>
+        <ul><li><a href="#tour">Что вы получаете</a></li><li><a href="#how">Как это работает</a></li><li><a href="#pricing">Тарифы</a></li><li><a href="/ru/trades.html" target="_blank" rel="noopener">История сделок</a></li><li><a href="#free-analysis">Бесплатный анализ</a></li></ul>
       </div>
       <div class="foot-col">
         <h5>Сообщество</h5>
