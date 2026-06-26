@@ -1,13 +1,1889 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="light">
 <head>
-<meta charset="UTF-8">
-<meta http-equiv="refresh" content="0; url=/ru/">
-<link rel="canonical" href="https://belfed.ru/ru/">
-<title>BelFed Analytics</title>
-<script>window.location.replace('/ru/');</script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Belfed — независимая рыночная аналитика и торговые идеи</title>
+  <meta name="description" content="Belfed — независимая глобальная инвестиционно-аналитическая компания. Ежедневная и еженедельная рыночная аналитика, торговые идеи и публичный трек-рекорд по акциям, криптовалютам, форексу и сырью. 14 дней пробного — без карты." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font-mono: 'Courier Prime', 'Courier New', ui-monospace, monospace;
+      /* Unified mono identity: all body prose also uses Courier Prime.
+         --font-sans is kept as an alias so we can reverse later without rewrites. */
+      --font-sans: 'Courier Prime', 'Courier New', ui-monospace, monospace;
+      --font-inter: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+      /* Belfed brand — light */
+      --white: #f5f5f0;          /* warm cream */
+      --paper: #efefe7;          /* slightly darker surface */
+      --paper-2: #e7e7dd;
+      --rule: #1a1a1a14;          /* hairline */
+      --rule-strong: #1a1a1a26;
+      --black: #0a0a0a;
+      --ink: #161614;
+      --ink-2: #2a2a26;
+      --gray: #888888;
+      --gray-soft: #6b6b6b;
+      --gray-faint: #b3b3a8;
+
+      --green: #1a6b3a;
+      --green-soft: #1a6b3a14;
+      --green-strong: #14542d;
+      --red: #8b1a1a;
+      --gold: #b8860b;
+
+      --shadow-soft: 0 1px 0 #1a1a1a0d, 0 8px 24px #1a1a1a0a;
+      --shadow-frame: 0 1px 0 #1a1a1a14, 0 12px 40px #1a1a1a12;
+      --glow: 0 0 0 1px #1a6b3a1f, 0 16px 60px #1a6b3a14;
+
+      --radius: 4px;
+      --radius-lg: 8px;
+
+      --maxw: 1240px;
+      --maxw-narrow: 920px;
+
+      --t: 200ms cubic-bezier(.2,.7,.2,1);
+    }
+
+    [data-theme="dark"] {
+      --white: #0d0d0a;
+      --paper: #131310;
+      --paper-2: #1a1a16;
+      --rule: #ffffff14;
+      --rule-strong: #ffffff26;
+      --black: #f1f1ea;
+      --ink: #e5e5dc;
+      --ink-2: #c9c9bf;
+      --gray: #8a8a82;
+      --gray-soft: #a3a39a;
+      --gray-faint: #4a4a44;
+      --green: #2fa05a;
+      --green-soft: #2fa05a1f;
+      --green-strong: #46c277;
+      --red: #d65a5a;
+      --gold: #d6a020;
+      --shadow-soft: 0 1px 0 #00000040, 0 8px 24px #00000040;
+      --shadow-frame: 0 1px 0 #00000060, 0 12px 40px #00000060;
+      --glow: 0 0 0 1px #2fa05a33, 0 16px 60px #2fa05a1a;
+    }
+
+    *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; scroll-padding-top: 72px; -webkit-font-smoothing: antialiased; }
+    body {
+      font-family: var(--font-mono);
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--ink);
+      background: var(--white);
+      transition: background var(--t), color var(--t);
+    }
+    img, svg, video { display: block; max-width: 100%; height: auto; }
+    a { color: inherit; text-decoration: none; }
+    button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+    input, textarea, select { font: inherit; color: inherit; }
+    ::selection { background: var(--green); color: var(--white); }
+    :focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
+
+    .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 28px; }
+    .wrap-narrow { max-width: var(--maxw-narrow); margin: 0 auto; padding: 0 28px; }
+
+    /* Section label */
+    .label {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--gray);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 14px;
+      display: inline-block;
+    }
+    .label::before { content: "// "; color: var(--gray-faint); }
+
+    /* Display type — uses mono for headlines too, matching belfed.com */
+    h1, h2, h3, h4 { font-family: var(--font-mono); font-weight: 700; color: var(--black); letter-spacing: -0.01em; line-height: 1.15; text-wrap: balance; }
+    h1 { font-size: clamp(34px, 5.4vw, 64px); line-height: 1.05; letter-spacing: -0.02em; }
+    h2 { font-size: clamp(26px, 3.4vw, 42px); }
+    h3 { font-size: 20px; }
+    p { text-wrap: pretty; }
+
+    /* NAV */
+    .nav {
+      position: sticky; top: 0; z-index: 50;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 28px;
+      background: color-mix(in oklab, var(--white) 88%, transparent);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--rule);
+    }
+    .logo {
+      font-family: var(--font-mono); font-weight: 700;
+      font-size: 17px; letter-spacing: 0.22em;
+      color: var(--black); white-space: nowrap;
+    }
+    .logo .cursor { display: inline-block; animation: blink 1.2s steps(1) infinite; color: var(--green); margin-left: 2px; }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .nav-links { display: flex; align-items: center; gap: 28px; list-style: none; }
+    .nav-links a {
+      font-family: var(--font-mono); font-size: 13px;
+      color: var(--gray-soft); letter-spacing: 0.04em;
+    }
+    .nav-links a:hover { color: var(--black); }
+
+    .nav-right { display: flex; align-items: center; gap: 14px; }
+    /* Language switcher — globe icon with target lang badge, same on all viewports */
+    .lang-globe { display: inline-flex; }
+    .lang-globe a {
+      width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 50%; color: var(--gray-soft); transition: color var(--t), background var(--t);
+      font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.04em;
+      position: relative;
+    }
+    .lang-globe a:hover { color: var(--ink); background: var(--paper); }
+    .lang-globe .lang-code {
+      position: absolute; bottom: -2px; right: -2px;
+      background: var(--black); color: var(--white);
+      font-size: 8px; padding: 1px 4px; border-radius: 6px;
+      letter-spacing: 0.05em; line-height: 1.1;
+    }
+    .theme-btn { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; color: var(--gray-soft); }
+    .theme-btn:hover { color: var(--black); background: var(--paper); }
+    .hamburger { display: none; width: 36px; height: 36px; align-items: center; justify-content: center; color: var(--gray-soft); border-radius: 4px; }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 12px 22px;
+      font-family: var(--font-mono); font-size: 13px; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      border-radius: 99px; transition: all var(--t);
+      border: 1px solid transparent;
+    }
+    .btn-primary { background: var(--black); color: var(--white); }
+    .btn-primary:hover { background: var(--green-strong); transform: translateY(-1px); box-shadow: 0 6px 24px #1a6b3a26; }
+    .btn-ghost { background: transparent; color: var(--ink); border-color: var(--rule-strong); }
+    .btn-ghost:hover { border-color: var(--black); color: var(--black); }
+    .btn-sm { padding: 8px 14px; font-size: 11px; }
+
+    /* HERO */
+    .hero {
+      padding: clamp(48px, 8vw, 96px) 0 clamp(40px, 6vw, 64px);
+      border-bottom: 1px solid var(--rule);
+      position: relative; overflow: hidden;
+    }
+    .hero-grid {
+      display: grid; grid-template-columns: 1.05fr 1fr; gap: 56px; align-items: center;
+    }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em;
+      color: var(--green-strong); text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+    .eyebrow::before { content: "//"; color: var(--gray-faint); }
+    .pulse { width: 7px; height: 7px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .5; transform: scale(.7); } }
+
+    .hero h1 .acc { color: var(--green-strong); }
+    .hero-sub {
+      margin-top: 24px; max-width: 56ch;
+      font-family: var(--font-sans); font-size: 14.5px; line-height: 1.7; letter-spacing: 0.005em;
+      color: var(--ink-2);
+    }
+    .hero-cta { margin-top: 32px; display: flex; gap: 14px; flex-wrap: wrap; }
+    .hero-trust {
+      margin-top: 28px; display: flex; flex-wrap: wrap; gap: 18px;
+      font-family: var(--font-mono); font-size: 12px; color: var(--gray-soft); letter-spacing: 0.04em;
+    }
+    .hero-trust span { display: inline-flex; align-items: center; gap: 8px; }
+    .hero-trust .ck { color: var(--green); font-weight: 700; }
+
+    /* Browser chrome frame */
+    .frame {
+      border: 1px solid var(--rule-strong);
+      border-radius: var(--radius-lg);
+      background: var(--paper);
+      box-shadow: var(--shadow-frame);
+      overflow: hidden;
+      position: relative;
+    }
+    .frame.glow { box-shadow: var(--shadow-frame), var(--glow); }
+    .frame-bar {
+      display: flex; align-items: center; gap: 6px;
+      padding: 10px 14px;
+      background: var(--paper-2);
+      border-bottom: 1px solid var(--rule);
+      font-family: var(--font-mono); font-size: 11px; color: var(--gray-soft);
+    }
+    .frame-bar .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--gray-faint); }
+    .frame-bar .url {
+      margin-left: 12px; padding: 3px 10px; border-radius: 99px;
+      background: var(--white); border: 1px solid var(--rule);
+      font-size: 11px; color: var(--gray-soft);
+    }
+    .frame-body { position: relative; }
+    .frame-body .placeholder {
+      aspect-ratio: 16/10;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+      background:
+        repeating-linear-gradient(45deg, transparent 0 12px, #1a1a1a05 12px 13px),
+        var(--paper);
+      color: var(--gray-soft);
+      font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;
+      text-align: center;
+    }
+    .frame-body .placeholder strong { color: var(--ink); font-size: 13px; }
+    .frame-body img, .frame-body video { width: 100%; display: block; }
+    .frame-body picture { display: block; }
+    .stat-strip {
+      position: absolute; bottom: 14px; left: 14px; right: 14px;
+      display: flex; gap: 10px;
+    }
+    .hero-chips { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+    .hero-chips .stat-chip { flex: 0 1 auto; min-width: 130px; }
+    .stat-chip {
+      flex: 1;
+      padding: 10px 12px;
+      background: color-mix(in oklab, var(--white) 92%, transparent);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--rule-strong);
+      border-radius: 6px;
+      font-family: var(--font-mono);
+    }
+    .stat-chip .lbl { font-size: 10px; color: var(--gray-soft); letter-spacing: 0.12em; text-transform: uppercase; }
+    .stat-chip .val { font-size: 15px; font-weight: 700; color: var(--green-strong); margin-top: 2px; }
+
+    /* TRACK RECORD STRIP */
+    .record { padding: clamp(40px, 6vw, 64px) 0; border-bottom: 1px solid var(--rule); background: var(--paper); }
+    .record-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 0;
+    }
+    .record-col { padding: 8px 32px; border-right: 1px solid var(--rule); }
+    .record-col:last-child { border-right: none; }
+    .record-col .label { margin-bottom: 18px; }
+    .record-r {
+      font-family: var(--font-mono); font-size: clamp(32px, 4.2vw, 52px);
+      font-weight: 700; color: var(--green-strong); letter-spacing: -0.02em; line-height: 1;
+    }
+    .record-meta {
+      margin-top: 14px; display: flex; flex-direction: column; gap: 4px;
+      font-family: var(--font-mono); font-size: 12px; color: var(--gray-soft); letter-spacing: 0.04em;
+    }
+    .record-meta b { color: var(--ink); font-weight: 700; }
+    .record-foot {
+      margin-top: 36px; padding-top: 28px; border-top: 1px dashed var(--rule-strong);
+      display: flex; justify-content: space-between; align-items: center;
+      font-family: var(--font-mono); font-size: 12px; color: var(--gray-soft);
+      flex-wrap: wrap; gap: 12px;
+    }
+    .record-foot a { color: var(--green-strong); }
+    .record-foot a:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+    /* SECTION */
+    section.sec { padding: clamp(64px, 8vw, 112px) 0; border-bottom: 1px solid var(--rule); }
+    .sec-head { max-width: 64ch; margin-bottom: 56px; }
+    .sec-head p { font-family: var(--font-sans); font-size: 14px; color: var(--ink-2); margin-top: 12px; line-height: 1.7; letter-spacing: 0.005em; }
+
+    /* WHY (3 trust cards) */
+    .why-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+    .why-card { padding: 36px 32px; border-right: 1px solid var(--rule); }
+    .why-card:last-child { border-right: none; }
+    .why-card h3 { font-size: 17px; margin-bottom: 10px; }
+    .why-card p { font-family: var(--font-sans); font-size: 13px; color: var(--ink-2); line-height: 1.7; letter-spacing: 0.005em; }
+    .why-card .ic { width: 28px; height: 28px; color: var(--green-strong); margin-bottom: 18px; }
+
+    /* PRODUCT TOUR */
+    .tour-row {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 56px;
+      align-items: center; margin-bottom: 96px;
+    }
+    .tour-row:last-child { margin-bottom: 0; }
+    .tour-row.flip .tour-text { order: 2; }
+    .tour-text .label { color: var(--green-strong); }
+    .tour-text .label::before { color: var(--green); }
+    .tour-text h3 { font-size: clamp(22px, 2.6vw, 30px); margin-bottom: 16px; }
+    .tour-text p { font-family: var(--font-sans); font-size: 13.5px; color: var(--ink-2); line-height: 1.75; max-width: 50ch; letter-spacing: 0.005em; }
+    .tour-text .tour-meta {
+      margin-top: 18px; display: flex; flex-wrap: wrap; gap: 12px;
+      font-family: var(--font-mono); font-size: 11px; color: var(--gray-soft); letter-spacing: 0.1em; text-transform: uppercase;
+    }
+    .tour-text .tour-meta span { padding: 4px 10px; border: 1px solid var(--rule-strong); border-radius: 99px; }
+    .live-dot { display: inline-flex; align-items: center; gap: 6px; }
+    .live-dot::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 1.6s infinite; }
+
+    /* Telegram phone mockup */
+    .phones { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .phone {
+      border: 1px solid var(--rule-strong); border-radius: 24px; background: var(--paper);
+      box-shadow: var(--shadow-frame); overflow: hidden;
+    }
+    .phone-bar {
+      padding: 10px 14px; background: var(--paper-2); border-bottom: 1px solid var(--rule);
+      font-family: var(--font-mono); font-size: 11px; color: var(--gray-soft);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .phone-bar .tg-ic { width: 16px; height: 16px; color: #229ED9; }
+    .phone-body {
+      aspect-ratio: 9/16; max-height: 460px;
+      background:
+        repeating-linear-gradient(45deg, transparent 0 12px, #1a1a1a05 12px 13px),
+        var(--paper);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--gray-soft); font-family: var(--font-mono); font-size: 11px; text-align: center; padding: 18px;
+    }
+
+    /* FREE TICKER (lead magnet) */
+    .lead {
+      background: var(--paper);
+      padding: clamp(64px, 8vw, 112px) 0;
+      border-bottom: 1px solid var(--rule);
+      position: relative; overflow: hidden;
+    }
+    .lead::before {
+      content: ""; position: absolute; inset: 0;
+      background: radial-gradient(ellipse 70% 50% at 75% 50%, #1a6b3a0d 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .lead-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; position: relative; }
+    .lead .eyebrow { color: var(--gold); }
+    .lead .eyebrow .pulse { background: var(--gold); }
+    .lead h2 { margin-bottom: 18px; }
+    .lead-sub { font-family: var(--font-sans); font-size: 14px; line-height: 1.7; color: var(--ink-2); max-width: 50ch; letter-spacing: 0.005em; }
+    .lead-bullets { margin-top: 24px; display: flex; flex-direction: column; gap: 10px; font-family: var(--font-mono); font-size: 13px; color: var(--ink-2); }
+    .lead-bullets span { display: inline-flex; align-items: center; gap: 10px; }
+    .lead-bullets .ck { color: var(--green-strong); font-weight: 700; }
+
+    .form-card {
+      background: var(--white);
+      border: 1px solid var(--rule-strong);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      box-shadow: var(--shadow-frame), var(--glow);
+    }
+    .form-card h4 {
+      font-size: 13px; letter-spacing: 0.12em; color: var(--gray-soft);
+      text-transform: uppercase; margin-bottom: 22px;
+    }
+    .form-card h4::before { content: "// "; color: var(--gray-faint); }
+    .field { margin-bottom: 18px; }
+    .field label {
+      display: block; font-family: var(--font-mono); font-size: 11px;
+      color: var(--gray-soft); letter-spacing: 0.08em; text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .field input, .field textarea {
+      width: 100%; padding: 12px 14px;
+      background: var(--white); border: 1px solid var(--rule-strong); border-radius: 6px;
+      font-family: var(--font-mono); font-size: 14px; color: var(--ink);
+      transition: border-color var(--t), box-shadow var(--t);
+    }
+    .field input:focus, .field textarea:focus { outline: none; border-color: var(--green-strong); box-shadow: 0 0 0 3px var(--green-soft); }
+    .field textarea { resize: vertical; min-height: 72px; }
+    .radio-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .radio-row label {
+      display: inline-flex; align-items: center; padding: 8px 14px;
+      border: 1px solid var(--rule-strong); border-radius: 99px;
+      font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em;
+      cursor: pointer; transition: all var(--t); color: var(--gray-soft);
+      text-transform: uppercase;
+    }
+    .radio-row input { display: none; }
+    .radio-row label:hover { border-color: var(--black); color: var(--black); }
+    .radio-row input:checked + span { color: var(--white); }
+    .radio-row label:has(input:checked) { background: var(--black); border-color: var(--black); color: var(--white); }
+    /* Consent checkbox */
+    .consent {
+      display: flex; align-items: flex-start; gap: 12px;
+      margin: 4px 0 16px;
+      padding: 14px 16px;
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: border-color .18s, background .18s;
+    }
+    .consent:hover { border-color: var(--rule-strong); background: var(--white); }
+    .consent input { position: absolute; opacity: 0; pointer-events: none; }
+    .consent-box {
+      flex-shrink: 0;
+      width: 18px; height: 18px;
+      border: 1.5px solid var(--rule-strong);
+      border-radius: 4px;
+      background: var(--white);
+      display: inline-flex; align-items: center; justify-content: center;
+      color: var(--white);
+      transition: all .18s;
+      margin-top: 1px;
+    }
+    .consent-box svg { opacity: 0; transition: opacity .15s; pointer-events: none; }
+    .consent-box { pointer-events: none; }
+    .consent:has(input:checked) .consent-box {
+      background: var(--green-strong);
+      border-color: var(--green-strong);
+    }
+    .consent:has(input:checked) .consent-box svg { opacity: 1; }
+    .consent-text {
+      font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-2);
+      line-height: 1.55; letter-spacing: 0.005em;
+    }
+    .consent-text b { color: var(--ink); font-weight: 700; }
+
+    .form-card .btn { width: 100%; justify-content: center; padding: 14px; margin-top: 8px; }
+    .form-note { margin-top: 14px; font-family: var(--font-mono); font-size: 11px; color: var(--gray-soft); line-height: 1.6; text-align: center; }
+
+    .thanks { display: none; text-align: center; padding: 18px 0; }
+    .thanks.show { display: block; }
+    .thanks .checkmark {
+      width: 56px; height: 56px; border-radius: 50%; background: var(--green-soft);
+      display: flex; align-items: center; justify-content: center; margin: 0 auto 18px;
+      color: var(--green-strong);
+    }
+    .form-card.submitted .form-body { display: none; }
+
+    /* HOW IT WORKS */
+    .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+    .step { padding: 32px 24px; border-right: 1px solid var(--rule); }
+    .step:last-child { border-right: none; }
+    .step-n {
+      font-family: var(--font-mono); font-size: 11px; color: var(--gray-faint); letter-spacing: 0.16em;
+      margin-bottom: 16px;
+    }
+    .step h4 { font-size: 16px; margin-bottom: 8px; }
+    .step p { font-family: var(--font-sans); font-size: 12.5px; color: var(--ink-2); line-height: 1.7; letter-spacing: 0.005em; }
+
+    /* PRICING */
+    .price-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 880px; margin: 0 auto; }
+    .price-card {
+      background: var(--paper); border: 1px solid var(--rule-strong);
+      border-radius: var(--radius-lg); padding: 36px 32px;
+      position: relative;
+    }
+    .price-card.featured {
+      background: var(--white);
+      box-shadow: var(--shadow-frame), var(--glow);
+      border-color: var(--green-strong);
+    }
+    .price-tag {
+      position: absolute; top: -12px; left: 32px;
+      background: var(--gold); color: var(--white);
+      font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      padding: 4px 12px; border-radius: 99px;
+    }
+    .price-plan { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.16em; color: var(--gray-soft); text-transform: uppercase; margin-bottom: 16px; }
+    .price-amount { display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px; }
+    .price-amount .num { font-family: var(--font-mono); font-size: 52px; font-weight: 700; color: var(--black); letter-spacing: -0.02em; line-height: 1; }
+    .price-amount .per { font-family: var(--font-mono); font-size: 13px; color: var(--gray-soft); }
+    .price-desc { font-family: var(--font-sans); font-size: 13px; color: var(--ink-2); margin-bottom: 24px; line-height: 1.7; max-width: 44ch; letter-spacing: 0.005em; }
+    .price-feats { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-bottom: 28px; }
+    .pf { display: flex; align-items: flex-start; gap: 12px; font-family: var(--font-mono); font-size: 13px; color: var(--ink); }
+    .pf .ck { color: var(--green-strong); font-weight: 700; flex-shrink: 0; }
+    .price-card .btn { width: 100%; justify-content: center; padding: 14px; }
+    .price-foot { margin-top: 32px; text-align: center; font-family: var(--font-mono); font-size: 12px; color: var(--gray-soft); }
+    .tribute { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: var(--ink); }
+
+    /* ABOUT */
+    .about-stack { max-width: 860px; margin: 0 auto; }
+    .about-stack > .label { display: block; margin-bottom: 12px; }
+    .about-stack h2 { font-size: clamp(28px, 4vw, 40px); line-height: 1.15; }
+    .about-lede { font-family: var(--font-sans); font-size: 16px; line-height: 1.7; color: var(--ink); letter-spacing: 0.005em; max-width: 720px; }
+    .about-pillars {
+      margin-top: 40px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+    }
+    .about-pillar {
+      padding: 24px 24px 22px;
+      border: 1px solid var(--rule-strong);
+      border-radius: var(--radius-lg);
+      background: var(--paper);
+    }
+    .about-pillar-kicker {
+      font-family: var(--font-mono); font-size: 11px; color: var(--gray-soft);
+      letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 10px;
+    }
+    .about-pillar-h {
+      font-family: var(--font-mono); font-size: 18px; font-weight: 700;
+      color: var(--ink); line-height: 1.3; margin-bottom: 10px;
+      letter-spacing: -0.005em;
+    }
+    .about-pillar-p {
+      font-family: var(--font-sans); font-size: 14px; line-height: 1.65;
+      color: var(--ink-2); letter-spacing: 0.005em;
+    }
+    .about-pillar-p + .about-pillar-p { margin-top: 10px; }
+    .about-meta {
+      margin-top: 32px; display: flex; flex-wrap: wrap; gap: 12px;
+      font-family: var(--font-mono); font-size: 11px; color: var(--gray-soft); letter-spacing: 0.14em; text-transform: uppercase;
+    }
+    .about-meta span { padding: 5px 12px; border: 1px solid var(--rule-strong); border-radius: 99px; }
+
+    /* FAQ */
+    .faq-list { max-width: 800px; margin: 0 auto; border-top: 1px solid var(--rule-strong); }
+    .faq-item { border-bottom: 1px solid var(--rule-strong); }
+    .faq-q {
+      width: 100%; display: flex; justify-content: space-between; align-items: center;
+      padding: 22px 4px; font-family: var(--font-mono); font-size: 15px; font-weight: 700;
+      color: var(--black); text-align: left; letter-spacing: -0.01em;
+    }
+    .faq-q .pm {
+      width: 18px; height: 18px; flex-shrink: 0; color: var(--gray-soft);
+      transition: transform var(--t), color var(--t);
+    }
+    .faq-q.open .pm { transform: rotate(45deg); color: var(--green-strong); }
+    .faq-a {
+      max-height: 0; overflow: hidden; transition: max-height 320ms ease;
+      font-family: var(--font-sans); font-size: 13px; color: var(--ink-2); line-height: 1.7; letter-spacing: 0.005em;
+    }
+    .faq-a.open { max-height: 400px; }
+    .faq-a div { padding: 0 4px 22px; }
+
+    /* FINAL CTA */
+    .final {
+      padding: clamp(72px, 9vw, 120px) 0; text-align: center;
+      border-bottom: 1px solid var(--rule);
+      position: relative; overflow: hidden;
+    }
+    .final::before {
+      content: ""; position: absolute; inset: 0;
+      background: radial-gradient(ellipse 60% 50% at 50% 50%, #1a6b3a14 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .final h2 { margin-bottom: 18px; }
+    .final p { font-family: var(--font-sans); font-size: 14.5px; color: var(--ink-2); max-width: 52ch; margin: 0 auto 32px; line-height: 1.75; letter-spacing: 0.005em; }
+    .final .cta-group { display: inline-flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+
+    /* FOOTER */
+    footer { padding: 48px 0 32px; background: var(--paper); }
+    .foot-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 36px; }
+    .foot-brand p { font-family: var(--font-sans); font-size: 12px; color: var(--gray-soft); margin-top: 12px; max-width: 32ch; line-height: 1.7; letter-spacing: 0.005em; }
+    .foot-col h5 { font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gray-soft); margin-bottom: 14px; }
+    .foot-col ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .foot-col a { font-family: var(--font-mono); font-size: 13px; color: var(--ink-2); }
+    .foot-col a:hover { color: var(--green-strong); }
+    .foot-bottom { padding-top: 24px; border-top: 1px solid var(--rule); font-family: var(--font-mono); font-size: 11px; color: var(--gray-soft); display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; flex-wrap: wrap; }
+    .foot-disclaim { max-width: 56ch; line-height: 1.6; }
+
+    /* MOBILE */
+    @media (max-width: 900px) {
+      .hero-grid, .tour-row, .tour-row.flip, .lead-grid { grid-template-columns: 1fr; gap: 32px; }
+      .about-pillars { grid-template-columns: 1fr; gap: 16px; }
+      .about-pillar { padding: 20px; }
+      .tour-row.flip .tour-text { order: 0; }
+      .why-grid, .steps, .record-grid { grid-template-columns: 1fr; }
+      .why-card, .step, .record-col { border-right: none; border-bottom: 1px solid var(--rule); }
+      .why-card:last-child, .step:last-child, .record-col:last-child { border-bottom: none; }
+      .price-grid { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+      .hamburger { display: inline-flex; }
+      .foot-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
+      .foot-brand { grid-column: 1 / -1; }
+      .phones { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 600px) {
+      .wrap, .wrap-narrow { padding: 0 18px; }
+      .nav { padding: 12px 16px; }
+      .nav-right { gap: 6px; }
+      .theme-btn { width: 30px; height: 30px; }
+      .btn-sm { padding: 8px 12px; font-size: 10px; letter-spacing: 0.08em; }
+      .nav-login { display: none; }
+      .hero { padding: 40px 0; }
+      .form-card { padding: 22px; }
+      .price-card { padding: 26px 22px; }
+      /* Bigger, clearer chart on mobile: drop fixed aspect, let SVG breathe */
+      .perf-chart { aspect-ratio: auto !important; height: auto !important; padding: 14px 14px 14px; overflow: visible !important; }
+      .perf-head { margin-bottom: 6px; }
+      .perf-headline { font-size: 14px; }
+      .perf-live { font-size: 8px; letter-spacing: 0.1em; }
+      .perf-controls { margin: 8px 0 4px; gap: 6px; }
+      .perf-stats { margin: 2px 0 4px; gap: 12px; }
+      .perf-svg-wrap { flex: 0 0 auto !important; min-height: 320px !important; height: 320px !important; margin-top: 4px; }
+      .perf-foot { display: none; }
+      .perf-legend { margin-top: 6px; }
+      /* Stats auto-note: keep dot inline with text */
+      .auto-note { gap: 10px; align-items: flex-start; flex-wrap: wrap; }
+      .auto-note > .dot-live { margin-top: 7px; }
+      .auto-note > span:nth-child(2) { flex: 1 1 calc(100% - 24px); min-width: 0; }
+      .auto-beam { display: none; }
+    }
+
+    /* Reveal — gentle, never fully hidden so content is always readable */
+    .r { opacity: 0.001; transform: translateY(10px); transition: opacity 500ms ease, transform 500ms ease; will-change: opacity, transform; }
+    .r.in { opacity: 1; transform: translateY(0); }
+    @media (prefers-reduced-motion: reduce) { .r { opacity: 1; transform: none; } }
+    /* Failsafe: if JS is off, show everything */
+    html.no-js .r { opacity: 1; transform: none; }
+
+    /* ============ NAV SCROLL-SPY ============ */
+    .nav-links a { position: relative; padding: 6px 0; transition: color var(--t); }
+    .nav-links a::after {
+      content: ""; position: absolute; left: 0; right: 0; bottom: -2px;
+      height: 2px; background: var(--green-strong);
+      transform: scaleX(0); transform-origin: left center;
+      transition: transform 300ms cubic-bezier(.2,.7,.2,1);
+    }
+    .nav-links a.active { color: var(--black); }
+    .nav-links a.active::after { transform: scaleX(1); }
+    .nav-links a:hover::after { transform: scaleX(1); opacity: 0.5; }
+
+    /* ============ HERO PERFORMANCE CHART ============ */
+    .perf-chart {
+      position: relative;
+      aspect-ratio: 5/4;
+      border: 1px solid var(--rule-strong);
+      border-radius: var(--radius-lg);
+      background: linear-gradient(180deg, var(--paper) 0%, var(--white) 100%);
+      box-shadow: var(--shadow-frame), var(--glow);
+      overflow: hidden;
+      padding: 16px 18px 14px;
+      display: flex; flex-direction: column;
+    }
+    .perf-head {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 12px; margin-bottom: 8px;
+    }
+    .perf-head-l { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .perf-headline {
+      font-family: var(--font-mono); font-size: 15px; font-weight: 700;
+      color: var(--ink); letter-spacing: -0.005em; line-height: 1.2;
+    }
+    .perf-headline .acc { color: var(--green-strong); }
+    .perf-sub {
+      font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em;
+      color: var(--gray-soft); text-transform: uppercase; line-height: 1.4;
+    }
+    .perf-sub::before { content: ""; }
+    .perf-live {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.14em;
+      color: var(--green-strong); text-transform: uppercase;
+    }
+    .perf-live::before {
+      content: ""; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--green-strong);
+      box-shadow: 0 0 6px var(--green-strong);
+      animation: livedot 1.6s ease-in-out infinite;
+    }
+    @keyframes livedot { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+    .perf-controls {
+      display: flex; gap: 8px; margin: 10px 0 4px; flex-wrap: wrap;
+    }
+    .perf-seg {
+      display: inline-flex; border: 1px solid var(--rule-strong);
+      border-radius: 999px; padding: 2px; background: var(--white);
+    }
+    .perf-seg button {
+      font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 5px 11px; border: 0; background: transparent; cursor: pointer;
+      color: var(--gray-soft); border-radius: 999px; transition: all .18s;
+    }
+    .perf-seg button.active {
+      background: var(--ink); color: var(--white);
+    }
+    .perf-seg button:hover:not(.active) { color: var(--ink); }
+
+    .perf-stats {
+      display: flex; gap: 18px; flex-wrap: wrap;
+      margin: 2px 0 6px;
+      font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em;
+      color: var(--gray-soft);
+    }
+    .perf-stats .v { color: var(--ink); font-weight: 700; letter-spacing: 0.02em; }
+    .perf-stats .v.up { color: var(--green-strong); }
+    .perf-stats .v.dn { color: var(--red); }
+
+    .perf-svg-wrap {
+      flex: 1; position: relative; min-height: 0;
+    }
+    .perf-svg-wrap svg { width: 100%; height: 100%; display: block; }
+
+    .perf-grid { stroke: #1a1a1a10; stroke-width: 0.6; fill: none; }
+    .perf-axis { stroke: var(--ink); stroke-width: 0.6; opacity: 0.18; fill: none; }
+    .perf-100k { stroke: var(--ink); stroke-width: 0.7; opacity: 0.25; stroke-dasharray: 3 3; fill: none; }
+
+    .line-belfed {
+      fill: none; stroke: var(--green-strong); stroke-width: 2.2;
+      stroke-linecap: round; stroke-linejoin: round;
+      filter: drop-shadow(0 1px 2px rgba(26,107,58,0.25));
+    }
+    .line-bench {
+      fill: none; stroke: #b08642; stroke-width: 1.6;
+      stroke-linecap: round; stroke-linejoin: round; opacity: 0.85;
+      stroke-dasharray: 5 4;
+    }
+    .area-belfed { fill: var(--green-strong); opacity: 0.05; }
+
+    .perf-label {
+      font-family: 'Courier Prime', monospace; font-size: 9px;
+      fill: var(--gray-soft); letter-spacing: 0.06em;
+      paint-order: stroke fill;
+      stroke: var(--white); stroke-width: 3px; stroke-linejoin: round;
+    }
+    .perf-tick {
+      font-family: 'Courier Prime', monospace; font-size: 9px;
+      fill: var(--gray-faint); letter-spacing: 0.04em;
+    }
+    .perf-final-dot {
+      fill: var(--green-strong); stroke: var(--white); stroke-width: 2;
+      filter: drop-shadow(0 0 4px var(--green-strong));
+    }
+    .perf-final-dot.pulse { animation: ewPulse 2.4s ease-in-out infinite; transform-origin: center; }
+    .perf-final-bench { fill: #b08642; stroke: var(--white); stroke-width: 1.5; }
+
+    .perf-legend {
+      display: flex; gap: 16px; margin-top: 4px; flex-wrap: wrap;
+      font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em;
+      color: var(--gray-soft);
+    }
+    .perf-legend .sw {
+      display: inline-block; width: 18px; height: 2px; vertical-align: middle;
+      margin-right: 6px;
+    }
+    .perf-legend .sw.belfed { background: var(--green-strong); }
+    .perf-legend .sw.bench {
+      background-image: linear-gradient(to right, #b08642 0, #b08642 5px, transparent 5px, transparent 9px);
+      background-size: 9px 2px; height: 2px;
+    }
+    .perf-foot {
+      position: absolute; bottom: 8px; left: 18px; right: 18px;
+      display: flex; justify-content: space-between;
+      font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em;
+      color: var(--gray-faint); text-transform: uppercase;
+      pointer-events: none;
+    }
+    .perf-annot {
+      position: absolute;
+      font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em;
+      background: var(--white); border: 1px solid var(--rule-strong);
+      padding: 5px 8px; border-radius: 4px;
+      box-shadow: 0 2px 6px rgba(26,26,26,0.06);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    .perf-annot.up { color: var(--green-strong); border-color: var(--green-strong); }
+    .perf-annot.dn { color: var(--red); border-color: var(--red); }
+    .perf-annot::before { content: "→ "; color: var(--gray-soft); }
+    @keyframes ewPulse {
+      0%, 100% { r: 5; opacity: 1; }
+      50% { r: 8; opacity: 0.55; }
+    }
+
+    /* ============ TRACK RECORD AUTO-UPDATE NOTE + PULSE BEAM ============ */
+    .record-r { font-size: clamp(40px, 5.6vw, 68px); }
+    .auto-note {
+      margin-top: 30px;
+      display: flex; align-items: center; gap: 14px;
+      font-family: var(--font-mono); font-size: 12px;
+      color: var(--gray-soft); letter-spacing: 0.04em;
+      flex-wrap: wrap;
+    }
+    .auto-beam {
+      position: relative; flex: 1; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--rule-strong) 20%, var(--rule-strong) 80%, transparent);
+      border-radius: 2px; overflow: hidden;
+      min-width: 80px;
+    }
+    .auto-beam::after {
+      content: ""; position: absolute; top: 0; left: -30%;
+      width: 30%; height: 100%;
+      background: linear-gradient(90deg, transparent, var(--green-strong) 50%, transparent);
+      animation: beam 3.2s ease-in-out infinite;
+      box-shadow: 0 0 8px var(--green);
+    }
+    @keyframes beam {
+      0% { left: -30%; }
+      60% { left: 100%; }
+      100% { left: 100%; }
+    }
+    .auto-note .dot-live {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--green); animation: pulse 1.6s infinite;
+      flex-shrink: 0;
+    }
+    @media (prefers-reduced-motion: reduce) { .auto-beam::after { animation: none; opacity: 0.5; } }
+
+    /* ============ VIDEO IN FRAME ============ */
+    .frame-body video { width: 100%; display: block; background: var(--paper); }
+
+    /* ============ MODAL ============ */
+    .modal-backdrop {
+      position: fixed; inset: 0; z-index: 100;
+      background: color-mix(in oklab, var(--black) 60%, transparent);
+      backdrop-filter: blur(6px);
+      display: none; align-items: center; justify-content: center;
+      padding: 24px; opacity: 0; transition: opacity 200ms ease;
+    }
+    .modal-backdrop.open { display: flex; opacity: 1; }
+    .modal {
+      background: var(--white); border: 1px solid var(--rule-strong);
+      border-radius: var(--radius-lg); max-width: 460px; width: 100%;
+      padding: 32px; box-shadow: var(--shadow-frame), var(--glow);
+      position: relative;
+      transform: translateY(10px); opacity: 0; transition: all 240ms cubic-bezier(.2,.7,.2,1);
+    }
+    .modal-backdrop.open .modal { transform: translateY(0); opacity: 1; }
+    .modal-close {
+      position: absolute; top: 14px; right: 14px;
+      width: 32px; height: 32px; display: inline-flex;
+      align-items: center; justify-content: center;
+      border-radius: 4px; color: var(--gray-soft);
+    }
+    .modal-close:hover { background: var(--paper); color: var(--black); }
+    .modal h3 { font-family: var(--font-mono); font-size: 18px; margin-bottom: 8px; color: var(--black); }
+    .modal-sub {
+      font-family: var(--font-mono); font-size: 12px;
+      color: var(--gray-soft); margin-bottom: 24px; letter-spacing: 0.04em;
+    }
+    .modal-list { display: flex; flex-direction: column; gap: 10px; }
+    .modal-list a {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 16px;
+      border: 1px solid var(--rule-strong); border-radius: 8px;
+      font-family: var(--font-mono); font-size: 13px; color: var(--ink);
+      transition: all var(--t);
+    }
+    .modal-list a:hover {
+      border-color: var(--green-strong); background: var(--paper);
+      transform: translateX(4px);
+    }
+    .modal-list a .icon { width: 22px; height: 22px; flex-shrink: 0; }
+    .modal-list a .meta { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    .modal-list a .meta b { font-weight: 700; color: var(--black); font-size: 13px; }
+    .modal-list a .meta span { font-size: 11px; color: var(--gray-soft); letter-spacing: 0.04em; }
+    .modal-list a .arrow { font-family: var(--font-mono); color: var(--gray-faint); transition: color var(--t), transform var(--t); }
+    .modal-list a:hover .arrow { color: var(--green-strong); transform: translateX(2px); }
+    .ic-tg { color: #229ED9; }
+    .ic-tv { color: #2962ff; }
+    .ic-x { color: var(--black); }
+
+    /* ============ DUPLICATE / ERROR MESSAGES ============ */
+    .form-msg {
+      margin-top: 14px; padding: 12px 14px;
+      border-radius: 6px; font-family: var(--font-mono); font-size: 12px;
+      line-height: 1.55; display: none;
+    }
+    .form-msg.show { display: block; }
+    .form-msg.dup { background: #b8860b14; border: 1px solid #b8860b40; color: var(--gold); }
+    .form-msg.dup b { color: var(--ink); }
+    .form-msg.dup a { color: var(--green-strong); font-weight: 700; }
+    .form-msg.dup a:hover { text-decoration: underline; text-underline-offset: 3px; }
+    .form-msg.err { background: #c0392b14; border: 1px solid #c0392b40; color: #c0392b; }
+    .form-msg.err b { color: var(--ink); }
+    .form-msg.err a { color: var(--green-strong); font-weight: 700; }
+    .form-msg.err a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+    </style>
 </head>
 <body>
-<p>Перенаправление на <a href="/ru/">/ru/</a>…</p>
+
+<!-- ============ NAV ============ -->
+<nav class="nav" aria-label="Primary">
+  <a href="/" class="logo" aria-label="Belfed home">BELFED<span class="cursor">_</span></a>
+  <ul class="nav-links" role="list">
+    <li><a href="#tour" data-spy="tour">Что вы получаете</a></li>
+    <li><a href="#how" data-spy="how">Как это работает</a></li>
+    <li><a href="https://belfed.com/trades.html" target="_blank" rel="noopener">История сделок ↗</a></li>
+    <li><a href="#pricing" data-spy="pricing">Тарифы</a></li>
+    <li><a href="#faq" data-spy="faq">FAQ</a></li>
+  </ul>
+  <div class="nav-right">
+    <div class="lang-globe" role="group" aria-label="Язык">
+      <a href="https://belfed.com/" aria-label="Switch to English">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18"/></svg><span class="lang-code">EN</span>
+      </a>
+    </div>
+    <button class="theme-btn" id="themeBtn" aria-label="Toggle theme">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+    <a href="/members.html" class="btn btn-ghost btn-sm nav-login">Войти</a>
+    <a href="#pricing" class="btn btn-primary btn-sm">Бесплатный доступ</a>
+    <button class="hamburger" id="ham" aria-label="Menu">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <div class="eyebrow"><span class="pulse"></span>Платформа рыночной аналитики и трейдинга</div>
+        <h1>Рыночный контекст и <span class="acc">торговые возможности</span> для поддержки ваших инвестиционных решений.</h1>
+        <p class="hero-sub">Ежедневная аналитика и торговые возможности на мировых рынках акций, криптовалют и биржевых товаров.<br><br>Вся информация в удобном личном кабинете, по email и в Telegram.</p>
+        <div class="hero-cta">
+          <a href="#pricing" class="btn btn-primary">Начать 14-дневный бесплатный доступ →</a>
+          <a href="https://belfed.com/trades.html" target="_blank" rel="noopener" class="btn btn-ghost">Смотреть публичную историю сделок</a>
+        </div>
+        <div class="hero-trust">
+          <span><span class="ck">✓</span> 14 дней бесплатного доступа без карты</span>
+          <span><span class="ck">✓</span> Отмена в любой момент</span>
+          <span><span class="ck">✓</span> Публичная история каждой торговой идеи и возможности</span>
+        </div>
+      </div>
+      <div class="r">
+        <div class="perf-chart" aria-label="Гипотетическая доходность $100 000 против базового индекса">
+          <div class="perf-head">
+            <div class="perf-head-l">
+              <div class="perf-headline"><span class="acc">Торговые идеи Belfed</span> против базовых индексов</div>
+              <div class="perf-sub" id="perfTitle">1 единица = 1% стартового капитала · Акции против SPY · с янв 2025</div>
+            </div>
+            
+          </div>
+          <div class="perf-controls">
+            <div class="perf-seg" role="tablist" aria-label="Market">
+              <button class="active" data-market="eq" type="button">Акции</button>
+              <button data-market="cr" type="button">Крипто</button>
+            </div>
+            <div class="perf-seg" role="tablist" aria-label="Year">
+              <button data-year="2025" type="button">2025</button>
+              <button class="active" data-year="2026" type="button">2026 YTD</button>
+              <button data-year="all" type="button">Всё</button>
+            </div>
+          </div>
+          <div class="perf-stats" id="perfStats"></div>
+          <div class="perf-svg-wrap">
+            <svg viewBox="0 0 500 280" preserveAspectRatio="none" aria-hidden="true" id="perfSvg"></svg>
+          </div>
+          <div class="perf-legend">
+            <span><span class="sw belfed"></span> Belfed</span>
+            <span><span class="sw bench"></span> <span id="perfBenchName">SPY</span> купил-и-держи</span>
+            <span style="color:var(--gray-faint);margin-left:auto;">1R = 1% капитала · реинвестирование</span>
+          </div>
+        </div>
+        <div class="hero-chips">
+          <div class="stat-chip"><div class="lbl">// Покрытие</div><div class="val" style="color:var(--ink);font-size:13px;">Акции · Крипто · FX · Сырьё</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ============ TRACK RECORD STRIP ============ -->
+<section class="record" id="record" aria-label="Публичный трек-рекорд">
+  <div class="wrap">
+    <div class="record-grid">
+      <div class="record-col">
+        <span class="label">2026 Акции <span style="opacity:.6;font-weight:400;">YTD</span></span>
+        <div class="record-r">+90.70R</div>
+        <div class="record-meta">
+          <span><b>56,1%</b> прибыльных сделок</span>
+          <span><b>98</b> закрытых сделок</span>
+          <span>Сред. победа <b>+2,4R</b> · сред. убыток <b>−0,9R</b></span>
+        </div>
+      </div>
+      <div class="record-col">
+        <span class="label">2025 Акции</span>
+        <div class="record-r">+70.33R</div>
+        <div class="record-meta">
+          <span><b>42,6%</b> прибыльных сделок</span>
+          <span><b>61</b> закрытая сделка</span>
+          <span>Сред. победа <b>+4,3R</b> · сред. убыток <b>−1,2R</b></span>
+        </div>
+      </div>
+      <div class="record-col">
+        <span class="label">Крипто <span style="opacity:.6;font-weight:400;">всё время</span></span>
+        <div class="record-r">+99.12R</div>
+        <div class="record-meta">
+          <span><b>43,2%</b> прибыльных сделок</span>
+          <span><b>37</b> закрытых сделок</span>
+          <span>Сред. победа <b>+7,3R</b> · сред. убыток <b>−0,8R</b></span>
+        </div>
+      </div>
+    </div>
+    <div class="auto-note" aria-live="polite">
+      <span class="dot-live"></span>
+      <span>Статистика обновляется автоматически в момент закрытия новой сделки.</span>
+      <span class="auto-beam" aria-hidden="true"></span>
+      <a href="https://belfed.com/trades.html" target="_blank" rel="noopener" style="color:var(--green-strong);">Полная история сделок →</a>
+    </div>
+    <div class="record-foot" style="margin-top:18px;border-top:none;padding-top:0;">
+      <span>// Каждый вход, выход и результат публикуются открыто с 2025.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WHY ============ -->
+<section class="sec">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="label">Почему инвесторы и активные трейдеры выбирают Belfed</span>
+      <h2>Построено на прозрачности.</h2>
+      <p>В мире, полном продавцов сигналов с непрозрачной и выборочной историей, мы открыто публикуем результаты всех наших торговых идей и сделок.</p>
+    </div>
+    <div class="why-grid">
+      <div class="why-card r">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M2 20c0-3.5 3-6 7-6s7 2.5 7 6"/><path d="M14 20c0-2.5 2-4.5 5-4.5s3 1 3 3"/></svg>
+        <h3>Растущее глобальное сообщество</h3>
+        <p>2 400+ подписчиков на наших каналах. Мы строим глобальное сообщество инвесторов и активных трейдеров, ценящих надёжность, прозрачность и системность, а не быструю выгоду.</p>
+      </div>
+      <div class="why-card r">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+        <h3>Открытая статистика всех закрытых идей и сделок</h3>
+        <p>Все торговые идеи — вход, выход, результат — публикуются открыто после закрытия без возможности редактирования.</p>
+      </div>
+      <div class="why-card r">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>
+        <h3>Прозрачная методология</h3>
+        <p>Мы показываем структуру тренда, которую отслеживаем, и объясняем тезис каждой торговой возможности. Никаких чёрных ящиков. Вы учитесь читать динамику цены и контекст, а не просто копировать сигналы.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PRODUCT TOUR ============ -->
+<section class="sec" id="tour" style="background: var(--paper);">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="label">Загляните внутрь Belfed</span>
+      <h2>Что вы получаете после регистрации.</h2>
+      <p>Реальный вид личного кабинета и закрытой Telegram-группы — чтобы вы точно знали, за что платите.</p>
+    </div>
+
+    <!-- 1. Live Trade Tracker / Positions -->
+    <div class="tour-row">
+      <div class="tour-text r">
+        <span class="label">Лайв-трекер сделок</span>
+        <h3>Каждая открытая и закрытая идея — отслеживается в реальном времени.</h3>
+        <p>Акции и крипто рядом. Каждая сделка показывает цену входа, текущую цену, P&amp;L, уровень риска и статус-бейдж — так вы точно видите, где находится каждая идея в зоне покупки или продажи, и можете использовать это в своих решениях.</p>
+        <div class="tour-meta">
+          <span>ACT · WAIT · CHASE · RISK</span>
+          <span>On-line котировки</span>
+          <span>Связано с Telegram</span>
+        </div>
+      </div>
+      <div class="r">
+        <div class="frame">
+          <div class="frame-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.belfed.com / dashboard</span></div>
+          <div class="frame-body">
+            <video class="lazy-video" autoplay muted loop playsinline preload="metadata" poster="video/ru/dashboard.jpg" aria-label="Belfed dashboard preview">
+              <source data-src="video/ru/dashboard.mp4" type="video/mp4">
+            </video>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Analytics · Timeline (video) -->
+    <div class="tour-row flip">
+      <div class="tour-text r">
+        <span class="label">Аналитика · Таймлайн</span>
+        <h3>Хронологическая лента всех рыночных заметок.</h3>
+        <p>Макро-обновления, фундаментальная и техническая картина рынков от лидирующих исследовательских инвест.-компаний, чтобы формировать верный контекст происходящего здесь и сейчас.</p>
+        <div class="tour-meta">
+          <span class="live-dot">В реальном времени</span>
+          <span>Ежедневные обновления</span>
+          <span>Поиск</span>
+        </div>
+      </div>
+      <div class="r">
+        <div class="frame">
+          <div class="frame-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.belfed.com / analytics / timeline</span></div>
+          <div class="frame-body">
+            <video class="lazy-video" autoplay muted loop playsinline preload="metadata" poster="video/ru/timeline.jpg" aria-label="Belfed analytics timeline preview">
+              <source data-src="video/ru/timeline.mp4" type="video/mp4">            </video>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Analytics · Reports (video) -->
+    <div class="tour-row">
+      <div class="tour-text r">
+        <span class="label">Аналитика · Отчёты</span>
+        <h3>Архив наших отчётов</h3>
+        <p>Еженедельные отчёты с фильтрами по классу активов, сектору и теме — инфляция, облигации, волатильность, отчётности, ФРС, геополитика. Найдите нужный анализ за секунды.</p>
+      </div>
+      <div class="r">
+        <div class="frame">
+          <div class="frame-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.belfed.com / analytics / reports</span></div>
+          <div class="frame-body">
+            <video class="lazy-video" autoplay muted loop playsinline preload="metadata" poster="video/ru/reports.jpg" aria-label="Belfed analytics reports library preview">
+              <source data-src="video/ru/reports.mp4" type="video/mp4">            </video>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Asset analysis & requests (video) -->
+    <div class="tour-row">
+      <div class="tour-text r">
+        <span class="label">Анализ активов и запросы</span>
+        <h3>Разбор наиболее динамичных и перспективных активов — включая те, что вы запросите.</h3>
+        <p>Анализ структур тренда и инвест.-тезис по широкому классу активов. Подписчики могут запросить любой актив на любых рынках, и мы опубликуем нашу оценку и структурированный анализ.</p>
+        <div class="tour-meta">
+          <span>1 запрос / 24ч</span>
+          <span>Акции · Крипто · FX · Сырьё</span>
+          <span>Размеченные графики</span>
+        </div>
+      </div>
+      <div class="r">
+        <div class="frame">
+          <div class="frame-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.belfed.com / asset-analysis</span></div>
+          <div class="frame-body">
+            <video class="lazy-video" autoplay muted loop playsinline preload="metadata" poster="video/ru/asset.jpg" aria-label="Belfed asset analysis preview">
+              <source data-src="video/ru/asset.mp4" type="video/mp4">            </video>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Telegram (video) -->
+    <div class="tour-row flip">
+      <div class="tour-text r">
+        <span class="label">Доставка в Telegram и Email</span>
+        <h3>Мгновенные оповещения о сделках — плюс место для общения с другими участниками.</h3>
+        <p>Вход, стоп и цели отправляются в момент срабатывания торговой возможности. Внутри сообщества выделен <b>отдельный топик для обсуждений</b>, где подписчики делятся идеями, публикуют свои разборы, задают вопросы и общаются напрямую — это разговор, а не односторонняя лента.</p>
+        <div class="tour-meta">
+          <span>Уведомления за секунды</span>
+          <span>EN + RU группы</span>
+          <span>Топик обсуждений</span>
+          <span>Чат участников</span>
+        </div>
+      </div>
+      <div class="r">
+        <div class="frame">
+          <div class="frame-bar">
+            <svg class="tg-ic" style="width:14px;height:14px;color:#229ED9;" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.6 0 12 0zm5.6 8.2-1.9 8.9c-.1.6-.5.8-1.1.5l-3-2.2-1.4 1.4c-.2.2-.3.3-.6.3l.2-3.2 5.7-5.2c.2-.2 0-.3-.3-.1L7.7 13l-3-1c-.6-.2-.7-.6.1-.9l11.7-4.5c.5-.2 1 .1.8.8z"/></svg>
+            <span class="url" style="margin-left:8px;">t.me/marketartistryENG — Belfed канал</span>
+          </div>
+          <div class="frame-body">
+            <video class="lazy-video" autoplay muted loop playsinline preload="metadata" poster="video/telegram.jpg" aria-label="Belfed Telegram channel preview">
+              <source data-src="video/telegram.mp4" type="video/mp4">            </video>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FREE TICKER LEAD MAGNET ============ -->
+<section class="lead" id="free-analysis">
+  <div class="wrap">
+    <div class="lead-grid">
+      <div>
+        <div class="eyebrow"><span class="pulse"></span>Бесплатный анализ тикера</div>
+        <h2>Запросите анализ любого интересного вам актива — бесплатно.</h2>
+        <p class="lead-sub">Отправьте запрос — и наша команда пришлёт структурированный анализ на вашу почту в течение 3 рабочих дней: структуру тренда, ключевые уровни и наше текущее мнение. Без привязки карты и без спама.</p>
+        <div class="lead-bullets">
+          <span><span class="ck">✓</span> В формате настоящего Belfed-отчёта</span>
+          <span><span class="ck">✓</span> Любой глобальный актив — акции, крипто, сырьё</span>
+          <span><span class="ck">✓</span> Останется у вас — оформите подписку или нет</span>
+          
+        </div>
+      </div>
+      <div class="r">
+        <form class="form-card" id="leadForm" novalidate>
+          <input type="text" id="website" name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true">
+          <div class="form-body">
+            <h4>Запросите бесплатный анализ</h4>
+            <div class="field">
+              <label for="ticker">Тикер / Актив</label>
+              <input id="ticker" name="ticker" type="text" placeholder="например NVDA · BTC · XAU" required />
+            </div>
+            <div class="field">
+              <label>Класс активов</label>
+              <div class="radio-row">
+                <label><input type="radio" name="class" value="equities" checked /><span>Акции</span></label>
+                <label><input type="radio" name="class" value="crypto" /><span>Крипто</span></label>
+                <label><input type="radio" name="class" value="commodities" /><span>Сырьё</span></label>
+                <label><input type="radio" name="class" value="other" /><span>Другое</span></label>
+              </div>
+            </div>
+            <div class="field">
+              <label>Желаемый таймфрейм</label>
+              <div class="radio-row">
+                <label><input type="radio" name="tf" value="intraday" /><span>Внутридневной</span></label>
+                <label><input type="radio" name="tf" value="swing" checked /><span>Среднесрок · дни</span></label>
+                <label><input type="radio" name="tf" value="position" /><span>Позиция · недели</span></label>
+                <label><input type="radio" name="tf" value="long" /><span>Долгосрочный · месяцы</span></label>
+              </div>
+            </div>
+            <div class="field">
+              <label for="email">Ваш email</label>
+              <input id="email" name="email" type="email" placeholder="vy@example.com" required />
+            </div>
+            <div class="field">
+              <label for="note">Почему этот актив? <span style="text-transform:none;color:var(--gray-faint);">(опционально)</span></label>
+              <textarea id="note" name="note" placeholder="Помогает подобрать угол — долгосрочный тезис, пробой, отчётность и т.д."></textarea>
+            </div>
+            <label class="consent" for="consent">
+              <input type="checkbox" id="consent" name="consent" checked />
+              <span class="consent-box" aria-hidden="true"><svg viewBox="0 0 16 16" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 8 7 12 13 4"/></svg></span>
+              <span class="consent-text">Держите меня в курсе. Я согласен получать рыночную аналитику Belfed, бесплатные отчёты и продуктовые обновления по email. <b>Не более пары раз в месяц — отписаться в один клик.</b></span>
+            </label>
+            <button type="submit" class="btn btn-primary">Запросить бесплатный анализ →</button>
+            <p class="form-note">Мы пришлём отчёт на email в течение 3 рабочих дней. Никакого спама — только ваш отчёт и одно короткое follow-up. Хотите больше? Начните <a href="#pricing" style="color:var(--green-strong);font-weight:700;">14-дневный бесплатный доступ</a> — подписчики могут запрашивать новый актив каждые 24 часа.</p>
+            <div class="form-msg dup" id="dupMsg">
+              <b>Похоже, по этому email уже есть бесплатный запрос.</b><br>
+              Чтобы запросить больше активов, начните <a href="#pricing">14-дневный бесплатный доступ</a> — без карты, и вы сможете отправлять новый запрос каждые 24 часа.
+            </div>
+            <div class="form-msg err" id="errMsg">
+              <b>Что-то пошло не так.</b><br>
+              Попробуйте ещё раз через минуту или напишите на <a href="mailto:hello@belfed.com">hello@belfed.com</a>.
+            </div>
+          </div>
+          <div class="thanks" id="thanks">
+            <div class="checkmark">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <h4 style="border:none;color:var(--green-strong);">Запрос получен</h4>
+            <h3 style="margin:8px 0 12px;">Вы в списке.</h3>
+            <p style="font-family:var(--font-sans);font-size:12.5px;color:var(--ink-2);line-height:1.7;letter-spacing:0.005em;">Мы пришлём <span id="thanksEmail" style="color:var(--black);font-family:var(--font-mono);">вам</span> Belfed-анализ актива <span id="thanksTicker" style="color:var(--green-strong);font-family:var(--font-mono);font-weight:700;">ваш тикер</span> в течение 3 рабочих дней.</p>
+            <a href="#pricing" class="btn btn-ghost" style="margin-top:20px;">Пока вы ждёте — начните 14-дневный бесплатный доступ</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HOW IT WORKS ============ -->
+<section class="sec" id="how">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="label">Как это работает</span>
+      <h2>Регистрация за 60 секунд.</h2>
+    </div>
+    <div class="steps">
+      <div class="step r">
+        <div class="step-n">01 →</div>
+        <h4>Начните 14-дневный бесплатный доступ</h4>
+        <p>Регистрация по email. Карта не нужна.</p>
+      </div>
+      <div class="step r">
+        <div class="step-n">02 →</div>
+        <h4>Получите доступ к личному кабинету пользователя на сайте</h4>
+        <p>Дашборд, аналитика, отчёты и разборы активов открываются сразу после регистрации.</p>
+      </div>
+      <div class="step r">
+        <div class="step-n">03 →</div>
+        <h4>Подключите Telegram</h4>
+        <p>Получите личное приглашение в наше закрытое сообщество для мгновенных оповещений.</p>
+      </div>
+      <div class="step r">
+        <div class="step-n">04 →</div>
+        <h4>Получайте аналитику и торговые возможности</h4>
+        <p>Ежедневная и еженедельная аналитика рынка плюс торговые идеи, которые мы реально берём.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PRICING ============ -->
+<section class="sec" id="pricing" style="background: var(--paper);">
+  <div class="wrap-narrow">
+    <div class="sec-head" style="text-align:center;margin-inline:auto;">
+      <span class="label">Тарифы</span>
+      <h2>Два тарифа. Без сюрпризов.</h2>
+      <p style="margin-inline:auto;">Большую часть нашей работы мы публикуем открыто. Подписчики получают всё — аналитику, запросы активов и сделки, которые мы берём.</p>
+    </div>
+    <div class="price-grid">
+      <div class="price-card r">
+        <p class="price-plan">Бесплатно</p>
+        <div class="price-amount"><span class="num">$0</span><span class="per">/ навсегда</span></div>
+        <p class="price-desc">Следите за нашей публичной работой в TradingView и Telegram-каналах на английском и русском.</p>
+        <ul class="price-feats">
+          <li class="pf"><span class="ck">✓</span> Публичный трек-рекорд на TradingView</li>
+          <li class="pf"><span class="ck">✓</span> Telegram-канал — Английский</li>
+          <li class="pf"><span class="ck">✓</span> Telegram-канал — Русский</li>
+          <li class="pf"><span class="ck">✓</span> Еженедельный публичный обзор рынка</li>
+          <li class="pf"><span class="ck">✓</span> Комментарии рынка в X / Twitter</li>
+        </ul>
+        <button type="button" class="btn btn-ghost" data-modal-open="channels">Присоединиться к бесплатным каналам →</button>
+      </div>
+      <div class="price-card featured r">
+        <span class="price-tag">★ Стартовая цена</span>
+        <p class="price-plan">Подписчик</p>
+        <div class="price-amount"><span class="num">1050 ₽</span><span class="per">/ месяц</span></div>
+        <p class="price-desc">Полный опыт участника Belfed. Отличная цена за глубину исследований — стоимость отражает фазу запуска.</p>
+        <ul class="price-feats">
+          <li class="pf"><span class="ck">✓</span> Ежедневная и еженедельная рыночная аналитика</li>
+          <li class="pf"><span class="ck">✓</span> Запросы активов от подписчиков</li>
+          <li class="pf"><span class="ck">✓</span> Все наши сделки — лонг и шорт</li>
+          <li class="pf"><span class="ck">✓</span> Веб-область для участников (дашборд, отчёты, разборы активов)</li>
+          <li class="pf"><span class="ck">✓</span> Мгновенная доставка сделок в Telegram</li>
+        </ul>
+        <a href="/members.html#signup" class="btn btn-primary">Начать 14-дневный бесплатный доступ — без карты</a>
+      </div>
+    </div>
+    <p class="price-foot">14-дневный бесплатный доступ · Отмена в любой момент · Без скрытых платежей · Платежи защищены <span class="tribute">Tribute ↗</span></p>
+  </div>
+</section>
+
+<!-- ============ ABOUT ============ -->
+<section class="sec" id="about">
+  <div class="wrap">
+    <div class="about-stack">
+      <span class="label">О Belfed</span>
+      <h2 style="margin-bottom:24px;">Независимые глобальные инвестиционные исследования.</h2>
+      <p class="about-lede">Belfed — независимая глобальная инвестиционно-аналитическая компания. Мы анализируем ключевые тренды глобальной экономики и финансовых рынков и публикуем собственную рыночную аналитику, включая наши торговые решения по аллокации активов и позиционированию на рынке.</p>
+
+      <div class="about-pillars">
+        <div class="about-pillar">
+          <div class="about-pillar-kicker">// Среднесрочные торговые идеи</div>
+          <h3 class="about-pillar-h">Удержание от нескольких дней до нескольких недель.</h3>
+          <p class="about-pillar-p">Среднесрочные торговые идеи по акциям, криптовалютам, валютным парам и сырьевым товарам.</p>
+          <p class="about-pillar-p">Для каждой идеи указаны точка входа, уровень риска и защитный стоп, а также целевые параметры по прибыли. Торговые идеи на рост или на снижение, с фиксированным размером риска на позицию.</p>
+        </div>
+        <div class="about-pillar">
+          <div class="about-pillar-kicker">// Макро и аллокация</div>
+          <h3 class="about-pillar-h">Где должен находиться капитал.</h3>
+          <p class="about-pillar-p">Мы постоянно следим за самыми перспективными секторами экономики и за тем, куда движется капитал на мировых рынках.</p>
+          <p class="about-pillar-p">На основе этой картины принимаем конкретные решения по распределению активов и рыночному позиционированию, которые применяем сами и которыми делимся с нашими пользователями.</p>
+        </div>
+      </div>
+
+      <div class="about-meta">
+        <span>На рынках с 2018</span>
+        <span>Независимые исследования</span>
+        <span>Публичный трек-рекорд</span>
+        <span>Акции · Крипто · FX · Сырьё</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section class="sec" id="faq" style="background: var(--paper);">
+  <div class="wrap">
+    <div class="sec-head" style="text-align:center;margin-inline:auto;">
+      <span class="label">FAQ</span>
+      <h2>Частые вопросы.</h2>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">Для кого Belfed?
+          <svg class="pm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <div class="faq-a"><div>Долгосрочные и среднесрочные инвесторы, активные трейдеры — и любой, кому интересны финансовые рынки и нужно больше контекста о том, что происходит и где следующие возможности. Если вы хотите понимать причины движений рынка, а не просто гоняться за сигналами — вам сюда.<br><br><b>Институциональные инвесторы или фонды?</b> Будем рады поговорить. Пишите напрямую на <a href="mailto:support@belfed.com" style="color:var(--green-strong);font-weight:700;">support@belfed.com</a> для индивидуальных условий по исследованиям.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">Чем Belfed отличается от случайных сигнальных каналов?
+          <svg class="pm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <div class="faq-a"><div>Большинство сигнальных каналов дают рекомендации без контекста и без ответственности. Belfed публикует проверяемую историю сделок — каждый сигнал, каждый результат, с меткой времени на TradingView. Вы можете проверить годы рекомендаций до оплаты. Мы объясняем тезис каждой сделки, чтобы вы учились читать рынок, а не просто копировать чужие рекомендации.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">Какие рынки вы покрываете?
+          <svg class="pm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <div class="faq-a"><div>Акции США (large-cap, секторальные сделки, торговые возможности под отчётности), криптовалюты (BTC, ETH, отдельные альты) и сырьё (золото, нефть и другие по запросу). Плюс подписчики могут запросить анализ любого глобального актива.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">Что включает 14-дневный бесплатный доступ?
+          <svg class="pm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <div class="faq-a"><div>Полный доступ подписчика — каждая сделка, вся аналитика, полный личный кабинет и Telegram. Карта для старта не нужна. В конце бесплатного периода — продолжаете или отменяете в один тап.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">Как устроены платежи?
+          <svg class="pm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <div class="faq-a"><div>Все платежи проходят безопасно через Tribute. Мы не храним данные вашей карты напрямую. Подписки продлеваются ежемесячно и могут быть отменены в любой момент.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">Как отменить подписку?
+          <svg class="pm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <div class="faq-a"><div>Отмените в любой момент из дашборда аккаунта или через Tribute. Никаких лок-инов, штрафов за отмену, уловок. Доступ сохраняется до конца оплаченного периода.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FINAL CTA ============ -->
+<section class="final">
+  <div class="wrap-narrow" style="position:relative;z-index:1;">
+    <span class="label">Готовы?</span>
+    <h2>Начните 14-дневный бесплатный доступ — без карты.</h2>
+    <p>Присоединяйтесь к инвесторам и трейдерам, которые используют Belfed для ежедневного рыночного контекста и торговых возможностей, которые действительно важны.</p>
+    <div class="cta-group">
+      <a href="#pricing" class="btn btn-primary">Получить бесплатный доступ →</a>
+      <a href="https://belfed.com/trades.html" target="_blank" rel="noopener" class="btn btn-ghost">Смотреть публичную историю сделок</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <span class="logo">BELFED<span class="cursor">_</span></span>
+        <p>Независимые глобальные инвестиционные исследования. Рыночная аналитика и торговые идеи по акциям, крипто и сырью.</p>
+      </div>
+      <div class="foot-col">
+        <h5>Продукт</h5>
+        <ul><li><a href="#tour">Что вы получаете</a></li><li><a href="#how">Как это работает</a></li><li><a href="#pricing">Тарифы</a></li><li><a href="https://belfed.com/trades.html" target="_blank" rel="noopener">История сделок</a></li><li><a href="#free-analysis">Бесплатный анализ</a></li></ul>
+      </div>
+      <div class="foot-col">
+        <h5>Сообщество</h5>
+        <ul><li><a href="https://t.me/marketartistryENG" target="_blank" rel="noopener">Telegram · EN</a></li><li><a href="https://t.me/marketartistry" target="_blank" rel="noopener">Telegram · RU</a></li><li><a href="https://tradingview.com/u/BelFed_Analytics" target="_blank" rel="noopener">TradingView</a></li><li><a href="https://x.com/art_the_trader" target="_blank" rel="noopener">X / Twitter</a></li></ul>
+      </div>
+      <div class="foot-col">
+        <h5>Юридическое</h5>
+        <ul><li><a href="/oferta.html">Оферта</a></li><li><a href="/privacy.html">Политика конфиденциальности</a></li><li><a href="/disclaimer.html">Раскрытие рисков</a></li><li><a href="mailto:hello@belfed.com">Контакты</a></li></ul>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 Belfed Analytics. Все права защищены. · Платежи через Tribute.</span>
+      <span class="foot-disclaim">Раскрытие рисков: трейдинг сопряжён со значительным риском убытков. Прошлые результаты не гарантируют будущих. Ничего на этом сайте не является финансовой рекомендацией.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Theme toggle
+  var themeBtn = document.getElementById('themeBtn');
+  themeBtn.addEventListener('click', function () {
+    var cur = document.documentElement.getAttribute('data-theme');
+    document.documentElement.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+  });
+
+  // Language toggle (visual only)
+  // FAQ
+  document.querySelectorAll('.faq-q').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var open = btn.classList.contains('open');
+      document.querySelectorAll('.faq-q').forEach(function (b) { b.classList.remove('open'); b.setAttribute('aria-expanded','false'); b.nextElementSibling.classList.remove('open'); });
+      if (!open) { btn.classList.add('open'); btn.setAttribute('aria-expanded','true'); btn.nextElementSibling.classList.add('open'); }
+    });
+  });
+
+  // Reveal on scroll — also reveals anything already in view on load
+  function revealIfVisible(el) {
+    var r = el.getBoundingClientRect();
+    var vh = window.innerHeight || document.documentElement.clientHeight;
+    if (r.top < vh * 0.95 && r.bottom > 0) el.classList.add('in');
+  }
+  var revealEls = document.querySelectorAll('.r');
+  // Immediate pass on load
+  revealEls.forEach(revealIfVisible);
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { threshold: 0.05, rootMargin: '0px 0px -5% 0px' });
+    revealEls.forEach(function (el) { if (!el.classList.contains('in')) io.observe(el); });
+  } else {
+    revealEls.forEach(function (el) { el.classList.add('in'); });
+  }
+  // Failsafe: ensure everything visible after 1.2s no matter what
+  setTimeout(function () { revealEls.forEach(function (el) { el.classList.add('in'); }); }, 1200);
+
+  // Lead form — sends to Supabase edge function landing-lead-create
+  var SUPA_URL = 'https://obujqvqqmyfcfflhqvud.supabase.co';
+  var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9idWpxdnFxbXlmY2ZmbGhxdnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDgxNjYsImV4cCI6MjA4OTkyNDE2Nn0.syl4YBLbf8aBitxyK3gCL51pPYxWjEW99mMTXJaQQ8w';
+  var form = document.getElementById('leadForm');
+  var dupMsg = document.getElementById('dupMsg');
+  var errMsg = document.getElementById('errMsg');
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var submitBtn = form.querySelector('button[type="submit"]');
+    var ticker = (document.getElementById('ticker').value || '').trim().toUpperCase();
+    var email = (document.getElementById('email').value || '').trim().toLowerCase();
+    var consent = document.getElementById('consent').checked;
+    var note = (document.getElementById('note').value || '').trim();
+    var assetClass = (document.querySelector('input[name="class"]:checked') || {}).value || null;
+    var timeframe  = (document.querySelector('input[name="tf"]:checked')    || {}).value || null;
+    var honeypot = (document.getElementById('website') || {}).value || '';
+    if (!ticker || !email) return;
+    dupMsg.classList.remove('show');
+    if (errMsg) errMsg.classList.remove('show');
+    var origLabel = submitBtn.innerHTML;
+    submitBtn.disabled = true; submitBtn.innerHTML = 'Отправляем…';
+
+    fetch(SUPA_URL + '/functions/v1/landing-lead-create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPA_KEY,
+        'Authorization': 'Bearer ' + SUPA_KEY
+      },
+      body: JSON.stringify({
+        email: email, ticker: ticker, asset_class: assetClass, timeframe: timeframe,
+        note: note || null, consent: consent, lang: 'ru', source: 'landing', website: honeypot
+      })
+    }).then(function (r) { return r.json().then(function (d) { return { status: r.status, body: d }; }); })
+      .then(function (res) {
+        submitBtn.disabled = false; submitBtn.innerHTML = origLabel;
+        if (res.body && res.body.ok) {
+          document.getElementById('thanksTicker').textContent = '$' + ticker;
+          document.getElementById('thanksEmail').textContent = email;
+          form.classList.add('submitted');
+          document.getElementById('thanks').classList.add('show');
+          document.getElementById('thanks').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else if (res.body && res.body.reason === 'dup') {
+          dupMsg.classList.add('show');
+          dupMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          if (errMsg) { errMsg.classList.add('show'); errMsg.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+        }
+      })
+      .catch(function () {
+        submitBtn.disabled = false; submitBtn.innerHTML = origLabel;
+        if (errMsg) { errMsg.classList.add('show'); errMsg.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+      });
+  });
+
+  // Mobile menu (basic)
+  var ham = document.getElementById('ham');
+  ham && ham.addEventListener('click', function () {
+    var links = document.querySelector('.nav-links');
+    if (!links) return;
+    var shown = links.style.display === 'flex';
+    links.style.display = shown ? '' : 'flex';
+    links.style.position = 'absolute';
+    links.style.top = '60px';
+    links.style.left = '0';
+    links.style.right = '0';
+    links.style.background = 'var(--white)';
+    links.style.flexDirection = 'column';
+    links.style.padding = '20px';
+    links.style.borderBottom = '1px solid var(--rule)';
+  });
+
+  // ============ MODAL ============
+  function openModal(id) {
+    var m = document.getElementById(id);
+    if (!m) return;
+    m.classList.add('open');
+    m.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal(m) {
+    m.classList.remove('open');
+    m.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+  document.querySelectorAll('[data-modal-open]').forEach(function (b) {
+    b.addEventListener('click', function () { openModal(b.dataset.modalOpen + 'Modal'); });
+  });
+  document.querySelectorAll('.modal-backdrop').forEach(function (bk) {
+    bk.addEventListener('click', function (e) {
+      if (e.target === bk || e.target.closest('[data-modal-close]')) closeModal(bk);
+    });
+    // Автозакрытие модалки при клике по любой внешней ссылке внутри
+    bk.querySelectorAll('a[href]').forEach(function (a) {
+      a.addEventListener('click', function () { closeModal(bk); });
+    });
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') document.querySelectorAll('.modal-backdrop.open').forEach(closeModal);
+  });
+
+
+  // ============ SCROLL-SPY ============
+  (function () {
+    var navLinks = document.querySelectorAll('.nav-links a[data-spy]');
+    var sectionMap = {};
+    navLinks.forEach(function (l) {
+      var id = l.getAttribute('data-spy');
+      var sec = document.getElementById(id);
+      if (sec) sectionMap[id] = { link: l, sec: sec };
+    });
+    function onScroll() {
+      var y = window.scrollY + 120;
+      var current = null;
+      Object.keys(sectionMap).forEach(function (id) {
+        var top = sectionMap[id].sec.offsetTop;
+        if (y >= top) current = id;
+      });
+      navLinks.forEach(function (l) { l.classList.remove('active'); });
+      if (current && sectionMap[current]) sectionMap[current].link.classList.add('active');
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  })();
+
+  // ============ LAZY VIDEO LOADING ============
+  (function () {
+    var vids = document.querySelectorAll('video.lazy-video');
+    function loadVideo(v) {
+      if (v.dataset.loaded) return;
+      v.querySelectorAll('source[data-src]').forEach(function (s) {
+        s.src = s.dataset.src;
+        s.removeAttribute('data-src');
+      });
+      v.load();
+      v.dataset.loaded = '1';
+      var p = v.play();
+      if (p && p.catch) p.catch(function () {});
+    }
+    if ('IntersectionObserver' in window) {
+      var vio = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (e.isIntersecting) { loadVideo(e.target); vio.unobserve(e.target); }
+        });
+      }, { rootMargin: '200px 0px', threshold: 0.01 });
+      vids.forEach(function (v) { vio.observe(v); });
+    } else {
+      vids.forEach(loadVideo);
+    }
+  })();
+
+
+  /* ============ HERO PERFORMANCE CHART ============ */
+  var BELFED_CHART_DATA = {"eq_2025":{"belfed":[[0,100000],[1,103030],[2,103030],[3,103030],[4,103030],[5,103030],[6,103030],[7,103030],[8,103030],[9,103030],[10,103030],[11,103030],[12,103030],[13,103030],[14,103030],[15,103030],[16,103030],[17,103030],[18,103030],[19,103030],[20,103030],[21,103030],[22,103030],[23,103030],[24,103030],[25,103030],[26,103030],[27,103030],[28,103030],[29,107955],[30,107955],[31,107955],[32,107955],[33,107955],[34,107955],[35,107955],[36,107955],[37,107955],[38,107955],[39,107955],[40,107955],[41,107955],[42,107955],[43,107955],[44,107955],[45,107955],[46,107955],[47,107955],[48,107955],[49,107955],[50,107955],[51,107955],[52,107955],[53,107955],[54,107955],[55,107955],[56,107955],[57,107955],[58,107955],[59,107955],[60,107955],[61,107955],[62,107955],[63,107955],[64,107955],[65,107955],[66,107955],[67,107955],[68,107955],[69,107955],[70,107955],[71,107955],[72,107955],[73,107955],[74,107955],[75,107955],[76,107955],[77,107955],[78,107955],[79,107955],[80,107955],[81,107955],[82,107955],[83,107955],[84,107955],[85,107955],[86,107955],[87,107955],[88,107955],[89,107955],[90,107955],[91,107955],[92,110535],[93,110535],[94,110535],[95,110535],[96,110535],[97,110535],[98,110535],[99,110535],[100,110535],[101,110535],[102,110535],[103,110535],[104,110535],[105,110535],[106,110535],[107,110535],[108,110535],[109,110535],[110,110535],[111,109430],[112,109430],[113,108335],[114,107252],[115,107252],[116,107252],[117,107252],[118,107252],[119,107252],[120,107252],[121,107252],[122,107252],[123,107252],[124,107252],[125,107252],[126,107252],[127,107252],[128,107252],[129,107252],[130,107252],[131,107252],[132,107252],[133,107252],[134,115253],[135,115253],[136,115253],[137,115253],[138,119264],[139,119264],[140,119264],[141,119264],[142,119264],[143,119264],[144,119264],[145,119264],[146,119264],[147,119264],[148,119264],[149,119264],[150,119264],[151,119264],[152,119264],[153,119264],[154,119264],[155,119264],[156,119264],[157,119264],[158,119264],[159,119264],[160,119264],[161,119264],[162,119264],[163,119264],[164,119264],[165,119264],[166,119264],[167,119264],[168,119264],[169,119264],[170,119264],[171,119264],[172,119264],[173,119264],[174,119264],[175,119264],[176,119264],[177,119264],[178,119264],[179,119264],[180,119264],[181,119264],[182,119264],[183,119264],[184,119264],[185,119264],[186,119264],[187,119264],[188,119264],[189,119264],[190,119264],[191,118071],[192,118071],[193,118071],[194,118071],[195,118071],[196,118071],[197,116890],[198,116890],[199,116890],[200,116890],[201,116890],[202,115722],[203,115722],[204,115722],[205,115722],[206,115722],[207,115722],[208,115722],[209,124458],[210,124458],[211,124458],[212,124458],[213,124458],[214,124458],[215,124458],[216,124458],[217,124458],[218,124458],[219,124458],[220,124458],[221,124458],[222,124458],[223,124458],[224,124458],[225,124458],[226,124458],[227,124458],[228,124458],[229,124458],[230,124458],[231,124458],[232,124458],[233,124458],[234,124458],[235,124458],[236,124458],[237,124458],[238,124458],[239,124458],[240,124458],[241,124458],[242,124458],[243,124458],[244,124458],[245,124458],[246,124458],[247,124458],[248,124458],[249,124458],[250,123214],[251,123214],[252,123214],[253,123214],[254,125962],[255,125962],[256,125962],[257,125962],[258,125962],[259,125962],[260,125962],[261,125962],[262,125962],[263,125962],[264,125962],[265,125962],[266,125962],[267,125962],[268,125962],[269,125962],[270,125962],[271,125962],[272,125962],[273,125962],[274,125962],[275,125962],[276,125962],[277,125962],[278,125962],[279,125962],[280,125962],[281,125962],[282,125962],[283,125962],[284,125962],[285,125962],[286,125962],[287,125962],[288,125962],[289,125962],[290,131882],[291,131882],[292,130101],[293,124849],[294,122364],[295,119929],[296,118730],[297,118730],[298,118730],[299,117542],[300,122650],[301,120209],[302,120209],[303,115369],[304,115369],[305,115369],[306,107043],[307,107043],[308,112470],[309,111345],[310,111345],[311,111345],[312,111345],[313,110232],[314,118142],[315,118142],[316,118142],[317,120198],[318,120198],[319,120198],[320,124285],[321,126000],[322,123492],[323,125197],[324,146835],[325,146835],[326,146835],[327,146835],[328,146835],[329,145367],[330,145367],[331,145367],[332,145367],[333,145367],[334,145367],[335,143913],[336,143913],[337,143913],[338,143913],[339,143913],[340,149540],[341,148045],[342,148045],[343,145099],[344,145099],[345,145099],[346,145099],[347,145099],[348,145099],[349,145099],[350,145708],[351,145708],[352,175272],[353,175272],[354,175272],[355,177778],[356,177778],[357,177778],[358,177778],[359,177778],[360,177778],[361,177778],[362,185387],[363,193303],[364,193303]],"benchmark":[[1,100000],[2,101250],[5,101834],[6,100682],[7,100830],[9,99290],[12,99444],[13,99581],[14,101392],[15,101197],[16,102213],[20,103149],[21,103729],[22,104295],[23,103990],[26,102519],[27,103400],[28,102937],[29,103489],[30,102939],[33,102246],[34,102932],[35,103349],[36,103708],[37,102759],[40,103457],[41,103536],[42,103202],[43,104292],[44,104286],[48,104593],[49,104839],[50,104403],[51,102617],[54,102150],[55,101642],[56,101693],[57,100070],[58,101632],[61,99851],[62,98669],[63,99730],[64,97959],[65,98508],[68,95885],[69,95088],[70,95592],[71,94318],[72,96266],[75,97008],[76,95960],[77,97005],[78,96724],[79,96466],[82,98194],[83,98430],[84,97255],[85,96996],[86,95043],[89,95681],[90,95951],[91,96559],[92,91800],[93,86426],[96,86272],[97,84921],[98,93839],[99,89727],[100,91328],[103,92214],[104,91956],[105,89912],[106,90040],[110,87897],[111,90184],[112,91581],[113,93509],[114,94184],[117,94220],[118,94814],[119,94852],[120,95524],[121,96942],[124,96386],[125,95580],[126,95982],[127,96651],[128,96528],[131,99718],[132,100376],[133,100505],[134,100995],[135,101635],[138,101746],[139,101404],[140,99696],[141,99735],[142,99054],[146,101114],[147,100529],[148,100925],[149,100812],[152,101380],[153,101958],[154,101931],[155,101438],[156,102480],[159,102573],[160,103154],[161,102860],[162,103269],[163,102114],[166,103086],[167,102205],[168,102189],[170,101649],[173,102653],[174,103787],[175,103845],[176,104658],[177,105178],[180,105680],[181,105646],[182,106125],[183,106962],[187,106164],[188,106106],[189,106743],[190,107044],[191,106667],[194,106871],[195,106414],[196,106770],[197,107423],[198,107345],[201,107548],[202,107564],[203,108479],[204,108515],[205,108973],[208,108946],[209,108658],[210,108521],[211,108114],[212,106342],[215,107959],[216,107411],[217,108234],[218,108143],[219,108987],[222,108771],[223,109929],[224,110305],[225,110316],[226,110057],[229,110034],[230,109437],[231,109146],[232,108708],[233,110377],[236,109892],[237,110352],[238,110603],[239,110995],[240,110333],[244,109515],[245,110109],[246,111029],[247,110707],[250,110979],[251,111236],[252,111558],[253,112485],[254,112447],[257,113046],[258,112890],[259,112750],[260,113277],[261,113523],[264,114060],[265,113439],[266,113078],[267,112556],[268,113201],[271,113519],[272,113947],[273,114335],[274,114467],[275,114465],[278,114876],[279,114450],[280,115132],[281,114799],[282,111696],[285,113410],[286,113271],[287,113774],[288,112999],[289,113641],[292,114823],[293,114821],[294,114224],[295,114901],[296,115841],[299,117207],[300,117518],[301,117575],[302,116282],[303,116663],[306,116882],[307,115497],[308,115897],[309,114653],[310,114766],[313,116557],[314,116824],[315,116889],[316,114949],[317,114931],[320,113860],[321,112904],[322,113340],[323,111612],[324,112724],[327,114383],[328,115459],[329,116256],[331,116891],[334,116357],[335,116573],[336,116976],[337,117062],[338,117284],[341,116932],[342,116831],[343,117606],[344,117879],[345,116612],[348,116436],[349,116118],[350,114840],[351,115707],[352,116412],[355,117137],[356,117672],[357,118086],[359,118074],[362,117654],[363,117510],[364,116639]],"bench_name":"SPY","start_date":"2025-01-01","end_date":"2025-12-31","total_days":364,"total_r":70.33,"n_trades":61,"wins":26,"win_rate":42.6,"belfed_return":93.3,"bench_return":16.6},"eq_2026":{"belfed":[[0,100000],[1,99000],[2,99000],[3,99000],[4,98010],[5,98010],[6,98010],[7,98010],[8,97030],[9,97030],[10,97030],[11,101792],[12,100774],[13,103515],[14,103515],[15,103515],[16,103515],[17,104954],[18,104954],[19,105248],[20,106330],[21,106330],[22,106330],[23,106330],[24,106330],[25,109775],[26,109775],[27,109775],[28,109775],[29,110675],[30,110675],[31,110675],[32,113612],[33,112476],[34,112476],[35,124991],[36,126553],[37,126553],[38,126553],[39,126553],[40,126553],[41,126553],[42,126553],[43,126553],[44,126553],[45,126553],[46,126553],[47,126553],[48,126553],[49,126553],[50,125287],[51,125287],[52,125287],[53,125287],[54,125287],[55,125287],[56,125287],[57,125287],[58,125287],[59,125287],[60,124034],[61,124034],[62,125635],[63,125635],[64,125635],[65,128512],[66,128512],[67,128512],[68,128512],[69,128512],[70,127226],[71,127226],[72,127226],[73,127226],[74,128347],[75,128347],[76,128347],[77,137260],[78,135888],[79,135888],[80,135888],[81,140562],[82,144848],[83,144848],[84,144848],[85,141966],[86,141966],[87,141966],[88,141966],[89,141966],[90,141966],[91,141966],[92,141966],[93,141966],[94,141966],[95,141966],[96,141966],[97,134370],[98,139725],[99,139725],[100,139725],[101,139725],[102,139725],[103,139725],[104,139725],[105,139725],[106,150428],[107,150428],[108,150428],[109,161115],[110,161115],[111,161115],[112,161115],[113,177590],[114,177590],[115,177590],[116,177590],[117,177936],[118,181263],[119,181263],[120,181263],[121,181263],[122,181263],[123,181263],[124,184163],[125,184163],[126,180480],[127,184520],[128,184520],[129,184520],[130,184520],[131,182657],[132,182657],[133,182657],[134,187990],[135,187990],[136,187990],[137,188891],[138,188891],[139,188891],[140,187002],[141,186067],[142,186067],[143,186067],[144,186067],[145,186067],[146,186067],[147,186067],[148,184132],[149,184132],[150,184132],[151,186029],[152,186029],[153,186029],[154,188423],[155,233649],[156,233649],[157,233649],[158,233649],[159,245926],[160,245926],[161,245926],[162,243467],[163,243467],[164,243467],[165,243467],[166,246753],[167,246753],[168,239715],[169,239715],[170,239715],[171,239715],[172,239715],[173,239715],[174,239715],[175,239715]],"benchmark":[[1,100000],[4,100666],[5,101265],[6,100938],[7,100928],[8,101596],[11,101755],[12,101552],[13,101052],[14,101328],[15,101243],[19,99182],[20,100326],[21,100850],[22,100887],[25,101399],[26,101803],[27,101793],[28,101591],[29,101288],[32,101792],[33,100931],[34,100442],[35,99188],[36,101091],[39,101578],[40,101310],[41,101287],[42,99722],[43,99792],[47,99953],[48,100457],[49,100192],[50,100916],[53,99886],[54,100612],[55,101461],[56,100897],[57,100413],[60,100470],[61,99584],[62,100287],[63,99728],[64,98421],[67,99283],[68,99123],[69,98999],[70,97495],[71,96944],[74,97930],[75,98188],[76,96818],[77,96579],[78,94935],[81,95932],[82,95610],[83,96143],[84,94426],[85,92816],[88,92506],[89,95194],[90,95912],[91,95998],[95,96452],[96,96494],[97,98952],[98,99523],[99,99457],[102,100429],[103,101653],[104,102455],[105,102707],[106,103948],[109,103740],[110,103061],[111,104104],[112,103700],[113,104504],[116,104684],[117,104175],[118,104159],[119,105195],[120,105486],[123,105100],[124,105943],[125,107415],[126,107086],[127,107970],[130,108216],[131,108052],[132,108657],[133,109514],[134,108197],[137,108121],[138,107401],[139,108502],[140,108717],[141,109144],[145,109869],[146,109850],[147,110456],[148,110731],[151,111032],[152,111183],[153,110403],[154,110820],[155,107960],[158,108204],[159,107887],[160,106186],[161,107991],[162,108575],[165,110489],[166,109831],[167,108459],[168,109305],[172,108961],[173,107379],[174,107329],[175,107660]],"bench_name":"SPY","start_date":"2026-01-01","end_date":"2026-06-25","total_days":175,"total_r":90.7,"n_trades":98,"wins":55,"win_rate":56.1,"belfed_return":139.7,"bench_return":7.7},"eq_all":{"belfed":[[0,100000],[2,103030],[4,103030],[6,103030],[8,103030],[10,103030],[12,103030],[14,103030],[16,103030],[18,103030],[20,103030],[22,103030],[24,103030],[26,103030],[28,103030],[30,107955],[32,107955],[34,107955],[36,107955],[38,107955],[40,107955],[42,107955],[44,107955],[46,107955],[48,107955],[50,107955],[52,107955],[54,107955],[56,107955],[58,107955],[60,107955],[62,107955],[64,107955],[66,107955],[68,107955],[70,107955],[72,107955],[74,107955],[76,107955],[78,107955],[80,107955],[82,107955],[84,107955],[86,107955],[88,107955],[90,107955],[92,110535],[94,110535],[96,110535],[98,110535],[100,110535],[102,110535],[104,110535],[106,110535],[108,110535],[110,110535],[112,109430],[114,107252],[116,107252],[118,107252],[120,107252],[122,107252],[124,107252],[126,107252],[128,107252],[130,107252],[132,107252],[134,115253],[136,115253],[138,119264],[140,119264],[142,119264],[144,119264],[146,119264],[148,119264],[150,119264],[152,119264],[154,119264],[156,119264],[158,119264],[160,119264],[162,119264],[164,119264],[166,119264],[168,119264],[170,119264],[172,119264],[174,119264],[176,119264],[178,119264],[180,119264],[182,119264],[184,119264],[186,119264],[188,119264],[190,119264],[192,118071],[194,118071],[196,118071],[198,116890],[200,116890],[202,115722],[204,115722],[206,115722],[208,115722],[210,124458],[212,124458],[214,124458],[216,124458],[218,124458],[220,124458],[222,124458],[224,124458],[226,124458],[228,124458],[230,124458],[232,124458],[234,124458],[236,124458],[238,124458],[240,124458],[242,124458],[244,124458],[246,124458],[248,124458],[250,123214],[252,123214],[254,125962],[256,125962],[258,125962],[260,125962],[262,125962],[264,125962],[266,125962],[268,125962],[270,125962],[272,125962],[274,125962],[276,125962],[278,125962],[280,125962],[282,125962],[284,125962],[286,125962],[288,125962],[290,131882],[292,130101],[294,122364],[296,118730],[298,118730],[300,122650],[302,120209],[304,115369],[306,107043],[308,112470],[310,111345],[312,111345],[314,118142],[316,118142],[318,120198],[320,124285],[322,123492],[324,146835],[326,146835],[328,146835],[330,145367],[332,145367],[334,145367],[336,143913],[338,143913],[340,149540],[342,148045],[344,145099],[346,145099],[348,145099],[350,145708],[352,175272],[354,175272],[356,177778],[358,177778],[360,177778],[362,185387],[364,193303],[366,191370],[368,191370],[370,189457],[372,189457],[374,187562],[376,196767],[378,200098],[380,200098],[382,202879],[384,203447],[386,205540],[388,205540],[390,212199],[392,212199],[394,213940],[396,213940],[398,217419],[400,241611],[402,244631],[404,244631],[406,244631],[408,244631],[410,244631],[412,244631],[414,244631],[416,242185],[418,242185],[420,242185],[422,242185],[424,242185],[426,239763],[428,242856],[430,248417],[432,248417],[434,248417],[436,245933],[438,245933],[440,248100],[442,265329],[444,262676],[446,271712],[448,279997],[450,274425],[452,274425],[454,274425],[456,274425],[458,274425],[460,274425],[462,259742],[464,270094],[466,270094],[468,270094],[470,270094],[472,290783],[474,311441],[476,311441],[478,343288],[480,343288],[482,343956],[484,350388],[486,350388],[488,350388],[490,355994],[492,356684],[494,356684],[496,353081],[498,353081],[500,363391],[502,365133],[504,365133],[506,359675],[508,359675],[510,359675],[512,359675],[514,355934],[516,359600],[518,359600],[520,451651],[522,451651],[524,475383],[526,475383],[528,470629],[530,470629],[532,476983],[534,463377],[536,463377],[538,463377],[540,463377]],"benchmark":[[1,100000],[2,101250],[5,101834],[6,100682],[7,100830],[9,99290],[12,99444],[13,99581],[14,101392],[15,101197],[16,102213],[20,103149],[21,103729],[22,104295],[23,103990],[26,102519],[27,103400],[28,102937],[29,103489],[30,102939],[33,102246],[34,102932],[35,103349],[36,103708],[37,102759],[40,103457],[41,103536],[42,103202],[43,104292],[44,104286],[48,104593],[49,104839],[50,104403],[51,102617],[54,102150],[55,101642],[56,101693],[57,100070],[58,101632],[61,99851],[62,98669],[63,99730],[64,97959],[65,98508],[68,95885],[69,95088],[70,95592],[71,94318],[72,96266],[75,97008],[76,95960],[77,97005],[78,96724],[79,96466],[82,98194],[83,98430],[84,97255],[85,96996],[86,95043],[89,95681],[90,95951],[91,96559],[92,91800],[93,86426],[96,86272],[97,84921],[98,93839],[99,89727],[100,91328],[103,92214],[104,91956],[105,89912],[106,90040],[110,87897],[111,90184],[112,91581],[113,93509],[114,94184],[117,94220],[118,94814],[119,94852],[120,95524],[121,96942],[124,96386],[125,95580],[126,95982],[127,96651],[128,96528],[131,99718],[132,100376],[133,100505],[134,100995],[135,101635],[138,101746],[139,101404],[140,99696],[141,99735],[142,99054],[146,101114],[147,100529],[148,100925],[149,100812],[152,101380],[153,101958],[154,101931],[155,101438],[156,102480],[159,102573],[160,103154],[161,102860],[162,103269],[163,102114],[166,103086],[167,102205],[168,102189],[170,101649],[173,102653],[174,103787],[175,103845],[176,104658],[177,105178],[180,105680],[181,105646],[182,106125],[183,106962],[187,106164],[188,106106],[189,106743],[190,107044],[191,106667],[194,106871],[195,106414],[196,106770],[197,107423],[198,107345],[201,107548],[202,107564],[203,108479],[204,108515],[205,108973],[208,108946],[209,108658],[210,108521],[211,108114],[212,106342],[215,107959],[216,107411],[217,108234],[218,108143],[219,108987],[222,108771],[223,109929],[224,110305],[225,110316],[226,110057],[229,110034],[230,109437],[231,109146],[232,108708],[233,110377],[236,109892],[237,110352],[238,110603],[239,110995],[240,110333],[244,109515],[245,110109],[246,111029],[247,110707],[250,110979],[251,111236],[252,111558],[253,112485],[254,112447],[257,113046],[258,112890],[259,112750],[260,113277],[261,113523],[264,114060],[265,113439],[266,113078],[267,112556],[268,113201],[271,113519],[272,113947],[273,114335],[274,114467],[275,114465],[278,114876],[279,114450],[280,115132],[281,114799],[282,111696],[285,113410],[286,113271],[287,113774],[288,112999],[289,113641],[292,114823],[293,114821],[294,114224],[295,114901],[296,115841],[299,117207],[300,117518],[301,117575],[302,116282],[303,116663],[306,116882],[307,115497],[308,115897],[309,114653],[310,114766],[313,116557],[314,116824],[315,116889],[316,114949],[317,114931],[320,113860],[321,112904],[322,113340],[323,111612],[324,112724],[327,114383],[328,115459],[329,116256],[331,116891],[334,116357],[335,116573],[336,116976],[337,117062],[338,117284],[341,116932],[342,116831],[343,117606],[344,117879],[345,116612],[348,116436],[349,116118],[350,114840],[351,115707],[352,116412],[355,117137],[356,117672],[357,118086],[359,118074],[362,117654],[363,117510],[364,116639],[366,116853],[369,117631],[370,118331],[371,117950],[372,117938],[373,118718],[376,118904],[377,118666],[378,118083],[379,118404],[380,118305],[384,115897],[385,117235],[386,117847],[387,117890],[390,118488],[391,118960],[392,118948],[393,118712],[394,118358],[397,118947],[398,117941],[399,117370],[400,115904],[401,118127],[404,118697],[405,118384],[406,118357],[407,116528],[408,116610],[412,116798],[413,117387],[414,117077],[415,117924],[418,116720],[419,117568],[420,118560],[421,117902],[422,117335],[425,117402],[426,116367],[427,117188],[428,116535],[429,115008],[432,116015],[433,115829],[434,115683],[435,113927],[436,113282],[439,114435],[440,114736],[441,113135],[442,112856],[443,110935],[446,112100],[447,111723],[448,112346],[449,110340],[450,108458],[453,108096],[454,111238],[455,112076],[456,112177],[460,112707],[461,112757],[462,115628],[463,116295],[464,116219],[467,117354],[468,118784],[469,119722],[470,120016],[471,121466],[474,121223],[475,120430],[476,121649],[477,121177],[478,122116],[481,122327],[482,121731],[483,121713],[484,122924],[485,123264],[488,122812],[489,123798],[490,125518],[491,125133],[492,126167],[495,126454],[496,126262],[497,126969],[498,127971],[499,126432],[502,126343],[503,125501],[504,126787],[505,127039],[506,127538],[510,128385],[511,128363],[512,129071],[513,129392],[516,129745],[517,129921],[518,129009],[519,129497],[520,126155],[523,126440],[524,126069],[525,124081],[526,126190],[527,126873],[530,129110],[531,128341],[532,126738],[533,127726],[537,127325],[538,125476],[539,125417],[540,125804]],"bench_name":"SPY","start_date":"2025-01-01","end_date":"2026-06-25","total_days":540,"total_r":161.03,"n_trades":159,"wins":81,"win_rate":50.9,"belfed_return":363.4,"bench_return":25.8},"cr_2025":{"belfed":[[0,100000],[1,100000],[2,100000],[3,100000],[4,100000],[5,100000],[6,100000],[7,100000],[8,100000],[9,100000],[10,100000],[11,100000],[12,100000],[13,100000],[14,100000],[15,100000],[16,100000],[17,100000],[18,100000],[19,100000],[20,100000],[21,100000],[22,100000],[23,100000],[24,100000],[25,100000],[26,100000],[27,100000],[28,100000],[29,100000],[30,100000],[31,100000],[32,100000],[33,100000],[34,100000],[35,100000],[36,100000],[37,100000],[38,100000],[39,100000],[40,100000],[41,100000],[42,100000],[43,100000],[44,100000],[45,100000],[46,100000],[47,100000],[48,100000],[49,100000],[50,100000],[51,100000],[52,100000],[53,100000],[54,100000],[55,100000],[56,100000],[57,100000],[58,100000],[59,100000],[60,100000],[61,100000],[62,100000],[63,100000],[64,100000],[65,100000],[66,100000],[67,100000],[68,100000],[69,100000],[70,100000],[71,100000],[72,100000],[73,100000],[74,100000],[75,100000],[76,100000],[77,100000],[78,100000],[79,100000],[80,100000],[81,100000],[82,100000],[83,100000],[84,100000],[85,100000],[86,100000],[87,100000],[88,100000],[89,100000],[90,100000],[91,100000],[92,100000],[93,100000],[94,100000],[95,100000],[96,133670],[97,133670],[98,133670],[99,133670],[100,133670],[101,133670],[102,133670],[103,133670],[104,133670],[105,133670],[106,133670],[107,133670],[108,133670],[109,133670],[110,133670],[111,133670],[112,133670],[113,133670],[114,133670],[115,133670],[116,133670],[117,133670],[118,133670],[119,133670],[120,133670],[121,133670],[122,133670],[123,133670],[124,133670],[125,133670],[126,133670],[127,133670],[128,133670],[129,133670],[130,133670],[131,133670],[132,133670],[133,133670],[134,133670],[135,133670],[136,133670],[137,133670],[138,133670],[139,133670],[140,133670],[141,133670],[142,133670],[143,133670],[144,133670],[145,133670],[146,133670],[147,133670],[148,133670],[149,133670],[150,133670],[151,133670],[152,133670],[153,133670],[154,133670],[155,133670],[156,133670],[157,133670],[158,133670],[159,133670],[160,133670],[161,133670],[162,133670],[163,133670],[164,133670],[165,133670],[166,133670],[167,133670],[168,133670],[169,133670],[170,133670],[171,133670],[172,133670],[173,133670],[174,133670],[175,133670],[176,133670],[177,133670],[178,133670],[179,133670],[180,133670],[181,133670],[182,133670],[183,133670],[184,133670],[185,133670],[186,133670],[187,133670],[188,133670],[189,133670],[190,133670],[191,133670],[192,133670],[193,133670],[194,133670],[195,133670],[196,133670],[197,133670],[198,133670],[199,133670],[200,133670],[201,133670],[202,133670],[203,133670],[204,133670],[205,133670],[206,133670],[207,133670],[208,133670],[209,133670],[210,133670],[211,133670],[212,133670],[213,133670],[214,133670],[215,133670],[216,133670],[217,133670],[218,133670],[219,133670],[220,133670],[221,133670],[222,133670],[223,133670],[224,133670],[225,141463],[226,141463],[227,141463],[228,141463],[229,141463],[230,141463],[231,141463],[232,141463],[233,141463],[234,141463],[235,141463],[236,141463],[237,141463],[238,141463],[239,141463],[240,141463],[241,141463],[242,141463],[243,141463],[244,141463],[245,141463],[246,141463],[247,141463],[248,141463],[249,141463],[250,141463],[251,141463],[252,141463],[253,141463],[254,141463],[255,141463],[256,141463],[257,141463],[258,141463],[259,141463],[260,141463],[261,141463],[262,141463],[263,144829],[264,180933],[265,180933],[266,180933],[267,180933],[268,180933],[269,180933],[270,180933],[271,180933],[272,180933],[273,180933],[274,180933],[275,192512],[276,192512],[277,192512],[278,192512],[279,192512],[280,192512],[281,192512],[282,190587],[283,190587],[284,190587],[285,190587],[286,190587],[287,190587],[288,190587],[289,190587],[290,190587],[291,190587],[292,190587],[293,190587],[294,190587],[295,190587],[296,190587],[297,190587],[298,190587],[299,190587],[300,190587],[301,190587],[302,190587],[303,190587],[304,190587],[305,190587],[306,190587],[307,190587],[308,190587],[309,190587],[310,190587],[311,190587],[312,190587],[313,190587],[314,190587],[315,190587],[316,190587],[317,190587],[318,190587],[319,190587],[320,190587],[321,190587],[322,190587],[323,190587],[324,210123],[325,210123],[326,210123],[327,210123],[328,210123],[329,210123],[330,210123],[331,210123],[332,210123],[333,210123],[334,210123],[335,210123],[336,210123],[337,210123],[338,210123],[339,210123],[340,210123],[341,210123],[342,210123],[343,210123],[344,210123],[345,210123],[346,210123],[347,210123],[348,210123],[349,210123],[350,220860],[351,220860],[352,220860],[353,220860],[354,220860],[355,220860],[356,220860],[357,220860],[358,220860],[359,220860],[360,220860],[361,220860],[362,220860],[363,220860],[364,220860]],"benchmark":[[0,100000],[1,102670],[2,103976],[3,104054],[4,104197],[5,108366],[6,102711],[7,100692],[8,98055],[9,100336],[10,100192],[11,100134],[12,100130],[13,102279],[14,106491],[15,105931],[16,110302],[17,110650],[18,107234],[19,108224],[20,112476],[21,109836],[22,110111],[23,111090],[24,110966],[25,108666],[26,108136],[27,107317],[28,109921],[29,110975],[30,108505],[31,106612],[32,103489],[33,107498],[34,103614],[35,102389],[36,102311],[37,102282],[38,102217],[39,102217],[40,103243],[41,101473],[42,103686],[43,102375],[44,103311],[45,103405],[46,101840],[47,101481],[48,101297],[49,102382],[50,104199],[51,101879],[52,102329],[53,101994],[54,96956],[55,93855],[56,89117],[57,89661],[58,89314],[59,91137],[60,99875],[61,91288],[62,92442],[63,95995],[64,95273],[65,91920],[66,91337],[67,85501],[68,83219],[69,87848],[70,88638],[71,85898],[72,88978],[73,89371],[74,87476],[75,89011],[76,87620],[77,92048],[78,89193],[79,89064],[80,88842],[81,91216],[82,92732],[83,92630],[84,92099],[85,92407],[86,89403],[87,87533],[88,87282],[89,87446],[90,90239],[91,87399],[92,88124],[93,88850],[94,88467],[95,83034],[96,83849],[97,80789],[98,87510],[99,84286],[100,88342],[101,90345],[102,88716],[103,89624],[104,88606],[105,89029],[106,90018],[107,89493],[108,90137],[109,90246],[110,92730],[111,99052],[112,99319],[113,99617],[114,100345],[115,100300],[116,99361],[117,100698],[118,99881],[119,99787],[120,102269],[121,102698],[122,101566],[123,99882],[124,100371],[125,102602],[126,102834],[127,109398],[128,109115],[129,111059],[130,110334],[131,108917],[132,110328],[133,109707],[134,109962],[135,109659],[136,109300],[137,112809],[138,111901],[139,113243],[140,116227],[141,118371],[142,113716],[143,114208],[144,115538],[145,115978],[146,115463],[147,114235],[148,111855],[149,110224],[150,110873],[151,111988],[152,112207],[153,111723],[154,110987],[155,107614],[156,110610],[157,111904],[158,112079],[159,116865],[160,116864],[161,115136],[162,112012],[163,112433],[164,111741],[165,111883],[166,113212],[167,110814],[168,111159],[169,110901],[170,109466],[171,108239],[172,107007],[173,111692],[174,112457],[175,113791],[176,113399],[177,113487],[178,113740],[179,114836],[180,113551],[181,112002],[182,115368],[183,116152],[184,114457],[185,114688],[186,115717],[187,114713],[188,115442],[189,117905],[190,122936],[191,124579],[192,124463],[193,126220],[194,126996],[195,124790],[196,125744],[197,126371],[198,125046],[199,124931],[200,124294],[201,124417],[202,127169],[203,125880],[204,125442],[205,124633],[206,124990],[207,126574],[208,125097],[209,124951],[210,124842],[211,122650],[212,119988],[213,119240],[214,121012],[215,121898],[216,120903],[217,121874],[218,124508],[219,123627],[220,123425],[221,126409],[222,125765],[223,127261],[224,130707],[225,125435],[226,124425],[227,124445],[228,124480],[229,123207],[230,119572],[231,121076],[232,119174],[233,123865],[234,122250],[235,120231],[236,116681],[237,118440],[238,117873],[239,119274],[240,114828],[241,115304],[242,114689],[243,115741],[244,117868],[245,118407],[246,117309],[247,117256],[248,116771],[249,117743],[250,118742],[251,118187],[252,120767],[253,122415],[254,123015],[255,122869],[256,122176],[257,122247],[258,123785],[259,123416],[260,124087],[261,122575],[262,122640],[263,122142],[264,119445],[265,118683],[266,120093],[267,115524],[268,116225],[269,116208],[270,118874],[271,121171],[272,120855],[273,125721],[274,127799],[275,129597],[276,129746],[277,130871],[278,132142],[279,128618],[280,130683],[281,128957],[282,119703],[283,117360],[284,121915],[285,122134],[286,119796],[287,117398],[288,114636],[289,112799],[290,113589],[291,115144],[292,117148],[293,114810],[294,113988],[295,116669],[296,117650],[297,118311],[298,121364],[299,120876],[300,119625],[301,116580],[302,114753],[303,116074],[304,116601],[305,117114],[306,112899],[307,107506],[308,110050],[309,107318],[310,109430],[311,108372],[312,110925],[313,112286],[314,109139],[315,107687],[316,105542],[317,100128],[318,101230],[319,99789],[320,97581],[321,98443],[322,96904],[323,91686],[324,90131],[325,89723],[326,91974],[327,93519],[328,92521],[329,95852],[330,96751],[331,96312],[332,96233],[333,95747],[334,91417],[335,96741],[336,99015],[337,97574],[338,94662],[339,94580],[340,95782],[341,96048],[342,98206],[343,97513],[344,98049],[345,95650],[346,95626],[347,93418],[348,91560],[349,93082],[350,91340],[351,90545],[352,93335],[353,93580],[354,93915],[355,93826],[356,92632],[357,92822],[358,92359],[359,92491],[360,93033],[361,93107],[362,92294],[363,93658],[364,92705]],"bench_name":"BTC","start_date":"2025-01-01","end_date":"2025-12-31","total_days":364,"total_r":87.75,"n_trades":10,"wins":8,"win_rate":80.0,"belfed_return":120.9,"bench_return":-7.3},"cr_2026":{"belfed":[[0,100000],[1,100000],[2,100000],[3,100000],[4,100000],[5,100000],[6,100000],[7,100000],[8,100000],[9,100000],[10,100000],[11,99000],[12,99000],[13,99000],[14,99000],[15,99000],[16,99000],[17,99000],[18,99000],[19,99000],[20,99000],[21,99000],[22,99000],[23,99000],[24,99000],[25,99000],[26,99000],[27,99000],[28,99000],[29,99000],[30,112900],[31,112900],[32,112900],[33,112900],[34,117009],[35,120239],[36,120239],[37,120239],[38,120239],[39,120239],[40,120239],[41,120239],[42,120239],[43,120239],[44,120239],[45,120239],[46,120239],[47,120239],[48,120239],[49,120239],[50,120239],[51,120239],[52,120239],[53,119036],[54,119036],[55,119036],[56,119036],[57,119036],[58,119036],[59,119036],[60,119036],[61,119036],[62,119036],[63,119036],[64,119036],[65,119036],[66,117846],[67,117846],[68,117846],[69,117846],[70,117846],[71,117846],[72,117846],[73,117846],[74,117846],[75,117846],[76,117846],[77,117846],[78,117846],[79,117846],[80,117846],[81,117846],[82,117846],[83,117846],[84,117846],[85,117846],[86,117846],[87,117846],[88,117846],[89,117846],[90,117846],[91,117846],[92,117846],[93,117846],[94,117846],[95,122925],[96,121696],[97,121696],[98,121696],[99,121696],[100,121696],[101,121696],[102,121696],[103,121696],[104,121696],[105,121696],[106,121696],[107,121696],[108,121696],[109,121696],[110,121087],[111,121087],[112,121087],[113,121087],[114,121087],[115,121087],[116,122859],[117,122859],[118,121630],[119,121630],[120,121630],[121,121630],[122,121630],[123,121630],[124,121630],[125,121630],[126,121630],[127,121630],[128,121630],[129,121630],[130,121630],[131,120414],[132,120414],[133,120414],[134,120414],[135,119210],[136,117851],[137,117851],[138,117851],[139,117851],[140,117851],[141,116672],[142,116672],[143,116672],[144,116672],[145,116089],[146,114754],[147,113697],[148,112537],[149,112537],[150,112537],[151,112537],[152,112537],[153,112537],[154,112537],[155,110264],[156,110264],[157,110264],[158,110264],[159,110264],[160,110264],[161,110264],[162,110264],[163,110727],[164,110727],[165,110727],[166,110727],[167,110727],[168,110727],[169,110727],[170,110727],[171,110727],[172,110727],[173,110727],[174,110727],[175,110727]],"benchmark":[[0,100000],[1,101374],[2,102096],[3,103105],[4,105783],[5,105616],[6,102864],[7,102578],[8,102003],[9,101856],[10,102404],[11,102761],[12,107489],[13,109260],[14,107719],[15,107624],[16,107180],[17,105516],[18,104306],[19,99518],[20,100705],[21,100817],[22,100830],[23,100387],[24,97547],[25,99450],[26,100427],[27,100478],[28,95239],[29,94785],[30,88629],[31,86654],[32,88650],[33,85264],[34,82262],[35,70760],[36,79478],[37,78032],[38,79198],[39,78999],[40,77535],[41,75531],[42,74610],[43,77545],[44,78644],[45,77522],[46,77597],[47,76029],[48,74849],[49,75472],[50,76612],[51,76580],[52,76199],[53,72827],[54,72199],[55,76622],[56,76056],[57,74218],[58,75467],[59,74116],[60,77567],[61,77008],[62,81907],[63,79884],[64,76752],[65,75795],[66,74343],[67,77117],[68,78839],[69,79118],[70,79483],[71,79948],[72,80272],[73,82073],[74,84390],[75,83317],[76,80287],[77,78792],[78,79444],[79,77658],[80,76455],[81,79869],[82,79485],[83,80350],[84,77496],[85,74774],[86,74737],[87,74327],[88,75207],[89,76880],[90,76756],[91,75384],[92,75458],[93,75832],[94,77762],[95,77592],[96,81036],[97,80107],[98,80910],[99,82262],[100,82361],[101,79735],[102,83894],[103,83593],[104,84334],[105,84702],[106,86882],[107,85348],[108,83192],[109,85493],[110,86038],[111,88134],[112,88216],[113,87292],[114,87505],[115,88658],[116,87183],[117,86003],[118,85367],[119,85990],[120,88163],[121,88668],[122,88529],[123,89986],[124,91176],[125,91773],[126,90159],[127,90365],[128,90892],[129,92632],[130,92099],[131,90699],[132,89351],[133,91369],[134,89092],[135,88018],[136,87231],[137,86709],[138,86510],[139,87308],[140,87389],[141,85018],[142,86378],[143,86745],[144,87053],[145,85449],[146,83747],[147,82842],[148,82678],[149,83133],[150,82912],[151,80365],[152,75118],[153,72167],[154,71904],[155,68777],[156,68573],[157,71336],[158,71066],[159,69514],[160,69248],[161,71630],[162,71602],[163,72607],[164,74045],[165,74688],[166,73944],[167,72625],[168,70859],[169,71531],[170,72373],[171,71261],[172,72066],[173,70595],[174,68722],[175,67263]],"bench_name":"BTC","start_date":"2026-01-01","end_date":"2026-06-25","total_days":175,"total_r":11.37,"n_trades":27,"wins":8,"win_rate":29.6,"belfed_return":10.7,"bench_return":-32.7},"cr_all":{"belfed":[[0,100000],[2,100000],[4,100000],[6,100000],[8,100000],[10,100000],[12,100000],[14,100000],[16,100000],[18,100000],[20,100000],[22,100000],[24,100000],[26,100000],[28,100000],[30,100000],[32,100000],[34,100000],[36,100000],[38,100000],[40,100000],[42,100000],[44,100000],[46,100000],[48,100000],[50,100000],[52,100000],[54,100000],[56,100000],[58,100000],[60,100000],[62,100000],[64,100000],[66,100000],[68,100000],[70,100000],[72,100000],[74,100000],[76,100000],[78,100000],[80,100000],[82,100000],[84,100000],[86,100000],[88,100000],[90,100000],[92,100000],[94,100000],[96,133670],[98,133670],[100,133670],[102,133670],[104,133670],[106,133670],[108,133670],[110,133670],[112,133670],[114,133670],[116,133670],[118,133670],[120,133670],[122,133670],[124,133670],[126,133670],[128,133670],[130,133670],[132,133670],[134,133670],[136,133670],[138,133670],[140,133670],[142,133670],[144,133670],[146,133670],[148,133670],[150,133670],[152,133670],[154,133670],[156,133670],[158,133670],[160,133670],[162,133670],[164,133670],[166,133670],[168,133670],[170,133670],[172,133670],[174,133670],[176,133670],[178,133670],[180,133670],[182,133670],[184,133670],[186,133670],[188,133670],[190,133670],[192,133670],[194,133670],[196,133670],[198,133670],[200,133670],[202,133670],[204,133670],[206,133670],[208,133670],[210,133670],[212,133670],[214,133670],[216,133670],[218,133670],[220,133670],[222,133670],[224,133670],[226,141463],[228,141463],[230,141463],[232,141463],[234,141463],[236,141463],[238,141463],[240,141463],[242,141463],[244,141463],[246,141463],[248,141463],[250,141463],[252,141463],[254,141463],[256,141463],[258,141463],[260,141463],[262,141463],[264,180933],[266,180933],[268,180933],[270,180933],[272,180933],[274,180933],[276,192512],[278,192512],[280,192512],[282,190587],[284,190587],[286,190587],[288,190587],[290,190587],[292,190587],[294,190587],[296,190587],[298,190587],[300,190587],[302,190587],[304,190587],[306,190587],[308,190587],[310,190587],[312,190587],[314,190587],[316,190587],[318,190587],[320,190587],[322,190587],[324,210123],[326,210123],[328,210123],[330,210123],[332,210123],[334,210123],[336,210123],[338,210123],[340,210123],[342,210123],[344,210123],[346,210123],[348,210123],[350,220860],[352,220860],[354,220860],[356,220860],[358,220860],[360,220860],[362,220860],[364,220860],[366,220860],[368,220860],[370,220860],[372,220860],[374,220860],[376,218651],[378,218651],[380,218651],[382,218651],[384,218651],[386,218651],[388,218651],[390,218651],[392,218651],[394,218651],[396,249350],[398,249350],[400,265559],[402,265559],[404,265559],[406,265559],[408,265559],[410,265559],[412,265559],[414,265559],[416,265559],[418,262903],[420,262903],[422,262903],[424,262903],[426,262903],[428,262903],[430,262903],[432,260274],[434,260274],[436,260274],[438,260274],[440,260274],[442,260274],[444,260274],[446,260274],[448,260274],[450,260274],[452,260274],[454,260274],[456,260274],[458,260274],[460,271492],[462,268777],[464,268777],[466,268777],[468,268777],[470,268777],[472,268777],[474,268777],[476,267433],[478,267433],[480,267433],[482,271345],[484,268632],[486,268632],[488,268632],[490,268632],[492,268632],[494,268632],[496,265945],[498,265945],[500,263286],[502,260284],[504,260284],[506,257682],[508,257682],[510,256393],[512,251110],[514,248549],[516,248549],[518,248549],[520,243529],[522,243529],[524,243529],[526,243529],[528,244552],[530,244552],[532,244552],[534,244552],[536,244552],[538,244552],[540,244552]],"benchmark":[[0,100000],[2,103976],[4,104197],[6,102711],[8,98055],[10,100192],[12,100130],[14,106491],[16,110302],[18,107234],[20,112476],[22,110111],[24,110966],[26,108136],[28,109921],[30,108505],[32,103489],[34,103614],[36,102311],[38,102217],[40,103243],[42,103686],[44,103311],[46,101840],[48,101297],[50,104199],[52,102329],[54,96956],[56,89117],[58,89314],[60,99875],[62,92442],[64,95273],[66,91337],[68,83219],[70,88638],[72,88978],[74,87476],[76,87620],[78,89193],[80,88842],[82,92732],[84,92099],[86,89403],[88,87282],[90,90239],[92,88124],[94,88467],[96,83849],[98,87510],[100,88342],[102,88716],[104,88606],[106,90018],[108,90137],[110,92730],[112,99319],[114,100345],[116,99361],[118,99881],[120,102269],[122,101566],[124,100371],[126,102834],[128,109115],[130,110334],[132,110328],[134,109962],[136,109300],[138,111901],[140,116227],[142,113716],[144,115538],[146,115463],[148,111855],[150,110873],[152,112207],[154,110987],[156,110610],[158,112079],[160,116864],[162,112012],[164,111741],[166,113212],[168,111159],[170,109466],[172,107007],[174,112457],[176,113399],[178,113740],[180,113551],[182,115368],[184,114457],[186,115717],[188,115442],[190,122936],[192,124463],[194,126996],[196,125744],[198,125046],[200,124294],[202,127169],[204,125442],[206,124990],[208,125097],[210,124842],[212,119988],[214,121012],[216,120903],[218,124508],[220,123425],[222,125765],[224,130707],[226,124425],[228,124480],[230,119572],[232,119174],[234,122250],[236,116681],[238,117873],[240,114828],[242,114689],[244,117868],[246,117309],[248,116771],[250,118742],[252,120767],[254,123015],[256,122176],[258,123785],[260,124087],[262,122640],[264,119445],[266,120093],[268,116225],[270,118874],[272,120855],[274,127799],[276,129746],[278,132142],[280,130683],[282,119703],[284,121915],[286,119796],[288,114636],[290,113589],[292,117148],[294,113988],[296,117650],[298,121364],[300,119625],[302,114753],[304,116601],[306,112899],[308,110050],[310,109430],[312,110925],[314,109139],[316,105542],[318,101230],[320,97581],[322,96904],[324,90131],[326,91974],[328,92521],[330,96751],[332,96233],[334,91417],[336,99015],[338,94662],[340,95782],[342,98206],[344,98049],[346,95626],[348,91560],[350,91340],[352,93335],[354,93915],[356,92632],[358,92359],[360,93033],[362,92294],[364,92705],[366,95311],[368,96938],[370,99299],[372,96443],[374,95764],[376,96614],[378,102725],[380,101187],[382,99205],[384,93566],[386,94787],[388,94383],[390,93501],[392,94468],[394,89116],[396,81471],[398,80164],[400,66527],[402,73365],[404,74273],[406,71013],[408,72907],[410,72886],[412,71481],[414,70958],[416,72000],[418,68471],[420,72039],[422,69779],[424,69683],[426,72402],[428,75106],[430,71262],[432,72504],[434,74386],[436,75166],[438,77164],[440,78334],[442,74079],[444,73013],[446,75092],[448,75544],[450,70302],[452,69882],[454,72281],[456,70875],[458,71296],[460,72951],[462,75316],[464,77342],[466,74966],[468,78593],[470,79636],[472,80244],[474,80379],[476,82862],[478,82071],[480,83355],[482,80859],[484,80846],[486,83364],[488,84604],[490,86284],[492,84961],[494,87091],[496,85274],[498,85904],[500,82753],[502,81523],[504,82086],[506,79933],[508,81557],[510,80338],[512,77887],[514,78161],[516,75558],[518,67851],[520,64664],[522,67070],[524,65356],[526,67346],[528,68264],[530,70221],[532,68281],[534,67252],[536,66999],[538,66373],[540,63240]],"bench_name":"BTC","start_date":"2025-01-01","end_date":"2026-06-25","total_days":540,"total_r":99.12,"n_trades":37,"wins":16,"win_rate":43.2,"belfed_return":144.6,"bench_return":-36.8}};
+
+  (function initPerfChart() {
+    var state = { market: 'eq', year: '2026' };
+    var svg = document.getElementById('perfSvg');
+    var titleEl = document.getElementById('perfTitle');
+    var statsEl = document.getElementById('perfStats');
+    var benchNameEl = document.getElementById('perfBenchName');
+    if (!svg) return;
+
+    var W = 500, H = 280;
+    var P = { l: 56, r: 28, t: 8, b: 28 };
+
+    function fmtMoney(v) {
+      // Display in "units" — 1 unit = 1% of starting capital ($1,000 of the $100k base).
+      return Math.round(v / 1000) + ' ед.';
+    }
+    function fmtPct(v, signed) {
+      var s = (v>=0 ? '+' : '') + v.toFixed(1) + '%';
+      return s;
+    }
+
+    function pathFrom(pts, totalDays, minV, maxV) {
+      // Smoothed curve via Catmull-Rom → cubic Bezier (tension k = 0.5).
+      var range = maxV - minV;
+      if (range <= 0) range = 1;
+      var innerW = W - P.l - P.r;
+      var innerH = H - P.t - P.b;
+      if (!pts || !pts.length) return '';
+      var coords = [];
+      for (var i = 0; i < pts.length; i++) {
+        coords.push({
+          x: P.l + (pts[i][0] / totalDays) * innerW,
+          y: P.t + innerH - ((pts[i][1] - minV) / range) * innerH
+        });
+      }
+      if (coords.length === 1) {
+        return 'M' + coords[0].x.toFixed(1) + ',' + coords[0].y.toFixed(1);
+      }
+      var d = 'M' + coords[0].x.toFixed(1) + ',' + coords[0].y.toFixed(1);
+      var k = 0.5;
+      for (var j = 0; j < coords.length - 1; j++) {
+        var p0 = coords[j - 1] || coords[j];
+        var p1 = coords[j];
+        var p2 = coords[j + 1];
+        var p3 = coords[j + 2] || p2;
+        var cp1x = p1.x + (p2.x - p0.x) * k / 3;
+        var cp1y = p1.y + (p2.y - p0.y) * k / 3;
+        var cp2x = p2.x - (p3.x - p1.x) * k / 3;
+        var cp2y = p2.y - (p3.y - p1.y) * k / 3;
+        d += ' C' + cp1x.toFixed(1) + ',' + cp1y.toFixed(1) +
+             ' ' + cp2x.toFixed(1) + ',' + cp2y.toFixed(1) +
+             ' ' + p2.x.toFixed(1) + ',' + p2.y.toFixed(1);
+      }
+      return d;
+    }
+    function lastPoint(pts, totalDays, minV, maxV) {
+      var p = pts[pts.length-1];
+      var range = maxV - minV; if (range <= 0) range = 1;
+      var innerW = W - P.l - P.r;
+      var innerH = H - P.t - P.b;
+      return {
+        x: P.l + (p[0]/totalDays) * innerW,
+        y: P.t + innerH - ((p[1] - minV)/range) * innerH,
+        v: p[1]
+      };
+    }
+
+    function render() {
+      var key = (state.market) + '_' + (state.year === 'all' ? 'all' : state.year);
+      var d = BELFED_CHART_DATA[key];
+      if (!d) return;
+
+      benchNameEl.textContent = d.bench_name;
+      var marketLabel = state.market === 'eq' ? 'Акции против ' + d.bench_name : 'Крипто против ' + d.bench_name;
+      var yearLabel = state.year === 'all' ? 'с янв 2025' : (state.year === '2026' ? '2026 YTD' : '2025');
+      titleEl.textContent = '1 единица = 1% стартового капитала · ' + marketLabel + ' · ' + yearLabel;
+
+      // Range
+      var all = d.belfed.concat(d.benchmark);
+      var minV = 100000, maxV = 100000;
+      for (var i=0; i<all.length; i++) {
+        if (all[i][1] < minV) minV = all[i][1];
+        if (all[i][1] > maxV) maxV = all[i][1];
+      }
+      var pad = (maxV - minV) * 0.08;
+      if (pad < 1000) pad = 1000;
+      minV = Math.max(0, minV - pad);
+      maxV = maxV + pad;
+
+      var totalDays = d.total_days;
+      var bp = pathFrom(d.belfed, totalDays, minV, maxV);
+      var hp = pathFrom(d.benchmark, totalDays, minV, maxV);
+
+      // y-axis ticks (4)
+      var ticks = [];
+      var steps = 4;
+      for (var s=0; s<=steps; s++) {
+        var val = minV + (maxV - minV) * (s/steps);
+        var y = P.t + (H - P.t - P.b) - (s/steps) * (H - P.t - P.b);
+        ticks.push({val: val, y: y});
+      }
+
+      // Always-include $100k baseline
+      var range = maxV - minV; if (range <= 0) range = 1;
+      var baselineY = P.t + (H - P.t - P.b) - ((100000 - minV)/range) * (H - P.t - P.b);
+
+      // Final points
+      var belfedLast = lastPoint(d.belfed, totalDays, minV, maxV);
+      var benchLast = lastPoint(d.benchmark, totalDays, minV, maxV);
+
+      // x-axis labels — start and end dates
+      var startLabel = d.start_date.slice(5);
+      var endLabel = d.end_date.slice(5);
+
+      // Build SVG
+      var svgHTML = '';
+      // Grid
+      for (var s=0; s<=steps; s++) {
+        svgHTML += '<line class="perf-grid" x1="'+P.l+'" y1="'+ticks[s].y+'" x2="'+(W-P.r)+'" y2="'+ticks[s].y+'"/>';
+      }
+      // 100k baseline (dashed) — label anchored at LEFT edge to avoid endpoint collision.
+      // Skip the label if it would overlap with a nearby y-axis tick label.
+      svgHTML += '<line class="perf-100k" x1="'+P.l+'" y1="'+baselineY+'" x2="'+(W-P.r)+'" y2="'+baselineY+'"/>';
+      var baselineLabelClear = true;
+      for (var s2=0; s2<=steps; s2++) {
+        if (Math.abs(ticks[s2].y - baselineY) < 10) { baselineLabelClear = false; break; }
+      }
+      if (baselineLabelClear) {
+        svgHTML += '<text class="perf-tick" x="'+(P.l+4)+'" y="'+(baselineY-4)+'" text-anchor="start" fill="#999">100 ед. · старт</text>';
+      }
+
+      // Axes
+      svgHTML += '<line class="perf-axis" x1="'+P.l+'" y1="'+P.t+'" x2="'+P.l+'" y2="'+(H-P.b)+'"/>';
+      svgHTML += '<line class="perf-axis" x1="'+P.l+'" y1="'+(H-P.b)+'" x2="'+(W-P.r)+'" y2="'+(H-P.b)+'"/>';
+
+      // Y tick labels
+      for (var s=0; s<=steps; s++) {
+        svgHTML += '<text class="perf-tick" x="'+(P.l-6)+'" y="'+(ticks[s].y+3)+'" text-anchor="end">'+fmtMoney(ticks[s].val)+'</text>';
+      }
+      // X tick labels
+      svgHTML += '<text class="perf-tick" x="'+P.l+'" y="'+(H-8)+'" text-anchor="start">'+startLabel+'</text>';
+      svgHTML += '<text class="perf-tick" x="'+(W-P.r)+'" y="'+(H-8)+'" text-anchor="end">'+endLabel+'</text>';
+
+      // Benchmark line first (under)
+      svgHTML += '<path class="line-bench" d="'+hp+'"/>';
+      // Belfed line on top
+      svgHTML += '<path class="line-belfed" d="'+bp+'"/>';
+
+      // Final dots
+      svgHTML += '<circle class="perf-final-bench" cx="'+benchLast.x.toFixed(1)+'" cy="'+benchLast.y.toFixed(1)+'" r="3"/>';
+      svgHTML += '<circle class="perf-final-dot pulse" cx="'+belfedLast.x.toFixed(1)+'" cy="'+belfedLast.y.toFixed(1)+'" r="4.5"/>';
+
+      // Final value labels — smart stacked so they never overlap each other OR the $100k baseline.
+      // Both labels live to the LEFT of their endpoints (text-anchor=end), pushed inside the plot.
+      var BELFED_LBL_PAD = 12;    // px gap from dot to label
+      var BENCH_LBL_PAD = 10;
+      var MIN_LBL_DELTA = 14;     // min vertical separation between Belfed and bench labels
+      var BASELINE_PAD = 12;      // min vertical clearance from $100k baseline label
+
+      var belfedLabelY = belfedLast.y - 8;       // default: above the dot
+      var benchLabelY  = benchLast.y + 14;       // default: below the dot
+
+      // If bench endpoint sits near the $100k baseline, push its label away from the baseline text
+      if (Math.abs(benchLast.y - baselineY) < BASELINE_PAD) {
+        // Baseline label is at baselineY-4 anchored left; bench label sits right-anchored, but the
+        // bench DOT may sit visually next to the baseline. Push label below the dot far enough.
+        benchLabelY = benchLast.y + 16;
+      }
+
+      // Resolve vertical collision between the two endpoint labels
+      if (Math.abs(belfedLabelY - benchLabelY) < MIN_LBL_DELTA) {
+        if (belfedLast.y < benchLast.y) {
+          belfedLabelY = belfedLast.y - 10;
+          benchLabelY  = benchLast.y + 18;
+        } else {
+          belfedLabelY = belfedLast.y + 18;
+          benchLabelY  = benchLast.y - 10;
+        }
+      }
+
+      // Belfed endpoint label (always to the LEFT of the dot, right-anchored).
+      // The white stroke (paint-order: stroke fill) creates a halo so the label stays readable
+      // even when the equity line passes behind it.
+      svgHTML += '<text class="perf-label" x="'+(belfedLast.x - BELFED_LBL_PAD).toFixed(1)+'" y="'+belfedLabelY.toFixed(1)+'" text-anchor="end" font-weight="700" fill="#1a6b3a">'+fmtMoney(belfedLast.v)+'</text>';
+      // Bench endpoint label (also to the LEFT of its dot)
+      svgHTML += '<text class="perf-label" x="'+(benchLast.x - BENCH_LBL_PAD).toFixed(1)+'" y="'+benchLabelY.toFixed(1)+'" text-anchor="end" fill="#b08642">'+fmtMoney(benchLast.v)+'</text>';
+
+      svg.innerHTML = svgHTML;
+
+      // Stats line
+      var spread = d.belfed_return - d.bench_return;
+      statsEl.innerHTML =
+        '<span>Belfed <span class="v '+(d.belfed_return>=0?'up':'dn')+'">'+fmtPct(d.belfed_return)+'</span></span>' +
+        '<span>'+d.bench_name+' <span class="v '+(d.bench_return>=0?'up':'dn')+'">'+fmtPct(d.bench_return)+'</span></span>' +
+        '<span>Разница <span class="v '+(spread>=0?'up':'dn')+'">'+fmtPct(spread)+'</span></span>' +
+        '<span>'+d.n_trades+' сделок · '+d.win_rate+'% прибыльных</span>';
+    }
+
+    // Wire buttons
+    document.querySelectorAll('.perf-seg button[data-market]').forEach(function(b){
+      b.addEventListener('click', function(){
+        document.querySelectorAll('.perf-seg button[data-market]').forEach(function(x){ x.classList.remove('active'); });
+        b.classList.add('active');
+        state.market = b.getAttribute('data-market');
+        render();
+      });
+    });
+    document.querySelectorAll('.perf-seg button[data-year]').forEach(function(b){
+      b.addEventListener('click', function(){
+        document.querySelectorAll('.perf-seg button[data-year]').forEach(function(x){ x.classList.remove('active'); });
+        b.classList.add('active');
+        state.year = b.getAttribute('data-year');
+        render();
+      });
+    });
+
+    render();
+  })();
+
+</script>
+
+
+<!-- ============ MODAL: free channels ============ -->
+<div class="modal-backdrop" id="channelsModal" role="dialog" aria-modal="true" aria-labelledby="channelsTitle" aria-hidden="true">
+  <div class="modal" role="document">
+    <button class="modal-close" type="button" aria-label="Close" data-modal-close>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <h3 id="channelsTitle">Следите за Belfed — бесплатно.</h3>
+    <p class="modal-sub">// 4 публичных канала · регистрация не нужна</p>
+    <div class="modal-list">
+      <a href="https://www.tradingview.com/u/BelFed_Analytics/" target="_blank" rel="noopener">
+        <svg class="icon ic-tv" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 6h20v4h-7v8h-6v-8H2V6z"/></svg>
+        <span class="meta"><b>TradingView · @BelFed_Analytics</b><span>Полный публичный трек-рекорд и графики</span></span>
+        <span class="arrow">↗</span>
+      </a>
+      <a href="https://t.me/marketartistryENG" target="_blank" rel="noopener">
+        <svg class="icon ic-tg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.6 0 12 0zm5.6 8.2-1.9 8.9c-.1.6-.5.8-1.1.5l-3-2.2-1.4 1.4c-.2.2-.3.3-.6.3l.2-3.2 5.7-5.2c.2-.2 0-.3-.3-.1L7.7 13l-3-1c-.6-.2-.7-.6.1-.9l11.7-4.5c.5-.2 1 .1.8.8z"/></svg>
+        <span class="meta"><b>Telegram · Английский</b><span>@MarketArtistryENG · ежедневные рыночные заметки</span></span>
+        <span class="arrow">↗</span>
+      </a>
+      <a href="https://t.me/marketartistry" target="_blank" rel="noopener">
+        <svg class="icon ic-tg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.6 0 12 0zm5.6 8.2-1.9 8.9c-.1.6-.5.8-1.1.5l-3-2.2-1.4 1.4c-.2.2-.3.3-.6.3l.2-3.2 5.7-5.2c.2-.2 0-.3-.3-.1L7.7 13l-3-1c-.6-.2-.7-.6.1-.9l11.7-4.5c.5-.2 1 .1.8.8z"/></svg>
+        <span class="meta"><b>Telegram · Русский</b><span>@MarketArtistry · ежедневные обзоры</span></span>
+        <span class="arrow">↗</span>
+      </a>
+      <a href="https://x.com/art_the_trader" target="_blank" rel="noopener">
+        <svg class="icon ic-x" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2H21.5l-7.55 8.625L23 22h-6.766l-5.31-6.929L4.8 22H1.54l8.082-9.225L1 2h6.91l4.8 6.34L18.244 2zm-2.367 18h1.84L7.21 4H5.25l10.627 16z"/></svg>
+        <span class="meta"><b>X · @art_the_trader</b><span>Комментарии рынка в реальном времени</span></span>
+        <span class="arrow">↗</span>
+      </a>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
