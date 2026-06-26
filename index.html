@@ -135,19 +135,8 @@
     .nav-links a:hover { color: var(--black); }
 
     .nav-right { display: flex; align-items: center; gap: 14px; }
-    .lang-toggle {
-      display: inline-flex; align-items: center; gap: 0;
-      border: 1px solid var(--rule-strong); border-radius: 99px;
-      padding: 2px; font-size: 11px; font-family: var(--font-mono);
-    }
-    .lang-toggle button, .lang-toggle a {
-      padding: 4px 10px; border-radius: 99px; color: var(--gray-soft); letter-spacing: 0.06em;
-      text-decoration: none; display: inline-block; transition: all var(--t);
-    }
-    .lang-toggle a:hover { color: var(--black); }
-    .lang-toggle button.on, .lang-toggle a.on { background: var(--black); color: var(--white); }
-    /* Mobile language icon (globe) — replaces EN/RU pill */
-    .lang-globe { display: none; }
+    /* Language switcher — globe icon with target lang badge, same on all viewports */
+    .lang-globe { display: inline-flex; }
     .lang-globe a {
       width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;
       border-radius: 50%; color: var(--gray-soft); transition: color var(--t), background var(--t);
@@ -598,8 +587,6 @@
       .wrap, .wrap-narrow { padding: 0 18px; }
       .nav { padding: 12px 16px; }
       .nav-right { gap: 6px; }
-      .lang-toggle { display: none; }
-      .lang-globe { display: inline-flex; }
       .theme-btn { width: 30px; height: 30px; }
       .btn-sm { padding: 8px 12px; font-size: 10px; letter-spacing: 0.08em; }
       .nav-login { display: none; }
@@ -885,6 +872,10 @@
     .form-msg.dup b { color: var(--ink); }
     .form-msg.dup a { color: var(--green-strong); font-weight: 700; }
     .form-msg.dup a:hover { text-decoration: underline; text-underline-offset: 3px; }
+    .form-msg.err { background: #c0392b14; border: 1px solid #c0392b40; color: #c0392b; }
+    .form-msg.err b { color: var(--ink); }
+    .form-msg.err a { color: var(--green-strong); font-weight: 700; }
+    .form-msg.err a:hover { text-decoration: underline; text-underline-offset: 3px; }
 
     </style>
 </head>
@@ -892,7 +883,7 @@
 
 <!-- ============ NAV ============ -->
 <nav class="nav" aria-label="Primary">
-  <a href="#" class="logo" aria-label="Belfed home">BELFED<span class="cursor">_</span></a>
+  <a href="/" class="logo" aria-label="Belfed home">BELFED<span class="cursor">_</span></a>
   <ul class="nav-links" role="list">
     <li><a href="#tour" data-spy="tour">Что вы получаете</a></li>
     <li><a href="#how" data-spy="how">Как это работает</a></li>
@@ -901,10 +892,6 @@
     <li><a href="#faq" data-spy="faq">FAQ</a></li>
   </ul>
   <div class="nav-right">
-    <div class="lang-toggle" role="group" aria-label="Язык">
-      <a href="https://belfed.com/">EN</a>
-      <a href="https://belfed.ru/" class="on">RU</a>
-    </div>
     <div class="lang-globe" role="group" aria-label="Язык">
       <a href="https://belfed.com/" aria-label="Switch to English">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18"/></svg><span class="lang-code">EN</span>
@@ -1192,6 +1179,7 @@
       </div>
       <div class="r">
         <form class="form-card" id="leadForm" novalidate>
+          <input type="text" id="website" name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true">
           <div class="form-body">
             <h4>Запросите бесплатный анализ</h4>
             <div class="field">
@@ -1234,6 +1222,10 @@
             <div class="form-msg dup" id="dupMsg">
               <b>Похоже, по этому email уже есть бесплатный запрос.</b><br>
               Чтобы запросить больше активов, начните <a href="#pricing">14-дневный бесплатный доступ</a> — без карты, и вы сможете отправлять новый запрос каждые 24 часа.
+            </div>
+            <div class="form-msg err" id="errMsg">
+              <b>Что-то пошло не так.</b><br>
+              Попробуйте ещё раз через минуту или напишите на <a href="mailto:hello@belfed.com">hello@belfed.com</a>.
             </div>
           </div>
           <div class="thanks" id="thanks">
@@ -1436,7 +1428,7 @@
       </div>
       <div class="foot-col">
         <h5>Юридическое</h5>
-        <ul><li><a href="#">Условия использования</a></li><li><a href="#">Политика конфиденциальности</a></li><li><a href="#">Раскрытие рисков</a></li><li><a href="mailto:hello@belfed.com">Контакты</a></li></ul>
+        <ul><li><a href="/oferta.html">Оферта</a></li><li><a href="/privacy.html">Политика конфиденциальности</a></li><li><a href="/disclaimer.html">Раскрытие рисков</a></li><li><a href="mailto:hello@belfed.com">Контакты</a></li></ul>
       </div>
     </div>
     <div class="foot-bottom">
@@ -1455,13 +1447,6 @@
   });
 
   // Language toggle (visual only)
-  document.querySelectorAll('.lang-toggle button').forEach(function (b) {
-    b.addEventListener('click', function () {
-      document.querySelectorAll('.lang-toggle button').forEach(function (x) { x.classList.remove('on'); });
-      b.classList.add('on');
-    });
-  });
-
   // FAQ
   document.querySelectorAll('.faq-q').forEach(function (btn) {
     btn.addEventListener('click', function () {
@@ -1491,32 +1476,59 @@
   // Failsafe: ensure everything visible after 1.2s no matter what
   setTimeout(function () { revealEls.forEach(function (el) { el.classList.add('in'); }); }, 1200);
 
-  // Lead form
+  // Lead form — sends to Supabase edge function landing-lead-create
+  var SUPA_URL = 'https://obujqvqqmyfcfflhqvud.supabase.co';
+  var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9idWpxdnFxbXlmY2ZmbGhxdnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDgxNjYsImV4cCI6MjA4OTkyNDE2Nn0.syl4YBLbf8aBitxyK3gCL51pPYxWjEW99mMTXJaQQ8w';
   var form = document.getElementById('leadForm');
   var dupMsg = document.getElementById('dupMsg');
+  var errMsg = document.getElementById('errMsg');
   form.addEventListener('submit', function (e) {
     e.preventDefault();
-    var ticker = document.getElementById('ticker').value.trim().toUpperCase() || 'YOUR TICKER';
+    var submitBtn = form.querySelector('button[type="submit"]');
+    var ticker = (document.getElementById('ticker').value || '').trim().toUpperCase();
     var email = (document.getElementById('email').value || '').trim().toLowerCase();
     var consent = document.getElementById('consent').checked;
-    if (!email) return;
-    // consent is captured so we can pass it through to the backend opt-in record.
-    // (Per CAN-SPAM / GDPR best practice, even an unchecked consent still allows the
-    // transactional report delivery the user explicitly requested.)
-    window.__belfedLeadConsent = consent;
-    // Duplicate check (client-side demo; production: server-enforced)
-    if (getSubmittedEmails().indexOf(email) !== -1) {
-      dupMsg.classList.add('show');
-      dupMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
-    }
+    var note = (document.getElementById('note').value || '').trim();
+    var assetClass = (document.querySelector('input[name="class"]:checked') || {}).value || null;
+    var timeframe  = (document.querySelector('input[name="tf"]:checked')    || {}).value || null;
+    var honeypot = (document.getElementById('website') || {}).value || '';
+    if (!ticker || !email) return;
     dupMsg.classList.remove('show');
-    saveSubmittedEmail(email);
-    document.getElementById('thanksTicker').textContent = '$' + ticker;
-    document.getElementById('thanksEmail').textContent = email;
-    form.classList.add('submitted');
-    document.getElementById('thanks').classList.add('show');
-    document.getElementById('thanks').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (errMsg) errMsg.classList.remove('show');
+    var origLabel = submitBtn.innerHTML;
+    submitBtn.disabled = true; submitBtn.innerHTML = 'Отправляем…';
+
+    fetch(SUPA_URL + '/functions/v1/landing-lead-create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPA_KEY,
+        'Authorization': 'Bearer ' + SUPA_KEY
+      },
+      body: JSON.stringify({
+        email: email, ticker: ticker, asset_class: assetClass, timeframe: timeframe,
+        note: note || null, consent: consent, lang: 'ru', source: 'landing', website: honeypot
+      })
+    }).then(function (r) { return r.json().then(function (d) { return { status: r.status, body: d }; }); })
+      .then(function (res) {
+        submitBtn.disabled = false; submitBtn.innerHTML = origLabel;
+        if (res.body && res.body.ok) {
+          document.getElementById('thanksTicker').textContent = '$' + ticker;
+          document.getElementById('thanksEmail').textContent = email;
+          form.classList.add('submitted');
+          document.getElementById('thanks').classList.add('show');
+          document.getElementById('thanks').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else if (res.body && res.body.reason === 'dup') {
+          dupMsg.classList.add('show');
+          dupMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          if (errMsg) { errMsg.classList.add('show'); errMsg.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+        }
+      })
+      .catch(function () {
+        submitBtn.disabled = false; submitBtn.innerHTML = origLabel;
+        if (errMsg) { errMsg.classList.add('show'); errMsg.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+      });
   });
 
   // Mobile menu (basic)
@@ -1555,6 +1567,10 @@
   document.querySelectorAll('.modal-backdrop').forEach(function (bk) {
     bk.addEventListener('click', function (e) {
       if (e.target === bk || e.target.closest('[data-modal-close]')) closeModal(bk);
+    });
+    // Автозакрытие модалки при клике по любой внешней ссылке внутри
+    bk.querySelectorAll('a[href]').forEach(function (a) {
+      a.addEventListener('click', function () { closeModal(bk); });
     });
   });
   document.addEventListener('keydown', function (e) {
@@ -1610,14 +1626,6 @@
       vids.forEach(loadVideo);
     }
   })();
-
-  // ============ FREE-TICKER DUPLICATE PREVENTION ============
-  // Tracks submitted emails in memory; in production this is enforced server-side.
-  var __belfedSubmittedEmails = [];
-  function getSubmittedEmails() { return __belfedSubmittedEmails; }
-  function saveSubmittedEmail(e) {
-    if (__belfedSubmittedEmails.indexOf(e) === -1) __belfedSubmittedEmails.push(e);
-  }
 
 
   /* ============ HERO PERFORMANCE CHART ============ */
