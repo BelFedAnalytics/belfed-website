@@ -297,7 +297,7 @@ var tR=0,w=0,l=0,wR=0,lR=0,n=0;
 rows.forEach(function(r){
 var c=r.querySelectorAll('td');
 if(c.length<8)return;
-var d=c[3].textContent.trim().split('.');
+var d=c[4].textContent.trim().split('.');
 var ey=d.length===3?parseInt(d[2]):0;
 var ok=yr==='all'||ey===parseInt(yr);
 r.style.display=ok?'':'none';
