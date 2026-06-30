@@ -693,10 +693,10 @@ TEXTS_EN = {
         "(single-use, valid 24 hours):\n{invite}"
     ),
     "gift7_ok": (
-        "🎁 Gift for our early community: 14 days of access unlocked.\n\n"
+        "🎁 Gift for our early community: 7 days of access unlocked.\n\n"
         "Your personal invite to the private channel "
         "(single-use, valid 24 hours):\n{invite}\n\n"
-        "After 14 days: subscribe whenever you wish. No auto-charges."
+        "After 7 days: subscribe whenever you wish. No auto-charges."
     ),
     "gift7_already_active": (
         "✅ You already have active access — no gift needed.\n\n"
@@ -989,10 +989,14 @@ async def run_trial_flow(update: Update, context: ContextTypes.DEFAULT_TYPE,
 async def run_gift7_flow(update: Update, context: ContextTypes.DEFAULT_TYPE,
                           user_id: int, username: str | None,
                           lang: str, source: str, reply_target):
-    """Activate a 14-day gift trial for the user.
+    """Activate a 7-day gift trial for the user.
+
+    NOTE: the gift7 length (7 days) is INTENTIONALLY distinct from the canonical
+    14-day BelFed trial. This is a separate channel re-engagement gift; do not
+    bump it to 14 when reconciling the standard trial length.
 
     Three cases (handled by claim_trial_by_telegram RPC):
-      1) No profile or profile without trial   -> create/activate 14-day trial + invite
+      1) No profile or profile without trial   -> create/activate 7-day trial + invite
       2) Already active/admin                  -> just re-issue fresh invite link
       3) Trial already used                    -> show "already used" message
 
@@ -1007,7 +1011,7 @@ async def run_gift7_flow(update: Update, context: ContextTypes.DEFAULT_TYPE,
         {
             "p_telegram_id":       str(user_id),
             "p_telegram_username": username or "",
-            "p_trial_days":        14,
+            "p_trial_days":        7,
             "p_source":            source,
             "p_lang":              lang,
         },
@@ -1377,7 +1381,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await _send_stars_invoice(update.message, profile, lang, user.id)
             return
 
-    # Deep-link /start gift7[_ru|_en] — 14-day gift trial from channel post
+    # Deep-link /start gift7[_ru|_en] — 7-day gift trial from channel post
     if args and (args[0] == "gift7" or args[0].startswith("gift7_")):
         source = args[0]
         lang_from_src = detect_lang_from_source(source)
