@@ -142,6 +142,8 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 .login-box .login-error{color:#c50000;font-size:12px;margin-top:12px;display:none}
 .login-box .login-msg{color:#1a7a1a;font-size:12px;margin-top:12px;display:none}
 .trial-note{font-size:10px;opacity:0.5;margin-top:14px;letter-spacing:0.5px}
+.lock-title{font-size:15px;font-weight:bold;letter-spacing:1px;margin-bottom:12px}
+.lock-body{font-size:13px;line-height:1.7;margin-bottom:22px;opacity:0.85}
 #expiredScreen{display:none;justify-content:center;align-items:center;min-height:80vh}
 .expired-box{background:#fff;border:2px solid #c50000;padding:40px;max-width:460px;width:100%;text-align:center}
 .expired-box h2{font-size:16px;letter-spacing:2px;color:#c50000;margin-bottom:12px}
@@ -196,13 +198,14 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 <div id="loginScreen">
   <div class="login-box">
     <h2><a href="/" style="color:#000;text-decoration:none">— BELFED_ —</a></h2>
-    <div class="login-sub">MEMBER ACCESS</div>
+    <div class="lock-title">Доступ только для подписчиков</div>
+    <div class="lock-body">Зарегистрируйтесь и активируйте 14 дней бесплатного доступа к анализу активов и запросам по тикерам. Карта не нужна.</div>
     <div class="auth-tabs">
-      <button class="auth-tab active" onclick="showAuthTab('signin')">ВХОД</button>
-      <button class="auth-tab" onclick="showAuthTab('signup')">РЕГИСТРАЦИЯ</button>
+      <button class="auth-tab" onclick="showAuthTab('signin')">ВХОД</button>
+      <button class="auth-tab active" onclick="showAuthTab('signup')">РЕГИСТРАЦИЯ</button>
       <button class="auth-tab" onclick="showAuthTab('magiclink')">MAGIC LINK</button>
     </div>
-    <div id="signinForm">
+    <div id="signinForm" style="display:none">
       <input type="email" id="siEmail" placeholder="Email">
       <input type="password" id="siPassword" placeholder="Пароль">
       <button class="login-btn" onclick="handleSignIn()">ВОЙТИ</button>
@@ -213,7 +216,7 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
         <div id="resetStatus" style="font-size:11px;margin-top:8px;display:none"></div>
       </div>
     </div>
-    <div id="signupForm" style="display:none">
+    <div id="signupForm">
       <input type="email" id="suEmail" placeholder="Email">
       <input type="password" id="suPassword" placeholder="Пароль (мин. 6 символов)">
       <input type="password" id="suPassword2" placeholder="Повторите пароль">
