@@ -60,6 +60,9 @@
   }
 
   async function startCheckout(opts) {
+    if (typeof window !== 'undefined' && window.belfedTrack) {
+      window.belfedTrack('payment_started', { plan: (opts && opts.plan) || 'month' });
+    }
     var data = await createPayment(opts);
     window.location.assign(data.confirmation_url);
   }

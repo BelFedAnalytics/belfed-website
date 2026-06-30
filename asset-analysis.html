@@ -218,7 +218,7 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
       <input type="password" id="suPassword" placeholder="Пароль (мин. 6 символов)">
       <input type="password" id="suPassword2" placeholder="Повторите пароль">
       <button class="login-btn" onclick="handleSignUp()">НАЧАТЬ БЕСПЛАТНЫЙ ПРОБНЫЙ ПЕРИОД</button>
-      <div class="trial-note">14 дней бесплатного доступа &bull; Без привязки карты</div>
+      <div class="trial-note">7 дней бесплатного доступа &bull; Без привязки карты</div>
     </div>
     <div id="magiclinkForm" style="display:none">
       <input type="email" id="mlEmail" placeholder="Email">
@@ -234,8 +234,8 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 <div id="expiredScreen">
   <div class="expired-box">
     <h2>ПРОБНЫЙ ПЕРИОД ИСТЁК</h2>
-    <p>Ваш 14-дневный пробный период завершён.<br>Оформите подписку, чтобы продолжить получать торговые сигналы и аналитику.</p>
-    <a href="https://belfed.ru/#subscribe" class="login-btn">ТАРИФЫ</a>
+    <p>Ваш 7-дневный пробный период завершён.<br>Оформите подписку, чтобы продолжить получать торговые сигналы и аналитику.</p>
+    <a href="https://belfed.ru/#pricing" class="login-btn">ТАРИФЫ</a>
     <button class="login-btn" style="background:none;color:#000;border:1px solid #000;margin-top:10px" onclick="handleLogout()">ВЫЙТИ</button>
   </div>
 </div>
@@ -320,14 +320,27 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="belfed-analytics.js"></script>
 <script src="belfed-auth.js"></script>
 <script>
+// Failsafe: never leave the page blank if the auth callback is delayed/missing.
+// After a short wait, reveal the sign-in screen so guests are never stuck.
+var __authResolved = false;
+setTimeout(function () {
+  if (__authResolved) return;
+  document.getElementById('mainContainer').style.display = 'none';
+  document.getElementById('expiredScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.body.style.visibility = 'visible';
+}, 4000);
 // Page callbacks expected by belfed-auth.js
 function onAuthReady(profile, session, entitlement) {
+  __authResolved = true;
   if (entitlement && entitlement.access) showMain();
   else showExpired();
 }
 function onAuthSignedOut() {
+  __authResolved = true;
   document.getElementById('mainContainer').style.display = 'none';
   document.getElementById('expiredScreen').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'flex';

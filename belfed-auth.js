@@ -13,13 +13,19 @@ var currentSubscription = null;
 
 // --- Auth UI helpers ---
 function showAuthTab(tab) {
-  document.querySelectorAll('.auth-tab').forEach(function(b) { b.classList.remove('active'); });
-  event.target.classList.add('active');
-  document.getElementById('signinForm').style.display = tab === 'signin' ? 'block' : 'none';
-  document.getElementById('signupForm').style.display = tab === 'signup' ? 'block' : 'none';
-      var mlForm = document.getElementById('magiclinkForm'); if (mlForm) mlForm.style.display = tab === 'magiclink' ? 'block' : 'none';
-  document.getElementById('loginError').style.display = 'none';
-  document.getElementById('loginMsg').style.display = 'none';
+  // Activate the matching tab button without relying on a global `event`,
+  // so this can also be called programmatically (e.g. from #signup hash).
+  document.querySelectorAll('.auth-tab').forEach(function(b) {
+    var oc = b.getAttribute('onclick') || '';
+    b.classList.toggle('active', oc.indexOf("'" + tab + "'") !== -1);
+  });
+  var siForm = document.getElementById('signinForm');
+  var suForm = document.getElementById('signupForm');
+  if (siForm) siForm.style.display = tab === 'signin' ? 'block' : 'none';
+  if (suForm) suForm.style.display = tab === 'signup' ? 'block' : 'none';
+  var mlForm = document.getElementById('magiclinkForm'); if (mlForm) mlForm.style.display = tab === 'magiclink' ? 'block' : 'none';
+  var errEl = document.getElementById('loginError'); if (errEl) errEl.style.display = 'none';
+  var msgEl = document.getElementById('loginMsg'); if (msgEl) msgEl.style.display = 'none';
   var fpBlock = document.getElementById('forgotPasswordBlock');
   var fpLink = document.getElementById('forgotPasswordLink');
   if (fpBlock) fpBlock.style.display = 'none';
@@ -28,16 +34,71 @@ function showAuthTab(tab) {
   if (rs) rs.style.display = 'none';
 }
 
+// Open the correct auth tab based on the URL hash (#signup / #signin).
+// Default (no/unknown hash) leaves the sign-in tab active.
+function applyAuthHashTab() {
+  if (!document.getElementById('signupForm')) return; // not the members page
+  var h = (window.location.hash || '').replace('#', '').toLowerCase();
+  if (h === 'signup') showAuthTab('signup');
+  else if (h === 'signin') showAuthTab('signin');
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', applyAuthHashTab);
+} else {
+  applyAuthHashTab();
+}
+window.addEventListener('hashchange', applyAuthHashTab);
+
+// Map raw Supabase auth errors to clear Russian messages.
+function ruAuthError(err, context) {
+  var raw = (err && err.message ? err.message : '').toLowerCase();
+  if (raw.indexOf('already registered') !== -1 || raw.indexOf('already been registered') !== -1 || raw.indexOf('user already') !== -1) {
+    return 'Этот email уже зарегистрирован. Войдите в аккаунт или восстановите пароль.';
+  }
+  if (raw.indexOf('invalid login credentials') !== -1) {
+    return 'Неверный email или пароль. Проверьте данные или восстановите пароль.';
+  }
+  if (raw.indexOf('email not confirmed') !== -1) {
+    return 'Email не подтверждён. Проверьте почту и перейдите по ссылке из письма.';
+  }
+  if (raw.indexOf('invalid') !== -1 && raw.indexOf('email') !== -1) {
+    return 'Некорректный email. Проверьте адрес и попробуйте снова.';
+  }
+  if (raw.indexOf('rate limit') !== -1 || raw.indexOf('too many') !== -1) {
+    return 'Слишком много попыток. Подождите немного и попробуйте снова.';
+  }
+  if (raw.indexOf('password') !== -1 && raw.indexOf('least') !== -1) {
+    return 'Пароль должен быть не менее 6 символов.';
+  }
+  return (err && err.message) ? err.message : (context === 'signin' ? 'Не удалось войти' : 'Ошибка регистрации');
+}
+
+function showLoginError(text) {
+  var errEl = document.getElementById('loginError');
+  if (!errEl) return;
+  errEl.textContent = text;
+  errEl.style.display = 'block';
+  try { errEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {}
+}
+
 async function handleSignIn() {
   var email = document.getElementById('siEmail').value.trim();
   var pw = document.getElementById('siPassword').value;
   var errEl = document.getElementById('loginError');
   errEl.style.display = 'none';
-  if (!email || !pw) { errEl.textContent = 'Please enter email and password'; errEl.style.display = 'block'; return; }
+  if (!email || !pw) { showLoginError('Введите email и пароль'); return; }
+  var btn = document.querySelector('#signinForm .login-btn');
+  var prevBtnText = null;
+  if (btn) { prevBtnText = btn.textContent; btn.disabled = true; btn.textContent = 'Вход...'; }
   try {
     var res = await supaClient.auth.signInWithPassword({ email: email, password: pw });
     if (res.error) throw res.error;
-  } catch (err) { errEl.textContent = err.message || 'Login failed'; errEl.style.display = 'block'; }
+  } catch (err) {
+    showLoginError(ruAuthError(err, 'signin'));
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = prevBtnText || 'Войти'; }
+  }
 }
 
 async function handleMagicLink() {
@@ -102,7 +163,7 @@ async function handleMagicLink() {
       wrap.className = 'signup-consent';
       wrap.innerHTML = ''
         + '<input type="checkbox" id="suConsent">'
-        + '<label for="suConsent">Я согласен с <a href="/privacy.html" target="_blank" rel="noopener">Политикой конфиденциальности</a> и <a href="/terms.html" target="_blank" rel="noopener">Условиями использования</a></label>';
+        + '<label for="suConsent">Я согласен с <a href="/privacy.html" target="_blank" rel="noopener">Политикой конфиденциальности</a> и <a href="/oferta.html" target="_blank" rel="noopener">Условиями использования (Офертой)</a></label>';
       form.insertBefore(wrap, btn);
     });
   }
@@ -126,12 +187,11 @@ async function handleSignUp() {
   errEl.style.display = 'none'; msgEl.style.display = 'none';
   msgEl.innerHTML = '';
 
-  if (!email || !pw || !pw2) { errEl.textContent = 'Заполните все поля'; errEl.style.display = 'block'; return; }
-  if (pw !== pw2) { errEl.textContent = 'Пароли не совпадают'; errEl.style.display = 'block'; return; }
-  if (pw.length < 6) { errEl.textContent = 'Пароль должен быть не менее 6 символов'; errEl.style.display = 'block'; return; }
+  if (!email || !pw || !pw2) { showLoginError('Заполните все поля'); return; }
+  if (pw !== pw2) { showLoginError('Пароли не совпадают'); return; }
+  if (pw.length < 6) { showLoginError('Пароль должен быть не менее 6 символов'); return; }
   if (!consentBox || !consentBox.checked) {
-    errEl.textContent = 'Нужно согласиться с Политикой конфиденциальности и Условиями использования';
-    errEl.style.display = 'block';
+    showLoginError('Нужно согласиться с Политикой конфиденциальности и Условиями использования');
     return;
   }
 
@@ -148,17 +208,31 @@ async function handleSignUp() {
     });
     if (res.error) throw res.error;
 
-    // Fetch one-time TG deep-link with email + consent
+    // Supabase may obfuscate "already registered" by returning a user with an
+    // empty identities array instead of an error. Treat that as a duplicate.
+    var u = res.data && res.data.user;
+    if (u && Array.isArray(u.identities) && u.identities.length === 0) {
+      throw { message: 'User already registered' };
+    }
+
+    // Account created — emit funnel event with available UTM context.
+    if (typeof window !== 'undefined' && window.belfedTrack) window.belfedTrack('signup_complete', { email: email });
+
+    // Fetch one-time TG deep-link with email + consent (+ UTM attribution if available)
+    var intentBody = {
+      email: email,
+      lang: 'ru',
+      source: 'web_signup',
+      accept_privacy: true,
+      accept_terms: true
+    };
+    if (typeof window !== 'undefined' && window.belfedAnalytics) {
+      intentBody = Object.assign(intentBody, window.belfedAnalytics.utmPayload());
+    }
     var intentRes = await fetch(SUPABASE_URL + '/functions/v1/trial-intent-create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: email,
-        lang: 'ru',
-        source: 'web_signup',
-        accept_privacy: true,
-        accept_terms: true
-      })
+      body: JSON.stringify(intentBody)
     });
     var intentData = await intentRes.json();
     var deepLink = (intentData && intentData.ok && intentData.deep_link)
@@ -169,21 +243,23 @@ async function handleSignUp() {
     msgEl.innerHTML = ''
       + '<div class="signup-success">'
       + '  <h3>Аккаунт создан</h3>'
-      + '  <p>Чтобы активировать 14-дневный доступ к личному кабинету и получать наши сделки в живом режиме — присоединяйтесь к нашей трейдинг-группе.</p>'
+      + '  <p>Чтобы активировать 7-дневный доступ к личному кабинету и получать наши сделки в живом режиме — присоединяйтесь к нашей трейдинг-группе.</p>'
       + '  <a class="cta-tg" href="' + deepLink + '" target="_blank" rel="noopener">Получить доступ к группе</a>'
       + '  <div class="signup-success-note">Ссылка одноразовая, действует 15 минут. Если что — <a href="#" onclick="document.getElementById(\'signupForm\').querySelector(\'.login-btn\').click();return false;">запросите новую</a>.</div>'
       + '</div>';
     msgEl.style.display = 'block';
+    if (typeof window !== 'undefined' && window.belfedTrack) window.belfedTrack('trial_started', { source: 'web_signup' });
 
     // Auto-login if session already exists (shouldn't, but safe)
     if (res.data.session) {
       await checkProfile();
     }
   } catch (err) {
-    errEl.textContent = err.message || 'Ошибка регистрации';
-    errEl.style.display = 'block';
+    // Always surface the error in the active signup tab and reset the button.
+    showAuthTab('signup');
+    showLoginError(ruAuthError(err, 'signup'));
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = prevBtnText || 'Начать 14 дней бесплатно'; }
+    if (btn) { btn.disabled = false; btn.textContent = prevBtnText || 'Начать 7 дней бесплатно'; }
   }
 }
 

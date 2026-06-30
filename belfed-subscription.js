@@ -1,4 +1,4 @@
-// belfed-subscription.js — RU only, single plan, 14-day trial без карты.
+// belfed-subscription.js — RU only, single plan, 7-day trial без карты.
 // Виджет «Моя подписка». Подключается после supabase-js и belfed-auth.js.
 (function () {
   'use strict';
@@ -145,7 +145,7 @@
       html += `<div class="bf-row">Действует до: <b>${fmt(exp)}</b></div>`;
       html += `<div class="bf-row">Автопродление: <b class="${autorenew?'bf-on':'bf-off'}">${autorenew?'включено':'отключено'}</b></div>`;
     } else if (isTrial) {
-      html += `<div class="bf-status bf-status--trial">🎁 ПРОБНЫЙ ДОСТУП · 14 дней</div>`;
+      html += `<div class="bf-status bf-status--trial">🎁 ПРОБНЫЙ ДОСТУП · 7 дней</div>`;
       html += `<div class="bf-row">Действует до: <b>${fmt(trialEnd)}</b> · осталось ${daysLeft(trialEnd)} дн.</div>`;
       html += `<div class="bf-row bf-muted">После триала — подписка ${PRICE_RUB} ₽ / мес. Карта не привязана: оплата только по вашему действию.</div>`;
     } else {
