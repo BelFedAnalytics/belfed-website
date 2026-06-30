@@ -1,7 +1,7 @@
 """
 BelFed Analytics — Telegram bot (production, RU + EN multilingual).
 
-Логика триала: 7 дней полного бесплатного доступа в платный канал —
+Логика триала: 14 дней полного бесплатного доступа в платный канал —
 без привязки карты. Юзер кликает t.me/BelfedBot?start=trial_xxx →
 бот определяет язык (или спрашивает при первом /start) → выдаёт
 одноразовый invite в RU или EN closed group. Через 24 часа после
@@ -486,7 +486,7 @@ TEXTS_RU = {
         "Делимся торговыми идеями, обзорами рынков и аналитикой "
         "от ведущих инвест-домов.\n\n"
         "Акции · Криптовалюты · Сырьё · Валюты\n\n"
-        "🎁 7 дней бесплатного доступа — без привязки карты.\n\n"
+        "🎁 14 дней бесплатного доступа — без привязки карты.\n\n"
         f"После триала: подписка {PRICE_RUB} ₽ / мес, отмена в любой момент."
     ),
     "menu":            "// BELFED ANALYTICS\n\nРады видеть вас снова, {name}.",
@@ -500,7 +500,7 @@ TEXTS_RU = {
     "autorenew_off":   "Автопродление: отключено · доступ закончится в указанную дату",
     "need_link":       "Сначала привяжите аккаунт сайта: " + WEB_URL_RU + "/members.html",
     "link_already":    "✅ Аккаунт уже привязан к этому Telegram. /status — посмотреть подписку.",
-    "link_ok":         "✅ Telegram привязан. Бесплатный доступ открыт на 7 дней — без привязки карты.",
+    "link_ok":         "✅ Telegram привязан. Бесплатный доступ открыт на 14 дней — без привязки карты.",
     "link_bad":        "⚠️ Токен недействителен или истёк. Сгенерируйте новый на сайте.",
     "cancel_ok":       "Автопродление отключено. Доступ сохранится до {until}.",
     "cancel_none":     "У вас нет активной подписки для отмены.",
@@ -515,9 +515,9 @@ TEXTS_RU = {
                           "(вызвать меню: /start)."),
     "btn_link":        "🔗 Привязать аккаунт",
     "no_access":       ("Сначала зарегистрируйтесь на " + WEB_URL_RU + " и привяжите Telegram. "
-                        "Получите 7 дней бесплатного доступа — без привязки карты."),
+                        "Получите 14 дней бесплатного доступа — без привязки карты."),
     "trial_claim_ok": (
-        "🎁 7 дней бесплатного доступа открыты.\n\n"
+        "🎁 14 дней бесплатного доступа открыты.\n\n"
         "Ваша персональная ссылка в закрытый канал "
         "(одноразовая, действует 24 часа):\n{invite}\n\n"
         f"После триала: подписка {PRICE_RUB} ₽ / мес. "
@@ -650,7 +650,7 @@ TEXTS_EN = {
         "We share trade ideas, market reviews and research from leading "
         "investment houses.\n\n"
         "Equities · Crypto · Commodities · FX\n\n"
-        "🎁 7 days of free access — no card required.\n\n"
+        "🎁 14 days of free access — no card required.\n\n"
         f"After the trial: ${PRICE_USD} / month, cancel anytime."
     ),
     "menu":            "// BELFED ANALYTICS\n\nGood to see you again, {name}.",
@@ -664,7 +664,7 @@ TEXTS_EN = {
     "autorenew_off":   "Auto-renew: off · access ends on the date above",
     "need_link":       "Please link your account first: " + WEB_URL_EN + "/members.html",
     "link_already":    "✅ Your account is already linked to this Telegram. Use /status to view subscription.",
-    "link_ok":         "✅ Telegram linked. 7 days of free access — no card required.",
+    "link_ok":         "✅ Telegram linked. 14 days of free access — no card required.",
     "link_bad":        "⚠️ Token invalid or expired. Generate a new one on the site.",
     "cancel_ok":       "Auto-renew disabled. Access remains until {until}.",
     "cancel_none":     "You don't have an active subscription to cancel.",
@@ -679,9 +679,9 @@ TEXTS_EN = {
                           "(open the menu with /start)."),
     "btn_link":        "🔗 Link account",
     "no_access":       ("Please sign up at " + WEB_URL_EN + " and link Telegram first. "
-                        "Get 7 days of free access — no card required."),
+                        "Get 14 days of free access — no card required."),
     "trial_claim_ok": (
-        "🎁 7 days of free access unlocked.\n\n"
+        "🎁 14 days of free access unlocked.\n\n"
         "Your personal invite to the private channel "
         "(single-use, valid 24 hours):\n{invite}\n\n"
         f"After the trial: ${PRICE_USD} / month. "
@@ -693,10 +693,10 @@ TEXTS_EN = {
         "(single-use, valid 24 hours):\n{invite}"
     ),
     "gift7_ok": (
-        "🎁 Gift for our early community: 7 days of access unlocked.\n\n"
+        "🎁 Gift for our early community: 14 days of access unlocked.\n\n"
         "Your personal invite to the private channel "
         "(single-use, valid 24 hours):\n{invite}\n\n"
-        "After 7 days: subscribe whenever you wish. No auto-charges."
+        "After 14 days: subscribe whenever you wish. No auto-charges."
     ),
     "gift7_already_active": (
         "✅ You already have active access — no gift needed.\n\n"
@@ -989,10 +989,10 @@ async def run_trial_flow(update: Update, context: ContextTypes.DEFAULT_TYPE,
 async def run_gift7_flow(update: Update, context: ContextTypes.DEFAULT_TYPE,
                           user_id: int, username: str | None,
                           lang: str, source: str, reply_target):
-    """Activate a 7-day gift trial for the user.
+    """Activate a 14-day gift trial for the user.
 
     Three cases (handled by claim_trial_by_telegram RPC):
-      1) No profile or profile without trial   -> create/activate 7-day trial + invite
+      1) No profile or profile without trial   -> create/activate 14-day trial + invite
       2) Already active/admin                  -> just re-issue fresh invite link
       3) Trial already used                    -> show "already used" message
 
@@ -1007,7 +1007,7 @@ async def run_gift7_flow(update: Update, context: ContextTypes.DEFAULT_TYPE,
         {
             "p_telegram_id":       str(user_id),
             "p_telegram_username": username or "",
-            "p_trial_days":        7,
+            "p_trial_days":        14,
             "p_source":            source,
             "p_lang":              lang,
         },
@@ -1377,7 +1377,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await _send_stars_invoice(update.message, profile, lang, user.id)
             return
 
-    # Deep-link /start gift7[_ru|_en] — 7-day gift trial from channel post
+    # Deep-link /start gift7[_ru|_en] — 14-day gift trial from channel post
     if args and (args[0] == "gift7" or args[0].startswith("gift7_")):
         source = args[0]
         lang_from_src = detect_lang_from_source(source)
@@ -2620,9 +2620,9 @@ async def on_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Очищаем state email
         context.user_data.pop("awaiting_email_for_founding", None)
         # Обычный trial flow + founding follow-up как раньше
-        intro = ("✨ Запускаем 7-дневный триал. После него вы сможете оформить founding-подписку."
+        intro = ("✨ Запускаем 14-дневный триал. После него вы сможете оформить founding-подписку."
                  if lang == "ru" else
-                 "✨ Starting your 7-day trial. After that you can claim the founding price.")
+                 "✨ Starting your 14-day trial. After that you can claim the founding price.")
         await query.message.reply_text(intro)
         await run_trial_flow(update, context, user.id, user.username,
                               source=source, lang=lang,
