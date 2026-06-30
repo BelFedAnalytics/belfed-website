@@ -335,12 +335,12 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 
       <div class="field">
         <label>// ФУТЕР RU</label>
-        <textarea id="footer-ru" rows="2" placeholder="· @BelfedBot · belfed.ru · 7 дней бесплатно"></textarea>
+        <textarea id="footer-ru" rows="2" placeholder="· @BelfedBot · belfed.ru · 14 дней бесплатно"></textarea>
       </div>
 
       <div class="field">
         <label>// ФУТЕР EN</label>
-        <textarea id="footer-en" rows="2" placeholder="· @BelfedBot · belfed.com · 7 days free"></textarea>
+        <textarea id="footer-en" rows="2" placeholder="· @BelfedBot · belfed.com · 14 days free"></textarea>
       </div>
 
       <div class="actions" style="justify-content:flex-start;gap:10px">
@@ -404,8 +404,8 @@ const ALL_CLASS_TAGS = new Set(Object.values(ASSET_CLASS_TAG));
 // Plain-text footer appended BEFORE hashtags in every post. Mirrors the edge fn.
 // Stored globally in the config table (keys footer_ru / footer_en) via the edge fn.
 const FOOTER_FALLBACK = {
-  ru: '· @BelfedBot · belfed.ru · 7 дней бесплатно',
-  en: '· @BelfedBot · belfed.com · 7 days free'
+  ru: '· @BelfedBot · belfed.ru · 14 дней бесплатно',
+  en: '· @BelfedBot · belfed.com · 14 days free'
 };
 // Current in-memory footers (filled from config on load; fall back to defaults).
 let footerCache = { ru: FOOTER_FALLBACK.ru, en: FOOTER_FALLBACK.en };
