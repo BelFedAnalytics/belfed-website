@@ -229,10 +229,10 @@
     <a href="/" class="nav-logo">BELFED_</a>
     <ul class="nav-links">
       <li><a href="/">Главная</a></li>
-      <li><a href="/results.html">Результаты</a></li>
+      <li><a href="/ru/results.html">Результаты</a></li>
       <li><a href="/#pricing">Подписка</a></li>
     </ul>
-    <button class="nav-cta" id="navAuthBtn" onclick="handleLogout()">Выйти</button>
+    <button class="nav-cta" id="navAuthBtn" onclick="handleLogout()" style="display:none">Выйти</button>
   </nav>
 
   <div id="loginScreen">
@@ -398,6 +398,7 @@
     </footer>
   </div>
 
+    <script src="belfed-analytics.js"></script>
     <script src="belfed-auth.js"></script>
   <script src="belfed-payments.js"></script>
   <script src="belfed-subscription.js"></script>
@@ -617,8 +618,22 @@
           document.getElementById('acctSince').textContent = created.toLocaleDateString('ru-RU', { year: 'numeric', month: 'short', day: 'numeric' });
         }
         loadEmailPref();
+        // Fire funnel events once per (event,user) using a localStorage guard.
+        function bfOnce(name, uid, props) {
+          if (!window.belfedTrack) return;
+          try {
+            var key = 'bf_evt_' + name + '_' + (uid || 'anon');
+            if (localStorage.getItem(key)) return;
+            localStorage.setItem(key, '1');
+          } catch (e) {}
+          window.belfedTrack(name, props || {});
+        }
+        var uid = session && session.user ? session.user.id : null;
         if (profile) {
           var st = entitlement.status;
+          if (profile.telegram_id) bfOnce('telegram_connected', uid);
+          if (entitlement.reason === 'subscription' && st === 'active') bfOnce('subscription_paid', uid);
+          if (st === 'expired' || entitlement.reason === 'trial_expired') bfOnce('trial_expired', uid);
           var badge = document.getElementById('acctStatus');
           var stRu = ({active:'Активна', trial:'Пробный', expired:'Истекла', none:'Нет'})[st] || st.toUpperCase();
           badge.textContent = stRu;
@@ -652,6 +667,9 @@
     function onAuthSignedOut() {
       document.getElementById('loginScreen').style.display = 'flex';
       document.getElementById('membersContent').style.display = 'none';
+      var navAuth = document.getElementById('navAuthBtn');
+      if (navAuth) navAuth.style.display = 'none';
+      applyAuthHashTab();
     }
   </script>
 </body>

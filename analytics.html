@@ -6,6 +6,7 @@
 <title>BELFED ANALYTICS — Аналитика</title>
 <meta name="description" content="Профессиональная аналитика финансовых рынков от BelFed">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="belfed-analytics.js"></script>
 <script src="belfed-auth.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -160,7 +161,16 @@ a.card{text-decoration:none;color:#000}
 </style>
 </head>
 <body>
-<div class="container">
+<div id="memberLock" style="display:none;position:fixed;inset:0;z-index:10000;background:#f5f2eb;justify-content:center;align-items:center;padding:24px">
+  <div style="max-width:420px;width:100%;border:1px solid #000;background:#fff;padding:40px 32px;text-align:center">
+    <div style="font-size:13px;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px">— BELFED ANALYTICS —</div>
+    <div id="memberLockTitle" style="font-size:15px;font-weight:bold;letter-spacing:1px;margin-bottom:14px">Доступ только для подписчиков</div>
+    <div id="memberLockBody" style="font-size:13px;line-height:1.7;margin-bottom:28px;opacity:0.85">Зарегистрируйтесь и активируйте 14 дней бесплатного доступа, чтобы видеть ленту аналитики и обзоры. Карта не нужна.</div>
+    <a id="memberLockCta" href="/members.html#signup" style="display:inline-block;padding:14px 28px;border:1px solid #000;background:#000;color:#fff;text-decoration:none;font-size:11px;letter-spacing:2px;text-transform:uppercase">Начать 14 дней бесплатно</a>
+    <div style="margin-top:16px"><a href="/members.html#signin" style="font-size:11px;color:#666;letter-spacing:1px;text-decoration:underline">Уже есть аккаунт? Войти</a></div>
+  </div>
+</div>
+<div class="container" id="memberMain">
 
 <header>
 <h2><a href="/" style="color:#000;text-decoration:none">— BELFED_ —</a></h2>
@@ -775,16 +785,43 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchTimeline(false);
   }, 350));
 
-  document.body.style.visibility = 'visible';
+  // Не показываем защищённый контент, пока belfed-auth.js не подтвердит сессию.
+  // Fallback: если коллбэк по какой-то причине не пришёл — покажем лок-экран.
+  window.__authFallback = setTimeout(function(){ if (!authReady) showMemberLock('guest'); }, 4000);
   // Не вызываем fetchList() сразу — ждём коллбэк от belfed-auth.js.
 });
+
+// Показать полноэкранный лок (гость / истёкший доступ) и скрыть кабинет.
+function showMemberLock(state) {
+  clearTimeout(window.__authFallback);
+  var lock = document.getElementById('memberLock');
+  var main = document.getElementById('memberMain');
+  if (state === 'expired') {
+    document.getElementById('memberLockTitle').textContent = 'Пробный период завершён';
+    document.getElementById('memberLockBody').textContent = 'Оформите подписку, чтобы продолжить получать ленту аналитики и обзоры.';
+    document.getElementById('memberLockCta').textContent = 'Оформить подписку';
+    document.getElementById('memberLockCta').setAttribute('href', '/#pricing');
+  }
+  if (main) main.style.display = 'none';
+  if (lock) lock.style.display = 'flex';
+  document.body.style.visibility = 'visible';
+}
+function showMemberContent() {
+  clearTimeout(window.__authFallback);
+  var lock = document.getElementById('memberLock');
+  var main = document.getElementById('memberMain');
+  if (lock) lock.style.display = 'none';
+  if (main) main.style.display = 'block';
+  document.body.style.visibility = 'visible';
+}
 
 // Коллбэки для belfed-auth.js — вызываются после восстановления сессии из localStorage.
 function onAuthReady(profile, session, entitlement) {
   authReady = true;
   authedSession = session;
   hasAccess = !!(entitlement && entitlement.access);
-  if (!hasAccess) { renderTimelineLocked(); renderLocked(); return; }
+  if (!hasAccess) { showMemberLock('expired'); return; }
+  showMemberContent();
   // Load the active segment (Timeline by default). Reports loads lazily on switch.
   if (activeSeg === 'tl') { fetchTimeline(false); }
   else { window.__repLoaded = true; fetchList(); }
@@ -793,8 +830,7 @@ function onAuthSignedOut() {
   authReady = true;
   authedSession = null;
   hasAccess = false;
-  renderTimelineLocked();
-  renderLocked();
+  showMemberLock('guest');
 }
 </script>
 

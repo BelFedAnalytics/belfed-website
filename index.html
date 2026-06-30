@@ -1458,6 +1458,11 @@
   </div>
 </footer>
 
+<script src="belfed-analytics.js"></script>
+<script>
+  // Landing funnel entry event (UTM auto-captured by belfed-analytics.js).
+  if (window.belfedTrack) window.belfedTrack('landing_view', { path: location.pathname });
+</script>
 <script>
   // Theme toggle
   var themeBtn = document.getElementById('themeBtn');
@@ -1525,10 +1530,10 @@
         'apikey': SUPA_KEY,
         'Authorization': 'Bearer ' + SUPA_KEY
       },
-      body: JSON.stringify({
+      body: JSON.stringify(Object.assign({
         email: email, ticker: ticker, asset_class: assetClass, timeframe: timeframe,
         note: note || null, consent: consent, lang: 'ru', source: 'landing', website: honeypot
-      })
+      }, (window.belfedAnalytics ? window.belfedAnalytics.utmPayload() : {})))
     }).then(function (r) { return r.json().then(function (d) { return { status: r.status, body: d }; }); })
       .then(function (res) {
         submitBtn.disabled = false; submitBtn.innerHTML = origLabel;

@@ -291,14 +291,14 @@
             'Authorization': 'Bearer ' + SUPABASE_ANON,
             'apikey': SUPABASE_ANON
           },
-          body: JSON.stringify({
+          body: JSON.stringify(Object.assign({
             email: email,
             lang: 'ru',
             source: source,
             intent_type: 'trial',
             accept_privacy: true,
             accept_terms: true
-          })
+          }, (window.belfedAnalytics ? window.belfedAnalytics.utmPayload() : {})))
         }).then(function(r) {
           return r.json().then(function(body) { return { status: r.status, body: body }; });
         }).then(function(res) {
@@ -342,5 +342,6 @@
       });
     })();
   </script>
+<script src="/belfed-analytics.js"></script>
 </body>
 </html>
