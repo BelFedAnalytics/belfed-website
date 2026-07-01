@@ -201,10 +201,26 @@ async function handleSignUp() {
   if (btn) { prevBtnText = btn.textContent; btn.disabled = true; btn.textContent = 'Создание аккаунта...'; }
 
   try {
+    // Stamp the accepted consent into signUp metadata (raw_user_meta_data) so
+    // the profiles_autostart_trial BEFORE INSERT trigger persists
+    // privacy_consent_at / terms_consent_at at profile creation — independent of
+    // the later Telegram claim flow.
+    var consentIso = new Date().toISOString();
     var res = await supaClient.auth.signUp({
       email: email,
       password: pw,
-      options: { emailRedirectTo: window.location.origin + '/confirm.html' }
+      options: {
+        emailRedirectTo: window.location.origin + '/confirm.html',
+        data: {
+          accept_privacy: true,
+          accept_terms: true,
+          privacy_consent_at: consentIso,
+          terms_consent_at: consentIso,
+          consent_locale: (navigator && navigator.language) || 'ru',
+          consent_user_agent: ((navigator && navigator.userAgent) || '').slice(0, 500),
+          source: 'web_signup'
+        }
+      }
     });
     if (res.error) throw res.error;
 
