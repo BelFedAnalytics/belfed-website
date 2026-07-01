@@ -1,7 +1,7 @@
 // trial-bot-reminders v7 — staged trial reminders at T-5 / T-3 / T-1 days
 //
 // v7: All three stages now share the SAME three Founding-Member benefit bullets
-//     (BULLETS_EN / BULLETS_RU), including the new "60-day pause keeps your
+//     (BULLETS_EN / BULLETS_RU), including the "up-to-30-day pause keeps your
 //     discount + status" bullet. RU T-1 wording "торговым сетапам" replaced
 //     with "торговым возможностям" (EN keeps "trading setups").
 //
@@ -90,11 +90,11 @@ type Msg = { text: string; btnText: string };
 const BULLETS_EN =
   "\u2022 30% lifetime discount off the current price \u2014 *$10.50/mo*\n" +
   "\u2022 x3 priority asset requests per day, plus priority processing\n" +
-  "\u2022 Founding Member status tied to your account: if you ever need to pause, you'll have 60 days to come back without losing your discount or status";
+  "\u2022 Founding Member status tied to your account: if you ever need to pause, you'll have up to 30 days to come back without losing your discount or status";
 const BULLETS_RU =
   "\u2022 \u041f\u043e\u0436\u0438\u0437\u043d\u0435\u043d\u043d\u0430\u044f \u0441\u043a\u0438\u0434\u043a\u0430 30% \u043e\u0442 \u0442\u0435\u043a\u0443\u0449\u0435\u0433\u043e \u043f\u0440\u0430\u0439\u0441-\u043b\u0438\u0441\u0442\u0430 \u2014 *1 050 \u20bd/\u043c\u0435\u0441*\n" +
   "\u2022 x3 \u043f\u0440\u0438\u043e\u0440\u0438\u0442\u0435\u0442\u043d\u044b\u0445 \u0437\u0430\u043f\u0440\u043e\u0441\u0430 \u043d\u0430 \u0430\u043d\u0430\u043b\u0438\u0437 \u0430\u043a\u0442\u0438\u0432\u043e\u0432 \u0432 \u0434\u0435\u043d\u044c \u0438 \u043f\u0440\u0438\u043e\u0440\u0438\u0442\u0435\u0442 \u0432 \u0438\u0445 \u043e\u0431\u0440\u0430\u0431\u043e\u0442\u043a\u0435\n" +
-  "\u2022 \u0421\u0442\u0430\u0442\u0443\u0441 Founding Member \u0437\u0430\u043a\u0440\u0435\u043f\u043b\u0451\u043d \u0437\u0430 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u043e\u043c: \u043f\u0440\u0438 \u043d\u0435\u043e\u0431\u0445\u043e\u0434\u0438\u043c\u043e\u0441\u0442\u0438 \u043f\u0430\u0443\u0437\u044b \u0443 \u0432\u0430\u0441 \u0435\u0441\u0442\u044c 60 \u0434\u043d\u0435\u0439, \u0447\u0442\u043e\u0431\u044b \u0432\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f \u0431\u0435\u0437 \u043f\u043e\u0442\u0435\u0440\u0438 \u0441\u043a\u0438\u0434\u043a\u0438 \u0438 \u0441\u0442\u0430\u0442\u0443\u0441\u0430";
+  "\u2022 \u0421\u0442\u0430\u0442\u0443\u0441 Founding Member \u0437\u0430\u043a\u0440\u0435\u043f\u043b\u0451\u043d \u0437\u0430 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u043e\u043c: \u043f\u0440\u0438 \u043d\u0435\u043e\u0431\u0445\u043e\u0434\u0438\u043c\u043e\u0441\u0442\u0438 \u043f\u0430\u0443\u0437\u044b \u0443 \u0432\u0430\u0441 \u0435\u0441\u0442\u044c \u0434\u043e 30 \u0434\u043d\u0435\u0439, \u0447\u0442\u043e\u0431\u044b \u0432\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f \u0431\u0435\u0437 \u043f\u043e\u0442\u0435\u0440\u0438 \u0441\u043a\u0438\u0434\u043a\u0438 \u0438 \u0441\u0442\u0430\u0442\u0443\u0441\u0430";
 
 function msgD5(lang: "ru" | "en", ends: string): Msg {
   if (lang === "en") return {
