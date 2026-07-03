@@ -159,6 +159,33 @@
       cursor: pointer; margin-top: 6px; transition: background 0.2s, color 0.2s;
     }
     .login-box .login-btn:hover { background: transparent; color: var(--black); }
+    /* Primary CTA — used for Tribute checkout buttons across expired banner and // Моя подписка. */
+    .belfed-cta-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--font); font-size: 12px; font-weight: 700;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      background: var(--green, #1a6b3a); color: #fff;
+      padding: 14px 22px; border: 1px solid var(--green, #1a6b3a);
+      text-decoration: none; cursor: pointer;
+      box-shadow: 0 4px 14px rgba(26, 107, 58, 0.22);
+      transition: background .18s ease, transform .18s ease, box-shadow .18s ease;
+    }
+    .belfed-cta-primary:hover { background: #14542d; border-color: #14542d; transform: translateY(-1px); box-shadow: 0 8px 22px rgba(20, 84, 45, 0.28); }
+    .belfed-cta-primary:active { transform: translateY(0); box-shadow: 0 2px 8px rgba(20, 84, 45, 0.24); }
+    .belfed-cta-primary .belfed-cta-arrow { transition: transform .18s ease; }
+    .belfed-cta-primary:hover .belfed-cta-arrow { transform: translateX(3px); }
+    .belfed-cta-secondary {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--font); font-size: 12px; font-weight: 700;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      background: transparent; color: var(--black);
+      padding: 14px 22px; border: 1px solid var(--black);
+      text-decoration: none; cursor: pointer;
+      transition: background .18s ease, color .18s ease, transform .18s ease;
+    }
+    .belfed-cta-secondary:hover { background: var(--black); color: var(--white); transform: translateY(-1px); }
+    .belfed-cta-secondary .belfed-cta-arrow { transition: transform .18s ease; }
+    .belfed-cta-secondary:hover .belfed-cta-arrow { transform: translateX(3px); }
     .login-box .login-btn:disabled { background: var(--gray); border-color: var(--gray); cursor: not-allowed; }
     .login-error { color: var(--red); font-size: 12px; margin-top: 12px; display: none; }
     .login-msg { color: var(--green); font-size: 12px; margin-top: 12px; display: none; }
@@ -207,6 +234,29 @@
     .bf-actions .bf-danger { background: transparent; color: var(--red); border-color: var(--red); }
     .bf-actions .bf-danger:hover { background: var(--red); color: var(--white); }
     .bf-msg { font-size: 12px; color: var(--gray); margin-top: 12px; line-height: 1.5; max-width: 720px; }
+    /* Tribute payment picker — shown inside .bf-card when user has no active subscription. */
+    .bf-pay-title { font-size: 15px; font-weight: 700; margin: 20px 0 4px; color: var(--black); letter-spacing: 0.01em; }
+    .bf-pay-sub { font-size: 13px; color: var(--gray); margin-bottom: 14px; }
+    .bf-pay-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 720px; }
+    @media(max-width:600px) { .bf-pay-grid { grid-template-columns: 1fr; } }
+    .bf-pay-btn {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 18px; text-decoration: none;
+      border: 1px solid var(--black); background: var(--white);
+      color: var(--black); font-family: var(--font);
+      transition: background .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    .bf-pay-btn .bf-pay-icon { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0; }
+    .bf-pay-btn .bf-pay-text { display: flex; flex-direction: column; line-height: 1.35; }
+    .bf-pay-btn .bf-pay-text b { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; }
+    .bf-pay-btn .bf-pay-text small { font-size: 11px; color: var(--gray); margin-top: 2px; letter-spacing: 0.02em; }
+    .bf-pay-btn--primary { background: var(--green, #1a6b3a); color: #fff; border-color: var(--green, #1a6b3a); box-shadow: 0 4px 14px rgba(26, 107, 58, 0.22); }
+    .bf-pay-btn--primary .bf-pay-text small { color: rgba(255,255,255,0.75); }
+    .bf-pay-btn--primary:hover { background: #14542d; border-color: #14542d; transform: translateY(-1px); box-shadow: 0 8px 22px rgba(20, 84, 45, 0.28); }
+    .bf-pay-btn--secondary:hover { background: var(--black); color: #fff; transform: translateY(-1px); }
+    .bf-pay-btn--secondary:hover .bf-pay-text small { color: rgba(255,255,255,0.7); }
+    .bf-pay-foot { font-size: 11px; color: var(--gray); margin-top: 14px; max-width: 720px; line-height: 1.5; }
+    .bf-pay-foot a { color: var(--black); text-decoration: underline; }
     .bf-trial-banner { background: var(--light-gray); border: 1px solid var(--border); border-left: 4px solid #b8860b; padding: 18px 24px; margin: 0 40px 24px; max-width: 1060px; font-size: 14px; line-height: 1.5; }
     .bf-trial-banner b { font-weight: 700; }
     .bf-trial-banner .bf-trial-badge { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: #b8860b; font-weight: 700; margin-right: 8px; }
@@ -302,8 +352,7 @@
                       <p class="notice-tag" style="color:var(--red,#c33)">// Доступ ограничен</p>
                       <p><b>Ваш доступ завершён.</b> Оформите подписку, чтобы вернуть доступ к торговым сигналам, аналитике и анализу активов.</p>
                       <p style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap">
-                        <a href="/#pricing" class="login-btn" style="width:auto;padding:12px 22px;text-decoration:none;display:inline-block">Оформить подписку →</a>
-                        <a href="#subscription" style="color:var(--black);text-decoration:underline;font-weight:bold;align-self:center">См. варианты оплаты ↓</a>
+                        <a href="#" data-belfed-checkout="month" class="belfed-cta-primary">Оформить подписку <span class="belfed-cta-arrow">→</span></a>
                       </p>
                     </div>
       <div class="members-grid">
@@ -343,7 +392,8 @@
       </div>
 
       <!-- Subscription widget (belfed-subscription.js) -->
-      <div class="bf-section" id="subscriptionSection">
+      <div class="bf-section" id="subscription">
+        <a id="subscriptionSection"></a>
         <h2>// Моя подписка</h2>
         <div id="belfedSubscriptionBox"></div>
       </div>

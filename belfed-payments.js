@@ -1,107 +1,138 @@
 // belfed-payments.js
-// YooKassa payment integration for BelFed Analytics members area.
+// Checkout entry-point for BelFed Analytics members area.
+//
+// 2026-07-03: BelFed migrated fully off YooKassa. All checkout is now handled
+// externally via Tribute. This module exposes a single startCheckout() call
+// that opens the correct Tribute URL for the user's locale, preferring the
+// Telegram in-app deeplink when the user is already inside Telegram and
+// falling back to the Tribute Web checkout otherwise.
+//
 // Loaded after belfed-auth.js. Exposes window.BelfedPayments.
 (function () {
   'use strict';
 
-  var SUPABASE_URL = 'https://obujqvqqmyfcfflhqvud.supabase.co';
-  var CREATE_PAYMENT_URL = SUPABASE_URL + '/functions/v1/yookassa-create-payment';
-  var DEFAULT_RETURN_URL = window.location.origin + '/members.html?payment=success';
+  // Tribute checkout endpoints, per locale.
+  // RU: 1500 RUB / month. EN: $15 / month.
+  var TRIBUTE_URLS = {
+    ru: {
+      tg:  'https://t.me/tribute/app?startapp=sZH9',
+      web: 'https://web.tribute.tg/s/ZH9'
+    },
+    en: {
+      tg:  'https://t.me/tribute/app?startapp=sZH2',
+      web: 'https://web.tribute.tg/s/ZH2'
+    }
+  };
 
-  function getSupabaseClient() {
-    if (window.belfedSupabase) return window.belfedSupabase;
-    if (window.supabaseClient) return window.supabaseClient;
-    if (window.supaClient) return window.supaClient;
-    // belfed-auth.js declares `var supaClient` at module scope; in browsers
-    // top-level `var` becomes a property of `window`, but be defensive.
-    try { if (typeof supaClient !== 'undefined' && supaClient) return supaClient; } catch (_) {}
-    return null;
+  function detectLocale(explicit) {
+    if (explicit === 'ru' || explicit === 'en') return explicit;
+    try {
+      // Prefer the user's profile language if belfed-auth exposes it.
+      if (window.belfedProfile && window.belfedProfile.lang) {
+        var l = String(window.belfedProfile.lang).toLowerCase();
+        if (l === 'ru' || l === 'en') return l;
+      }
+    } catch (_) {}
+    try {
+      var htmlLang = (document.documentElement.getAttribute('lang') || '').toLowerCase();
+      if (htmlLang.indexOf('ru') === 0) return 'ru';
+      if (htmlLang.indexOf('en') === 0) return 'en';
+    } catch (_) {}
+    try {
+      var nav = (navigator.language || '').toLowerCase();
+      if (nav.indexOf('ru') === 0) return 'ru';
+    } catch (_) {}
+    // Default to RU — BelFed's primary audience.
+    return 'ru';
   }
 
-  async function getAccessToken() {
-    var client = getSupabaseClient();
-    if (!client || !client.auth) throw new Error('Supabase client is not ready');
-    var res = await client.auth.getSession();
-    var session = res && res.data && res.data.session;
-    if (!session) throw new Error('You must be signed in to pay');
-    return session.access_token;
+  function isTelegramInApp() {
+    try {
+      if (window.Telegram && window.Telegram.WebApp) return true;
+      return /Telegram/i.test(navigator.userAgent || '');
+    } catch (_) {
+      return false;
+    }
   }
 
-  async function createPayment(opts) {
+  function resolveCheckoutUrl(opts) {
     opts = opts || {};
-    var plan = opts.plan || 'month';
-    var amount = opts.amount;
-    var returnUrl = opts.return_url || DEFAULT_RETURN_URL;
-
-    var token = await getAccessToken();
-    var body = { plan: plan, return_url: returnUrl };
-    if (amount != null) body.amount = amount;
-
-    var resp = await fetch(CREATE_PAYMENT_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token
-      },
-      body: JSON.stringify(body)
-    });
-
-    var data = null;
-    try { data = await resp.json(); } catch (e) {}
-
-    if (!resp.ok) {
-      var msg = (data && (data.error || data.message)) || ('HTTP ' + resp.status);
-      throw new Error(msg);
-    }
-    if (!data || !data.confirmation_url) {
-      throw new Error('No confirmation_url in response');
-    }
-    return data;
+    var locale = detectLocale(opts.locale);
+    var urls = TRIBUTE_URLS[locale] || TRIBUTE_URLS.ru;
+    return isTelegramInApp() ? urls.tg : urls.web;
   }
 
-  async function startCheckout(opts) {
-    if (typeof window !== 'undefined' && window.belfedTrack) {
-      window.belfedTrack('payment_started', { plan: (opts && opts.plan) || 'month' });
-    }
-    var data = await createPayment(opts);
-    window.location.assign(data.confirmation_url);
+  function startCheckout(opts) {
+    opts = opts || {};
+    try {
+      if (typeof window !== 'undefined' && window.belfedTrack) {
+        window.belfedTrack('payment_started', {
+          plan: opts.plan || 'month',
+          provider: 'tribute',
+          locale: detectLocale(opts.locale)
+        });
+      }
+    } catch (_) {}
+    var url = resolveCheckoutUrl(opts);
+    // Open in a new tab so the member portal remains available for the user
+    // to return to after paying in Tribute. Fall back to same-window navigation
+    // if the popup is blocked.
+    var win = null;
+    try { win = window.open(url, '_blank', 'noopener'); } catch (_) {}
+    if (!win) window.location.assign(url);
+    return Promise.resolve({ provider: 'tribute', url: url });
   }
 
   function bindButton(selector, opts) {
     var btn = typeof selector === 'string' ? document.querySelector(selector) : selector;
     if (!btn) return;
-    btn.addEventListener('click', async function (e) {
+    btn.addEventListener('click', function (e) {
       e.preventDefault();
-      btn.disabled = true;
-      var origText = btn.textContent;
-      btn.textContent = 'Redirecting...';
-      try {
-        await startCheckout(opts);
-      } catch (err) {
+      startCheckout(opts).catch(function (err) {
         console.error('[BelfedPayments] checkout failed', err);
-        alert('Payment error: ' + (err && err.message ? err.message : err));
-        btn.disabled = false;
-        btn.textContent = origText;
-      }
+      });
     });
   }
 
   function handleReturn() {
     try {
       var url = new URL(window.location.href);
-      if (url.searchParams.get('payment') === 'success') {
+      if (url.searchParams.get('payment') === 'success' ||
+          url.searchParams.get('payment') === 'return') {
         if (typeof window.belfedRefreshProfile === 'function') {
           window.belfedRefreshProfile();
         }
       }
-    } catch (e) {}
+    } catch (_) {}
   }
 
   document.addEventListener('DOMContentLoaded', handleReturn);
 
+  // Global delegated click handler: any element with `data-belfed-checkout`
+  // opens Tribute directly. The attribute value is treated as the plan
+  // (defaults to 'month'). This lets HTML pages wire checkout without JS.
+  document.addEventListener('click', function (e) {
+    var target = e.target;
+    while (target && target !== document) {
+      if (target.nodeType === 1 && target.hasAttribute && target.hasAttribute('data-belfed-checkout')) {
+        e.preventDefault();
+        var plan = target.getAttribute('data-belfed-checkout') || 'month';
+        var locale = target.getAttribute('data-belfed-locale') || undefined;
+        startCheckout({ plan: plan, locale: locale }).catch(function (err) {
+          console.error('[BelfedPayments] checkout failed', err);
+        });
+        return;
+      }
+      target = target.parentNode;
+    }
+  }, false);
+
   window.BelfedPayments = {
-    createPayment: createPayment,
     startCheckout: startCheckout,
-    bindButton: bindButton
+    bindButton: bindButton,
+    resolveCheckoutUrl: resolveCheckoutUrl,
+    // Legacy shim: some call-sites still call createPayment().
+    // Redirects to Tribute instead of returning a confirmation_url.
+    createPayment: function (opts) { return startCheckout(opts); }
   };
 })();

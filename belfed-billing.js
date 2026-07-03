@@ -5,17 +5,17 @@
 //   - window.supaClient (created by belfed-auth.js)
 //   - User must be signed in (handled here: shows login-required if not)
 //
-// Edge functions called:
-//   - POST /yookassa-cancel-subscription   { reason }   -> stop auto-renewal
-//   - POST /yookassa-detach-payment-method {}           -> remove saved card
+// 2026-07-03: BelFed migrated fully off YooKassa. All active billing now
+// happens through Tribute (@tribute bot). Historical YooKassa rows may still
+// exist in `subscriptions` / `payments` for reference — they render, but no
+// UI action calls yookassa-* edge functions anymore. Cancellation and card
+// management are entirely on Tribute's side.
 //
-// All copy is RU only — page is for Russian (YooKassa) flow.
+// All copy is RU only.
 (function () {
   'use strict';
 
   const SUPABASE_URL = 'https://obujqvqqmyfcfflhqvud.supabase.co';
-  const FN_CANCEL    = SUPABASE_URL + '/functions/v1/yookassa-cancel-subscription';
-  const FN_DETACH    = SUPABASE_URL + '/functions/v1/yookassa-detach-payment-method';
 
   function getClient() {
     return window.supaClient || window.belfedSupabase || window.supabaseClient;
@@ -120,14 +120,11 @@
     const isPaid = subscription && subscription.status === 'active' && exp && exp > new Date();
     const isTrial = !isPaid && !isAdmin && profile?.subscription_status === 'trial'
                     && trialEnd && trialEnd > new Date();
-    // Autorenew logic depends on provider:
-    //  - YooKassa: we control autorenew via saved payment_method_id (recurring charges from our side)
-    //  - Tribute:  autorenew is managed on Tribute's side — assume ON unless cancel_at_period_end
-    //  - other providers (telegram_stars, ...): treat like Tribute (external autorenew)
-    const provider = subscription?.provider || 'yookassa';
-    const autorenew = isPaid && !subscription.cancel_at_period_end && (
-      provider === 'yookassa' ? !!subscription.payment_method_id : true
-    );
+    // Autorenew is now always managed externally by Tribute (or, for legacy
+    // rows, by whichever provider is on record). We assume ON unless the row
+    // has cancel_at_period_end.
+    const provider = subscription?.provider || 'tribute';
+    const autorenew = isPaid && !subscription.cancel_at_period_end;
 
     // Pricing label — founding members keep 30% off forever
     const isFounding = !!profile?.founding_member;
@@ -154,128 +151,60 @@
     block.innerHTML = rows;
 
     let actHtml = '';
-    // Cancel-autorenew button only works for YooKassa (we own the recurrent token).
-    // Tribute users must cancel via @tribute bot; we surface a link instead.
-    if (autorenew && provider === 'yookassa') {
-      actHtml += `<button class="btn btn-danger" id="btnCancelAutorenew">Отменить автопродление</button>`;
-    } else if (autorenew && provider === 'tribute') {
+    // Cancellation and card management now live entirely inside Tribute.
+    if (autorenew) {
       actHtml += `<a class="btn btn-secondary" href="https://t.me/tribute" target="_blank" rel="noopener">Управлять в Tribute →</a>`;
     }
     if (!isPaid && !isAdmin) {
-      actHtml += `<a class="btn btn-primary" href="/members.html#pay">Оформить подписку</a>`;
+      // Two explicit Tribute checkout channels — pick your route.
+      actHtml +=
+        '<a class="bill-pay-btn bill-pay-btn--primary" href="https://t.me/tribute/app?startapp=sZH9" target="_blank" rel="noopener" data-belfed-pay="tg">' +
+          '<span class="bill-pay-icon" aria-hidden="true">' +
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.78 15.27 9.6 18.9c.36 0 .52-.15.72-.34l1.72-1.64 3.56 2.6c.65.36 1.11.17 1.29-.6l2.33-10.94c.22-.99-.36-1.38-.99-1.15L4.05 10.9c-.96.37-.95.9-.16 1.14l3.8 1.18 8.82-5.56c.42-.27.8-.12.48.16z"/></svg>' +
+          '</span>' +
+          '<span class="bill-pay-text"><b>Оплатить через Telegram</b><small>' + fmtRub(monthlyAmount) + ' / мес · Tribute-бот</small></span>' +
+        '</a>' +
+        '<a class="bill-pay-btn bill-pay-btn--secondary" href="https://web.tribute.tg/s/ZH9" target="_blank" rel="noopener" data-belfed-pay="web">' +
+          '<span class="bill-pay-icon" aria-hidden="true">' +
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a13.5 13.5 0 010 18M12 3a13.5 13.5 0 000 18"/></svg>' +
+          '</span>' +
+          '<span class="bill-pay-text"><b>Оплатить через браузер</b><small>' + fmtRub(monthlyAmount) + ' / мес · Tribute Web</small></span>' +
+        '</a>';
     }
     actions.innerHTML = actHtml;
 
+    // Fire analytics on channel picks.
+    actions.querySelectorAll('[data-belfed-pay]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        try {
+          if (window.belfedTrack) {
+            window.belfedTrack('payment_started', {
+              plan: 'month', provider: 'tribute',
+              channel: el.getAttribute('data-belfed-pay') || 'unknown', source: 'billing',
+            });
+          }
+        } catch (_) {}
+      });
+    });
+
     if (isPaid && autorenew) {
-      hint.innerHTML = `Доступ продлится автоматически <b>${fmtDate(exp)}</b>. После отмены автопродления доступ сохранится до этой даты, дальше — отключится. Восстановить можно в любой момент новым платежом.`;
+      hint.innerHTML = `Доступ продлится автоматически <b>${fmtDate(exp)}</b>. Чтобы отменить автопродление, откройте подписку в боте <b>@tribute</b> → My subscriptions. Доступ сохранится до этой даты, дальше выключится.`;
     } else if (isPaid && !autorenew) {
       hint.innerHTML = `Автопродление отключено. Доступ сохранится до <b>${fmtDate(exp)}</b>, после чего отключится. Чтобы продолжить — оформите подписку заново.`;
     } else if (isTrial) {
-      hint.innerHTML = `Карта не привязана. После окончания триала доступ завершится — подписка оформляется только по вашему действию.`;
+      hint.innerHTML = `Карта не привязана. После окончания триала доступ завершится — подписка оформляется в Tribute по вашему действию.`;
     } else if (!isAdmin) {
-      hint.innerHTML = `Подпишитесь, чтобы получить доступ в закрытый Telegram-канал и к полной аналитике.`;
+      hint.innerHTML = `Подпишитесь через Tribute, чтобы получить доступ в закрытый Telegram-канал и к полной аналитике.`;
     } else {
       hint.textContent = '';
-    }
-
-    const btn = document.getElementById('btnCancelAutorenew');
-    if (btn) {
-      btn.onclick = async () => {
-        if (!confirm('Отменить автопродление?\n\nДоступ сохранится до конца оплаченного периода.')) return;
-        btn.disabled = true;
-        const orig = btn.textContent;
-        btn.textContent = 'Отменяем…';
-        try {
-          const r = await callFn(FN_CANCEL, { reason: 'user_requested_billing_page' });
-          toast('Автопродление отключено. Доступ до ' + fmtDate(r.access_until), 'success');
-          await refresh();
-        } catch (e) {
-          toast('Ошибка: ' + e.message, 'error');
-          btn.disabled = false;
-          btn.textContent = orig;
-        }
-      };
     }
   }
 
   function renderPaymentMethod(state) {
-    const { subscription } = state;
-    const block = document.getElementById('paymentMethodBlock');
-    const actions = document.getElementById('paymentMethodActions');
-    const hint = document.getElementById('paymentMethodHint');
-
-    const provider = subscription?.provider || 'yookassa';
-    const hasCard = !!(subscription && subscription.payment_method_id);
-
-    // Tribute (and other external-billing providers): we don't hold a card token —
-    // billing is managed on their side. Show a clean informational panel instead of
-    // YooKassa-flavored "card not attached" copy.
-    if (provider === 'tribute') {
-      block.innerHTML = `
-        <div class="card-display">
-          <span class="card-icon">TRIBUTE</span>
-          <div class="card-meta">
-            <div class="card-line1">Оплата через Tribute</div>
-            <div class="card-line2">Автопродление и метод оплаты управляются в Tribute</div>
-          </div>
-        </div>
-      `;
-      actions.innerHTML = '';
-      hint.innerHTML = 'Чтобы отменить автопродление или удалить карту, откройте подписку в боте <b>@tribute</b> → «My subscriptions».';
-      return;
-    }
-
-    if (hasCard) {
-      const last4 = subscription.card_last4 || '••••';
-      const brand = brandLabel(subscription.card_brand);
-      const savedAt = subscription.payment_method_saved_at;
-      block.innerHTML = `
-        <div class="card-display">
-          <span class="card-icon">${brand}</span>
-          <div class="card-meta">
-            <div class="card-line1">•••• •••• •••• ${last4}</div>
-            <div class="card-line2">Привязана ${fmtDate(savedAt)} · автосписания каждый месяц</div>
-          </div>
-        </div>
-      `;
-      actions.innerHTML = `<button class="btn btn-danger" id="btnDetachCard">Удалить карту</button>`;
-      hint.innerHTML = `После удаления карты автоматические списания прекратятся. Текущий доступ сохранится до конца оплаченного периода. Чтобы продолжить подписку, нужно будет оформить новую оплату.`;
-
-      const btn = document.getElementById('btnDetachCard');
-      btn.onclick = async () => {
-        if (!confirm('Удалить привязанную карту?\n\nАвтоматические списания прекратятся. Доступ сохранится до конца оплаченного периода.')) return;
-        btn.disabled = true;
-        const orig = btn.textContent;
-        btn.textContent = 'Удаляем…';
-        try {
-          const r = await callFn(FN_DETACH, {});
-          toast('Карта удалена. Доступ до ' + fmtDate(r.access_until), 'success');
-          await refresh();
-        } catch (e) {
-          toast('Ошибка: ' + e.message, 'error');
-          btn.disabled = false;
-          btn.textContent = orig;
-        }
-      };
-    } else if (subscription && subscription.payment_method_detached_at) {
-      block.innerHTML = `
-        <div class="empty-card-state">
-          <b>Карта не привязана</b><br>
-          Вы удалили карту ${fmtDate(subscription.payment_method_detached_at)}. Чтобы возобновить подписку, оформите новую оплату — карта сохранится автоматически.
-        </div>
-      `;
-      actions.innerHTML = '';
-      hint.textContent = '';
-    } else {
-      block.innerHTML = `
-        <div class="empty-card-state">
-          <b>Карта не привязана.</b><br>
-          Карта сохраняется автоматически при первом успешном платеже через YooKassa. После этого подписка продлевается без вашего участия — пока вы сами не удалите карту.
-        </div>
-      `;
-      actions.innerHTML = '';
-      hint.textContent = '';
-    }
+    // No-op: the payment-method section has been merged into the unified
+    // '// Управление подпиской' card. All Tribute payment CTAs live in
+    // renderSubscription() now. The three legacy DOM targets remain hidden
+    // in billing.html and are intentionally not populated here.
   }
 
   function renderHistory(state) {

@@ -132,6 +132,25 @@
     }
     .btn-danger:hover:not(:disabled) { background: var(--red); color: var(--white); }
 
+    /* Tribute payment picker — unified block '// Управление подпиской' */
+    .billing-actions .bill-pay-btn {
+      flex: 1 1 240px; min-width: 240px; max-width: 320px;
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 18px; text-decoration: none;
+      border: 1px solid var(--black); background: var(--white); color: var(--black);
+      font-family: var(--font);
+      transition: background .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    .bill-pay-btn .bill-pay-icon { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0; }
+    .bill-pay-btn .bill-pay-text { display: flex; flex-direction: column; line-height: 1.35; text-transform: none; letter-spacing: 0; }
+    .bill-pay-btn .bill-pay-text b { font-size: 13px; font-weight: 700; letter-spacing: 0.03em; }
+    .bill-pay-btn .bill-pay-text small { font-size: 11px; color: var(--gray); margin-top: 2px; letter-spacing: 0.01em; }
+    .bill-pay-btn--primary { background: var(--green); color: #fff; border-color: var(--green); box-shadow: 0 4px 14px rgba(26, 107, 58, 0.22); }
+    .bill-pay-btn--primary .bill-pay-text small { color: rgba(255,255,255,0.75); }
+    .bill-pay-btn--primary:hover { background: #14542d; border-color: #14542d; transform: translateY(-1px); box-shadow: 0 8px 22px rgba(20, 84, 45, 0.28); }
+    .bill-pay-btn--secondary:hover { background: var(--black); color: #fff; transform: translateY(-1px); }
+    .bill-pay-btn--secondary:hover .bill-pay-text small { color: rgba(255,255,255,0.7); }
+
     .card-display {
       display: flex; align-items: center; gap: 16px;
       padding: 18px 0; border-bottom: 1px dotted var(--border);
@@ -254,39 +273,32 @@
     <div id="billingContent" style="display:none">
       <div class="billing-hero">
         <a href="/members.html" class="billing-back">&larr; Назад в личный кабинет</a>
-        <div class="tag">// Подписка и оплата</div>
+        <div class="tag">// Управление подпиской</div>
         <h1>Управление подпиской</h1>
-        <p>Здесь вы можете отменить автопродление, удалить привязанную карту и посмотреть историю платежей.</p>
+        <p>Оформление и управление подпиской происходят через Tribute — в Telegram или в браузере. Здесь вы видите текущий статус, прямые кнопки оплаты и историю платежей.</p>
       </div>
 
-      <!-- 1. Подписка -->
+      <!-- 1. Управление подпиской (объединяет бывшие «Подписка» + «Способ оплаты») -->
       <section class="billing-section">
         <div class="billing-card">
-          <h2><span>// 01</span> Подписка</h2>
+          <h2><span>// 01</span> Управление подпиской</h2>
           <div id="subscriptionBlock">
             <div class="billing-row"><span class="label">Загрузка…</span></div>
           </div>
           <div id="subscriptionActions" class="billing-actions"></div>
           <div class="billing-hint" id="subscriptionHint"></div>
+          <!-- Legacy targets kept for belfed-billing.js compatibility;
+               renderPaymentMethod() now writes into this collapsed area. -->
+          <div id="paymentMethodBlock" style="display:none"></div>
+          <div id="paymentMethodActions" style="display:none"></div>
+          <div id="paymentMethodHint" style="display:none"></div>
         </div>
       </section>
 
-      <!-- 2. Способ оплаты -->
+      <!-- 2. История платежей -->
       <section class="billing-section">
         <div class="billing-card">
-          <h2><span>// 02</span> Способ оплаты</h2>
-          <div id="paymentMethodBlock">
-            <div class="empty-card-state">Загрузка…</div>
-          </div>
-          <div id="paymentMethodActions" class="billing-actions"></div>
-          <div class="billing-hint" id="paymentMethodHint"></div>
-        </div>
-      </section>
-
-      <!-- 3. История платежей -->
-      <section class="billing-section">
-        <div class="billing-card">
-          <h2><span>// 03</span> История платежей</h2>
+          <h2><span>// 02</span> История платежей</h2>
           <div id="historyBlock">
             <div class="history-empty">Загрузка…</div>
           </div>
@@ -307,6 +319,7 @@
   <div id="toast" class="toast"></div>
 
   <script src="belfed-auth.js"></script>
+  <script src="belfed-payments.js"></script>
   <script src="belfed-billing.js"></script>
   <script>
     async function handleLogout() {
