@@ -167,7 +167,6 @@ a.card{text-decoration:none;color:#000}
     <div id="memberLockTitle" style="font-size:15px;font-weight:bold;letter-spacing:1px;margin-bottom:14px">Доступ только для подписчиков</div>
     <div id="memberLockBody" style="font-size:13px;line-height:1.7;margin-bottom:28px;opacity:0.85">Зарегистрируйтесь и активируйте 14 дней бесплатного доступа, чтобы видеть ленту аналитики и обзоры. Карта не нужна.</div>
     <a id="memberLockCta" href="/members.html#signup" style="display:inline-block;padding:14px 28px;border:1px solid #000;background:#000;color:#fff;text-decoration:none;font-size:11px;letter-spacing:2px;text-transform:uppercase">Начать 14 дней бесплатно</a>
-    <div style="margin-top:16px"><a href="/members.html#signin" style="font-size:11px;color:#666;letter-spacing:1px;text-decoration:underline">Уже есть аккаунт? Войти</a></div>
   </div>
 </div>
 <div class="container" id="memberMain">
@@ -797,9 +796,9 @@ function showMemberLock(state) {
   var lock = document.getElementById('memberLock');
   var main = document.getElementById('memberMain');
   if (state === 'expired') {
-    document.getElementById('memberLockTitle').textContent = 'Пробный период завершён';
-    document.getElementById('memberLockBody').textContent = 'Оформите подписку, чтобы продолжить получать ленту аналитики и обзоры.';
-    document.getElementById('memberLockCta').textContent = 'Оформить подписку';
+    document.getElementById('memberLockTitle').textContent = 'ПРОБНЫЙ ПЕРИОД ЗАВЕРШЁН';
+    document.getElementById('memberLockBody').textContent = 'Ваш бесплатный доступ закончился. Оформите подписку, чтобы продолжить доступ к сигналам и аналитике.';
+    document.getElementById('memberLockCta').textContent = 'ОФОРМИТЬ ПОДПИСКУ';
     document.getElementById('memberLockCta').setAttribute('href', '/#pricing');
   }
   if (main) main.style.display = 'none';
