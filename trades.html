@@ -1,80 +1,151 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<html lang="en" data-theme="light"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://script.google.com https://docs.google.com; img-src 'self'; frame-src 'none';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title id="page-title">Crypto Trades | BelFed Analytics</title>
 <link rel="preconnect" href="https://fonts.googleapis.com/">
 <link href="./trades_files/css2" rel="stylesheet">
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Courier Prime','Courier New',monospace;background:#fff;color:#111;font-size:14px;line-height:1.6}
 
-nav{display:flex;justify-content:space-between;align-items:center;padding:20px 48px;border-bottom:1px solid #111;position:sticky;top:0;background:#fff;z-index:100}
-.nav-logo{font-size:18px;font-weight:700;letter-spacing:2px;text-decoration:none;color:#111}
-.nav-links{display:flex;gap:32px;align-items:center}
-.nav-links a{text-decoration:none;color:#111;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;transition:opacity .2s;padding-bottom:2px;border-bottom:1px solid transparent}
-.nav-links a:hover{opacity:.45}
-.nav-links a.nav-active{border-bottom:1px solid #111;opacity:1}
-.nav-btn{border:1px solid #111;padding:8px 16px;font-family:inherit;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;background:#111;color:#fff;cursor:pointer;text-decoration:none;transition:all .2s;border-bottom:none!important}
-.nav-btn:hover{background:#fff;color:#111}
-.page-header{padding:56px 48px 40px;border-bottom:1px solid #e0e0e0}
-.page-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:12px}
+/* ==== Belfed shared brand tokens + header/footer (mirrors index.html) ==== */
+:root{
+  --font-mono:'Courier Prime','Courier New',ui-monospace,monospace;
+  --font-sans:'Courier Prime','Courier New',ui-monospace,monospace;
+  --white:#f5f5f0;--paper:#efefe7;--paper-2:#e7e7dd;
+  --rule:#1a1a1a14;--rule-strong:#1a1a1a26;
+  --black:#0a0a0a;--ink:#161614;--ink-2:#2a2a26;
+  --gray:#888;--gray-soft:#6b6b6b;--gray-faint:#b3b3a8;
+  --green:#1a6b3a;--green-soft:#1a6b3a14;--green-strong:#14542d;
+  --red:#8b1a1a;--gold:#b8860b;
+  --radius:4px;--radius-lg:8px;
+  --maxw:1240px;--t:200ms cubic-bezier(.2,.7,.2,1);
+}
+[data-theme="dark"]{
+  --white:#0d0d0a;--paper:#131310;--paper-2:#1a1a16;
+  --rule:#ffffff14;--rule-strong:#ffffff26;
+  --black:#f1f1ea;--ink:#e5e5dc;--ink-2:#c9c9bf;
+  --gray:#8a8a82;--gray-soft:#a3a39a;--gray-faint:#4a4a44;
+  --green:#2fa05a;--green-soft:#2fa05a1f;--green-strong:#46c277;
+  --red:#d65a5a;--gold:#d6a020;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:72px;-webkit-font-smoothing:antialiased}
+body{font-family:var(--font-mono);font-size:14px;line-height:1.6;color:var(--ink);background:var(--white);transition:background var(--t),color var(--t)}
+img,svg,video{display:block;max-width:100%;height:auto}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+:focus-visible{outline:2px solid var(--green);outline-offset:3px}
+/* NAV — copied from index.html */
+.nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:color-mix(in oklab,var(--white) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--rule)}
+.logo{font-family:var(--font-mono);font-weight:700;font-size:17px;letter-spacing:.22em;color:var(--black);white-space:nowrap}
+.logo .cursor{display:inline-block;animation:blink 1.2s steps(1) infinite;color:var(--green);margin-left:2px}
+@keyframes blink{50%{opacity:0}}
+.nav-links,.nav-links li{list-style:none!important}
+.nav-links{display:flex;align-items:center;gap:28px;padding:0;margin:0}
+.nav-links a{font-family:var(--font-mono);font-size:13px;color:var(--gray-soft);letter-spacing:.04em}
+.nav-links a:hover{color:var(--black)}
+.nav-links a.nav-active{color:var(--black)}
+.nav-right{display:flex;align-items:center;gap:14px}
+.lang-globe{display:inline-flex}
+.lang-globe a{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:var(--gray-soft);transition:color var(--t),background var(--t);font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.04em;position:relative}
+.lang-globe a:hover{color:var(--ink);background:var(--paper)}
+.lang-globe .lang-code{position:absolute;bottom:-2px;right:-2px;background:var(--black);color:var(--white);font-size:8px;padding:1px 4px;border-radius:6px;letter-spacing:.05em;line-height:1.1}
+.theme-btn{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;color:var(--gray-soft)}
+.theme-btn:hover{color:var(--black);background:var(--paper)}
+.btn{display:inline-flex;align-items:center;gap:10px;padding:12px 22px;font-family:var(--font-mono);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:99px;transition:all var(--t);border:1px solid transparent}
+.btn-primary{background:var(--black);color:var(--white)}
+.btn-primary:hover{background:var(--green-strong);transform:translateY(-1px);box-shadow:0 6px 24px #1a6b3a26}
+.btn-ghost{background:transparent;color:var(--ink);border-color:var(--rule-strong)}
+.btn-ghost:hover{border-color:var(--black);color:var(--black)}
+.btn-sm{padding:8px 14px;font-size:11px}
+.hamburger{display:none;width:36px;height:36px;align-items:center;justify-content:center;color:var(--gray-soft);border-radius:4px}
+/* FOOTER — copied from index.html */
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 28px}
+footer{padding:48px 0 32px;background:var(--paper);color:var(--ink);border-top:1px solid var(--rule);margin-top:48px}
+.foot-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:36px}
+.foot-brand p{font-family:var(--font-sans);font-size:12px;color:var(--gray-soft);margin-top:12px;max-width:32ch;line-height:1.7;letter-spacing:.005em}
+.foot-col h5{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gray-soft);margin-bottom:14px}
+.foot-col ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+.foot-col a{font-family:var(--font-mono);font-size:13px;color:var(--ink-2)}
+.foot-col a:hover{color:var(--green-strong)}
+.foot-bottom{padding-top:24px;border-top:1px solid var(--rule);font-family:var(--font-mono);font-size:11px;color:var(--gray-soft);display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap}
+.foot-disclaim{max-width:56ch;line-height:1.6}
+@media(max-width:900px){.nav{padding:12px 16px}.nav-links{display:none}.hamburger{display:inline-flex}.nav-right{gap:8px}.nav-right .btn-ghost,.nav-right .btn-primary{display:none}.foot-grid{grid-template-columns:1fr 1fr;gap:32px}.foot-brand{grid-column:1 / -1}footer{padding:36px 0 28px}}
+/* ==== end shared brand block ==== */
+
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font-mono);background:var(--white);color:var(--ink);font-size:14px;line-height:1.6}
+
+.page-header{padding:56px 48px 40px;border-bottom:1px solid var(--rule-strong)}
+.page-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gray);margin-bottom:12px}
 .page-title{font-size:36px;font-weight:700;margin-bottom:12px}
-.page-subtitle{font-size:14px;color:#555;max-width:660px}
-.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid #e0e0e0}
-.stat-item{padding:28px 48px;border-right:1px solid #e0e0e0}
+.page-subtitle{font-size:14px;color:var(--ink-2);max-width:660px}
+.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--rule-strong)}
+.stat-item{padding:28px 48px;border-right:1px solid var(--rule-strong)}
 .stat-item:last-child{border-right:none}
 .stat-value{font-size:28px;font-weight:700;margin-bottom:4px}
-.stat-label{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#888}
-.tab-bar{display:flex;padding:0 48px;border-bottom:1px solid #e0e0e0}
-.tab-link{display:block;padding:18px 0;margin-right:36px;font-family:'Courier Prime','Courier New',monospace;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;text-decoration:none;border-bottom:2px solid transparent;color:#888;transition:all .2s}
-.tab-link.active{color:#111;border-bottom-color:#111;pointer-events:none}
-.tab-link:hover{color:#111}
+.stat-label{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray)}
+.tab-bar{display:flex;padding:0 48px;border-bottom:1px solid var(--rule-strong)}
+.tab-link{display:block;padding:18px 0;margin-right:36px;font-family:var(--font-mono);font-size:12px;letter-spacing:1.5px;text-transform:uppercase;text-decoration:none;border-bottom:2px solid transparent;color:var(--gray);transition:all .2s}
+.tab-link.active{color:var(--ink);border-bottom-color:var(--ink);pointer-events:none}
+.tab-link:hover{color:var(--ink)}
 .table-wrap{padding:0 48px 48px;overflow-x:auto}
 table{width:100%;border-collapse:collapse}
-thead th{padding:16px 14px;text-align:left;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#888;border-bottom:2px solid #111;white-space:nowrap}
-tbody tr{border-bottom:1px solid #f0f0f0;transition:background .15s}
-tbody tr:hover{background:#fafafa}
+thead th{padding:16px 14px;text-align:left;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray);border-bottom:2px solid var(--ink);white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--rule);transition:background .15s}
+tbody tr:hover{background:var(--paper)}
 tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
-.num{color:#ccc;font-size:11px}
+.num{color:var(--gray-faint);font-size:11px}
 .ticker{font-weight:700;letter-spacing:1px;font-size:14px}
-.badge{display:inline-block;padding:3px 10px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;border:1px solid #111}
-.badge-long{background:transparent;color:#111}
-.badge-short{background:#111;color:#fff}
-.win{color:#1a7a1a;font-weight:700}
-.loss{color:#cc2222;font-weight:700}
-.tv-link{display:inline-flex;align-items:center;gap:5px;text-decoration:none;color:#888;font-size:10px;letter-spacing:1px;text-transform:uppercase;border:1px solid #ddd;padding:3px 8px;transition:all .2s;white-space:nowrap}
-.tv-link:hover{color:#111;border-color:#111;background:#f5f5f5}
+.badge{display:inline-block;padding:3px 10px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;border:1px solid var(--ink)}
+.badge-long{background:transparent;color:var(--ink)}
+.badge-short{background:var(--ink);color:var(--white)}
+.win{color:var(--green-strong);font-weight:700}
+.loss{color:var(--red);font-weight:700}
+.tv-link{display:inline-flex;align-items:center;gap:5px;text-decoration:none;color:var(--gray);font-size:10px;letter-spacing:1px;text-transform:uppercase;border:1px solid var(--rule-strong);padding:3px 8px;transition:all .2s;white-space:nowrap}
+.tv-link:hover{color:var(--ink);border-color:var(--ink);background:var(--paper-2)}
 .tv-link svg{width:9px;height:9px;flex-shrink:0}
-.no-link{color:#ddd;font-size:11px}
-.summary-bar{display:flex;gap:48px;padding:20px 48px;border-top:2px solid #111;background:#fafafa;flex-wrap:wrap}
+.no-link{color:var(--rule-strong);font-size:11px}
+.summary-bar{display:flex;gap:48px;padding:20px 48px;border-top:2px solid var(--ink);background:var(--paper);flex-wrap:wrap}
 .s-item{display:flex;flex-direction:column}
 .s-val{font-size:16px;font-weight:700}
-.s-val.pos{color:#1a7a1a}
-.s-lbl{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#888;margin-top:2px}
-.disclaimer{padding:20px 48px 32px;font-size:11px;color:#bbb;line-height:1.9;max-width:880px}
-footer{padding:32px 48px;border-top:1px solid #111;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#888;letter-spacing:1px}
+.s-val.pos{color:var(--green-strong)}
+.s-lbl{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray);margin-top:2px}
+.disclaimer{padding:20px 48px 32px;font-size:11px;color:var(--gray);line-height:1.9;max-width:880px}
 @media(max-width:768px){
   nav{padding:16px 20px}.nav-links{display:none}
   .page-header,.tab-bar,.table-wrap,.summary-bar,.disclaimer,footer{padding-left:20px;padding-right:20px}
   .stats-bar{grid-template-columns:repeat(2,1fr)}
   .stat-item{padding:20px}
   .page-title{font-size:26px}
-  footer{flex-direction:column;gap:8px;text-align:center}
 }
 </style>
 </head>
 <body>
 
-<nav>
-  <a href="/" class="nav-logo">BELFED_</a>
-  <div class="nav-links">
-    <a href="/">Home</a>
-    <a href="/trades.html" class="nav-active">Trades</a>
-    <a href="/#products">Products</a>
-    <a href="/#about">About</a>
-    <a href="/#subscribe">Subscribe</a>
-        <a href="/dashboard.html" class="nav-btn">Member Login</a>
+<nav class="nav" aria-label="Primary">
+  <a href="/" class="logo" aria-label="Belfed home">BELFED<span class="cursor">_</span></a>
+  <ul class="nav-links" role="list">
+    <li><a href="/#tour">What you get</a></li>
+    <li><a href="/#how">How it works</a></li>
+    <li><a href="/trades.html" class="nav-active">Track record</a></li>
+    <li><a href="/#pricing">Pricing</a></li>
+    <li><a href="/#faq">FAQ</a></li>
+  </ul>
+  <div class="nav-right">
+    <div class="lang-globe" role="group" aria-label="Language">
+      <a href="https://belfed.ru/" aria-label="Switch to Russian">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18"/></svg><span class="lang-code">RU</span>
+      </a>
+    </div>
+    <button class="theme-btn" id="themeBtn" aria-label="Toggle theme">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+    <a href="/members.html" class="btn btn-ghost btn-sm">Login</a>
+    <a href="/#pricing" class="btn btn-primary btn-sm">Start free access</a>
+    <button class="hamburger" id="ham" aria-label="Menu">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
   </div>
 </nav>
 
@@ -124,8 +195,30 @@ footer{padding:32px 48px;border-top:1px solid #111;display:flex;justify-content:
   Past results do not guarantee future performance. R-multiples are calculated relative to initial risk per trade (1R = amount risked). This page is updated manually after each position is closed. No positions are removed or edited retroactively.
 </div>
 <footer>
-  <span>BELFED ANALYTICS</span>
-  <span>belfed.com</span>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <span class="logo">BELFED<span class="cursor">_</span></span>
+        <p>Independent global investment research. Market analytics and trade ideas across equities, crypto and commodities.</p>
+      </div>
+      <div class="foot-col">
+        <h5>Product</h5>
+        <ul><li><a href="/#tour">What you get</a></li><li><a href="/#how">How it works</a></li><li><a href="/#pricing">Pricing</a></li><li><a href="/trades.html">Track record</a></li><li><a href="/#free-analysis">Free analysis</a></li></ul>
+      </div>
+      <div class="foot-col">
+        <h5>Community</h5>
+        <ul><li><a href="https://t.me/BelFedFreeEN" target="_blank" rel="noopener">Telegram · EN</a></li><li><a href="https://t.me/BelFedFreeRU" target="_blank" rel="noopener">Telegram · RU</a></li><li><a href="https://tradingview.com/u/BelFed_Analytics" target="_blank" rel="noopener">TradingView</a></li><li><a href="https://x.com/art_the_trader" target="_blank" rel="noopener">X / Twitter</a></li></ul>
+      </div>
+      <div class="foot-col">
+        <h5>Legal</h5>
+        <ul><li><a href="/terms.html">Terms of service</a></li><li><a href="/privacy.html">Privacy policy</a></li><li><a href="/disclaimer.html">Risk disclaimer</a></li><li><a href="mailto:hello@belfed.com">Contact</a></li></ul>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 Belfed Analytics. All rights reserved. · Payments by Tribute.</span>
+      <span class="foot-disclaim">Risk disclaimer: Trading involves substantial risk of loss. Past performance is not indicative of future results. Nothing on this site is financial advice.</span>
+    </div>
+  </div>
 </footer>
 
 
@@ -336,6 +429,15 @@ yf.querySelectorAll('.yfb').forEach(function(b){b.classList.remove('on')});
 e.target.classList.add('on');
 go(e.target.getAttribute('data-y'));
 });
+})();
+</script>
+<script>
+(function(){
+  try{var t=localStorage.getItem('belfed-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}
+  var b=document.getElementById('themeBtn');
+  if(b)b.addEventListener('click',function(){var c=document.documentElement.getAttribute('data-theme');var n=c==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',n);try{localStorage.setItem('belfed-theme',n);}catch(e){}});
+  var h=document.getElementById('ham');
+  if(h)h.addEventListener('click',function(){var l=document.querySelector('.nav-links');if(!l)return;var s=l.style.display==='flex';l.style.display=s?'':'flex';l.style.position='absolute';l.style.top='60px';l.style.left='0';l.style.right='0';l.style.background='var(--white)';l.style.flexDirection='column';l.style.padding='20px';l.style.borderBottom='1px solid var(--rule)';});
 })();
 </script>
 </body></html>
