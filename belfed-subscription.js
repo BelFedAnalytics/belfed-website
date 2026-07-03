@@ -46,14 +46,21 @@
     const c = getClient();
     const { data: { session } } = await c.auth.getSession();
     if (!session) return null;
-    const [{ data: prof }, { data: sub }] = await Promise.all([
+    // Subscriptions: pick the newest one, provider-agnostic (yookassa, tribute, telegram_stars, ...).
+    // Users may legitimately have multiple rows across providers/history — prefer active,
+    // otherwise fall back to the most recent by current_period_end.
+    const [{ data: prof }, { data: subs }] = await Promise.all([
       c.from('profiles')
         .select('subscription_status, subscription_plan, subscription_expires_at, telegram_id, telegram_username, trial_started_at, trial_end')
         .eq('id', session.user.id).maybeSingle(),
       c.from('subscriptions')
-        .select('status, plan_code, current_period_end, cancel_at_period_end, payment_method_id')
-        .eq('user_id', session.user.id).maybeSingle(),
+        .select('status, plan_code, provider, current_period_end, cancel_at_period_end, payment_method_id')
+        .eq('user_id', session.user.id)
+        .order('current_period_end', { ascending: false, nullsFirst: false })
+        .limit(5),
     ]);
+    const list = Array.isArray(subs) ? subs : [];
+    const sub = list.find(s => s.status === 'active') || list[0] || null;
     return { profile: prof, subscription: sub };
   }
 
