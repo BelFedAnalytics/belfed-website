@@ -156,20 +156,36 @@
       actHtml += `<a class="btn btn-secondary" href="https://t.me/tribute" target="_blank" rel="noopener">Управлять в Tribute →</a>`;
     }
     if (!isPaid && !isAdmin) {
-      actHtml += `<button class="btn btn-primary" id="btnStartCheckout">Оформить подписку</button>`;
+      // Two explicit Tribute checkout channels — pick your route.
+      actHtml +=
+        '<a class="bill-pay-btn bill-pay-btn--primary" href="https://t.me/tribute/app?startapp=sZH9" target="_blank" rel="noopener" data-belfed-pay="tg">' +
+          '<span class="bill-pay-icon" aria-hidden="true">' +
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.78 15.27 9.6 18.9c.36 0 .52-.15.72-.34l1.72-1.64 3.56 2.6c.65.36 1.11.17 1.29-.6l2.33-10.94c.22-.99-.36-1.38-.99-1.15L4.05 10.9c-.96.37-.95.9-.16 1.14l3.8 1.18 8.82-5.56c.42-.27.8-.12.48.16z"/></svg>' +
+          '</span>' +
+          '<span class="bill-pay-text"><b>Оплатить через Telegram</b><small>' + fmtRub(monthlyAmount) + ' / мес · Tribute-бот</small></span>' +
+        '</a>' +
+        '<a class="bill-pay-btn bill-pay-btn--secondary" href="https://web.tribute.tg/s/ZH9" target="_blank" rel="noopener" data-belfed-pay="web">' +
+          '<span class="bill-pay-icon" aria-hidden="true">' +
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a13.5 13.5 0 010 18M12 3a13.5 13.5 0 000 18"/></svg>' +
+          '</span>' +
+          '<span class="bill-pay-text"><b>Оплатить через браузер</b><small>' + fmtRub(monthlyAmount) + ' / мес · Tribute Web</small></span>' +
+        '</a>';
     }
     actions.innerHTML = actHtml;
 
-    const startBtn = document.getElementById('btnStartCheckout');
-    if (startBtn) {
-      startBtn.onclick = function () {
-        if (window.BelfedPayments && window.BelfedPayments.startCheckout) {
-          window.BelfedPayments.startCheckout({ plan: 'month' });
-        } else {
-          toast('Модуль оплаты не загружен. Попробуйте обновить страницу.', 'error');
-        }
-      };
-    }
+    // Fire analytics on channel picks.
+    actions.querySelectorAll('[data-belfed-pay]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        try {
+          if (window.belfedTrack) {
+            window.belfedTrack('payment_started', {
+              plan: 'month', provider: 'tribute',
+              channel: el.getAttribute('data-belfed-pay') || 'unknown', source: 'billing',
+            });
+          }
+        } catch (_) {}
+      });
+    });
 
     if (isPaid && autorenew) {
       hint.innerHTML = `Доступ продлится автоматически <b>${fmtDate(exp)}</b>. Чтобы отменить автопродление, откройте подписку в боте <b>@tribute</b> → My subscriptions. Доступ сохранится до этой даты, дальше выключится.`;
@@ -185,24 +201,10 @@
   }
 
   function renderPaymentMethod(state) {
-    const block = document.getElementById('paymentMethodBlock');
-    const actions = document.getElementById('paymentMethodActions');
-    const hint = document.getElementById('paymentMethodHint');
-
-    // BelFed no longer holds card tokens. All billing is on Tribute's side.
-    // We keep the block for visual consistency but only surface the Tribute
-    // management path — no card details, no detach/attach flows.
-    block.innerHTML = `
-      <div class="card-display">
-        <span class="card-icon">TRIBUTE</span>
-        <div class="card-meta">
-          <div class="card-line1">Оплата через Tribute</div>
-          <div class="card-line2">Автопродление и метод оплаты управляются в Tribute</div>
-        </div>
-      </div>
-    `;
-    actions.innerHTML = '';
-    hint.innerHTML = 'Чтобы отменить автопродление или управлять методом оплаты, откройте подписку в боте <b>@tribute</b> → «My subscriptions».';
+    // No-op: the payment-method section has been merged into the unified
+    // '// Управление подпиской' card. All Tribute payment CTAs live in
+    // renderSubscription() now. The three legacy DOM targets remain hidden
+    // in billing.html and are intentionally not populated here.
   }
 
   function renderHistory(state) {
