@@ -338,7 +338,7 @@ function renderStats() {
     <div class="stat-card green"><div class="label">Active</div><div class="value">${stats.active}</div><div class="sub">EN ${stats.en_active} · RU ${stats.ru_active}</div></div>
     <div class="stat-card amber"><div class="label">Trial</div><div class="value">${stats.trial}</div><div class="sub">EN ${stats.en_trial} · RU ${stats.ru_trial}</div></div>
     <div class="stat-card red"><div class="label">Expired</div><div class="value">${stats.expired}</div><div class="sub">истёкшие подписки</div></div>
-    <div class="stat-card"><div class="label">RUB всего</div><div class="value">${fmtMoney(stats.total_rub)}</div><div class="sub">YooKassa</div></div>
+    <div class="stat-card"><div class="label">RUB всего</div><div class="value">${fmtMoney(stats.total_rub)}</div><div class="sub">Tribute</div></div>
     <div class="stat-card"><div class="label">Stars всего</div><div class="value">${fmtMoney(stats.total_stars)}</div><div class="sub">Telegram Stars</div></div>
   `;
   document.getElementById('statsGrid').innerHTML = html;

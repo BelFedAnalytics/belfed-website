@@ -5,8 +5,15 @@
 
   const SUPABASE_URL = 'https://obujqvqqmyfcfflhqvud.supabase.co';
   const FN_LINK      = SUPABASE_URL + '/functions/v1/telegram-link-start';
-  const FN_CANCEL    = SUPABASE_URL + '/functions/v1/yookassa-cancel-subscription';
   const PRICE_RUB    = 1500;
+
+  // Legacy no-op. BelFed no longer operates yookassa-cancel-subscription
+  // (all billing is on Tribute; cancellation lives in the @tribute bot).
+  // Retained only as a defensive stub for any external caller that still
+  // imports window.BelfedSubscription.cancelSubscription.
+  async function cancelSubscription() {
+    throw new Error('Отмена подписки теперь выполняется в Telegram: @tribute → My subscriptions.');
+  }
 
   function getClient() {
     return window.supaClient || window.belfedSupabase || window.supabaseClient;
@@ -30,23 +37,12 @@
     return j;
   }
 
-  async function cancelSubscription(reason) {
-    const t = await token();
-    const r = await fetch(FN_CANCEL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + t },
-      body: JSON.stringify({ reason: reason || 'user_requested' }),
-    });
-    const j = await r.json();
-    if (!r.ok) throw new Error(j.error || 'Не удалось отменить');
-    return j;
-  }
-
   async function loadStatus() {
     const c = getClient();
     const { data: { session } } = await c.auth.getSession();
     if (!session) return null;
-    // Subscriptions: pick the newest one, provider-agnostic (yookassa, tribute, telegram_stars, ...).
+    // Subscriptions: pick the newest one, provider-agnostic (tribute, telegram_stars, ...).
+    // BelFed migrated fully off YooKassa on 2026-07-03; historical yookassa rows may still exist.
     // Users may legitimately have multiple rows across providers/history — prefer active,
     // otherwise fall back to the most recent by current_period_end.
     const [{ data: prof }, { data: subs }] = await Promise.all([
@@ -96,7 +92,7 @@
     const box = document.getElementById('belfedSubscriptionBox');
     if (!box) return;
 
-    // Возврат с YooKassa: ?payment=success → ждём активации.
+    // Возврат с Tribute checkout: ?payment=success|return → ждём активации.
     let paymentSuccess = false;
     try {
       const url = new URL(window.location.href);
@@ -222,12 +218,15 @@
       const msgEl = document.getElementById('bfMsg');
       payBtn.disabled = true;
       const orig = payBtn.textContent;
-      payBtn.textContent = 'Перенаправляем на оплату…';
+      payBtn.textContent = 'Открываем Tribute…';
       try {
         if (!window.BelfedPayments || !window.BelfedPayments.startCheckout) {
           throw new Error('Модуль оплаты не загружен');
         }
         await window.BelfedPayments.startCheckout({ plan: 'month' });
+        // startCheckout opens Tribute in a new tab; reset the button so the
+        // user can retry if the popup was blocked.
+        setTimeout(function(){ payBtn.disabled = false; payBtn.textContent = orig; }, 1500);
       } catch (err) {
         if (msgEl) msgEl.textContent = 'Ошибка оплаты: ' + (err.message || err);
         payBtn.disabled = false;
@@ -235,7 +234,7 @@
       }
     };
 
-    // Старая кнопка #bfCancel убрана — отмена автопродления живёт на /billing.html.
+    // Старая кнопка #bfCancel убрана — отмена автопродления живёт в @tribute → My subscriptions.
   }
 
   document.addEventListener('DOMContentLoaded', () => {
