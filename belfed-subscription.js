@@ -126,8 +126,28 @@
     }
 
     let state;
-    try { state = await loadStatus(); } catch { box.textContent = ''; return; }
-    if (!state) { box.textContent = ''; return; }
+    try {
+      state = await loadStatus();
+    } catch (err) {
+      // Never leave the card empty when there is a session — the QA report
+      // 2026-07-03 flagged that an expired user saw a blank "// Моя подписка"
+      // section with no payment CTA. Render a minimal upsell fallback instead.
+      console.error('belfed-subscription loadStatus failed:', err);
+      box.innerHTML =
+        '<div class="bf-card">' +
+          '<div class="bf-status">❗ Не удалось загрузить статус подписки</div>' +
+          '<div class="bf-row bf-muted">Попробуйте перезагрузить страницу, или оформите подписку на <a href="/#pricing" style="text-decoration:underline">странице тарифов</a>.</div>' +
+          '<div class="bf-actions" style="margin-top:12px">' +
+            '<a class="login-btn bf-cta" href="/#pricing" style="text-decoration:none;display:inline-block">💳 Оформить подписку — ' + PRICE_RUB + ' ₽ / мес</a>' +
+          '</div>' +
+        '</div>';
+      return;
+    }
+    if (!state) {
+      // No session at all — nothing to render here; auth screen handles it.
+      box.textContent = '';
+      return;
+    }
 
     const { profile, subscription } = state;
     const exp = profile?.subscription_expires_at ? new Date(profile.subscription_expires_at) : null;
@@ -156,8 +176,15 @@
       html += `<div class="bf-row">Действует до: <b>${fmt(trialEnd)}</b> · осталось ${daysLeft(trialEnd)} дн.</div>`;
       html += `<div class="bf-row bf-muted">После триала — подписка ${PRICE_RUB} ₽ / мес. Карта не привязана: оплата только по вашему действию.</div>`;
     } else {
-      html += `<div class="bf-status">❌ ПОДПИСКИ НЕТ</div>`;
-      html += `<div class="bf-row bf-muted">Оформите подписку, чтобы получить доступ в закрытый канал.</div>`;
+      // Covers subscription_status in ('expired', 'none') and any other
+      // non-access state. Show an explicit expired label when appropriate
+      // so the QA-flagged blank-card bug (2026-07-03) can never recur.
+      var isExpired = profile && profile.subscription_status === 'expired';
+      html += `<div class="bf-status">${isExpired ? '⏳ ДОСТУП ЗАВЕРШЁН' : '❌ ПОДПИСКИ НЕТ'}</div>`;
+      html += `<div class="bf-row bf-muted">${isExpired
+        ? 'Ваш пробный / платный доступ завершён. Оформите подписку, чтобы вернуть доступ к торговым сигналам и аналитике.'
+        : 'Оформите подписку, чтобы получить доступ в закрытый канал.'
+      }</div>`;
     }
     html += `<div class="bf-row">Telegram: ${profile?.telegram_id ? '<b>@' + (profile.telegram_username || profile.telegram_id) + '</b>' : '<span class="bf-muted">не привязан</span>'}</div>`;
     html += '</div>';

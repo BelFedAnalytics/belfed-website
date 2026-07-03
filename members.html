@@ -276,11 +276,35 @@
         <p>Доступ к торговым идеям, обзорам рынка, результатам сделок и настройкам вашей подписки.</p>
       </div>
 
-            <div class="dev-notice">
+            <!--
+              Access-scoped welcome banner. Rendered only for users that
+              currently have access (admin / active paid / active trial).
+              Hidden by default; onAuthReady() below shows it for the
+              access-granted states so expired / none users don't get a
+              contradictory "member area fully operational" message.
+            -->
+            <div class="dev-notice" id="memberWelcomeBanner" style="display:none">
                       <p class="notice-tag">// Личный кабинет</p>
                       <p>Личный кабинет полностью работает: онлайн-трекер открытых позиций, аналитика и анализ активов доступны прямо здесь на сайте.</p>
                       <p style="margin-top:12px">Оповещения в реальном времени о новых сделках, достижении целевых уровней прибыли или срабатывании стоп-лоссов приходят в закрытый Telegram-канал — откройте <a href="https://t.me/BelfedBot" target="_blank">@BelfedBot</a>, чтобы присоединиться.</p>
                       <p style="margin-top:12px"><a href="https://t.me/BelfedBot?start=members" style="color:var(--black);text-decoration:underline;font-weight:bold">Открыть @BelfedBot в Telegram &rarr;</a></p>
+                    </div>
+
+            <!--
+              Expired / no-subscription upsell banner. Hidden by default;
+              shown by onAuthReady() when the user has no active access.
+              Provides an immediate payment path so expired users are not
+              stranded on the member portal without a CTA (mirrors the RU
+              subscription card fallback but works even if the JS widget
+              fails to render for any reason).
+            -->
+            <div class="dev-notice" id="memberExpiredBanner" style="display:none;border-color:var(--red,#c33)">
+                      <p class="notice-tag" style="color:var(--red,#c33)">// Доступ ограничен</p>
+                      <p><b>Ваш доступ завершён.</b> Оформите подписку, чтобы вернуть доступ к торговым сигналам, аналитике и анализу активов.</p>
+                      <p style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap">
+                        <a href="/#pricing" class="login-btn" style="width:auto;padding:12px 22px;text-decoration:none;display:inline-block">Оформить подписку →</a>
+                        <a href="#subscription" style="color:var(--black);text-decoration:underline;font-weight:bold;align-self:center">См. варианты оплаты ↓</a>
+                      </p>
                     </div>
       <div class="members-grid">
         <a href="/dashboard.html" class="member-card">
@@ -640,6 +664,17 @@
           badge.className = 'status-badge';
           if (st === 'expired' || st === 'none') badge.classList.add('expired');
           if (st === 'trial') badge.classList.add('trial');
+          // Toggle the welcome vs expired banner based on actual access.
+          // hasAccess mirrors belfed-auth::getEntitlement's access flag.
+          try {
+            var hasAccess = (entitlement && entitlement.access === true)
+              || st === 'admin' || st === 'active'
+              || (st === 'trial' && profile.trial_end && new Date(profile.trial_end) > new Date());
+            var welcomeEl = document.getElementById('memberWelcomeBanner');
+            var expiredEl = document.getElementById('memberExpiredBanner');
+            if (welcomeEl) welcomeEl.style.display = hasAccess ? 'block' : 'none';
+            if (expiredEl) expiredEl.style.display = hasAccess ? 'none' : 'block';
+          } catch (bannerErr) { console.warn('members banner toggle failed:', bannerErr); }
           // Trial banner + remaining days
           if (st === 'trial' && profile.trial_end) {
             var row = document.getElementById('acctTrialRow');
