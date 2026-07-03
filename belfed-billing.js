@@ -86,19 +86,25 @@
     const session = await getSession();
     if (!session) return null;
 
-    const [{ data: prof }, { data: sub }, { data: pays }] = await Promise.all([
+    // Subscriptions: users may have multiple rows across providers (yookassa/tribute/telegram_stars)
+    // or historical rows — prefer active, otherwise fall back to the most recent by period end.
+    const [{ data: prof }, { data: subs }, { data: pays }] = await Promise.all([
       c.from('profiles')
         .select('id, email, subscription_status, subscription_plan, subscription_expires_at, telegram_id, telegram_username, trial_started_at, trial_end, founding_member, founding_locale')
         .eq('id', session.user.id).maybeSingle(),
       c.from('subscriptions')
-        .select('id, status, plan_code, amount_rub, current_period_end, cancel_at_period_end, payment_method_id, card_last4, card_brand, payment_method_saved_at, payment_method_detached_at, failed_attempts, last_charge_error')
-        .eq('user_id', session.user.id).maybeSingle(),
+        .select('id, status, plan_code, provider, amount_rub, current_period_end, cancel_at_period_end, payment_method_id, card_last4, card_brand, payment_method_saved_at, payment_method_detached_at, failed_attempts, last_charge_error')
+        .eq('user_id', session.user.id)
+        .order('current_period_end', { ascending: false, nullsFirst: false })
+        .limit(10),
       c.from('payments')
-        .select('id, amount, currency, status, paid_at, created_at, is_recurring, provider_payment_id')
+        .select('id, provider, amount, currency, status, paid_at, created_at, is_recurring, provider_payment_id')
         .eq('user_id', session.user.id)
         .order('created_at', { ascending: false })
         .limit(24),
     ]);
+    const subsList = Array.isArray(subs) ? subs : [];
+    const sub = subsList.find(s => s.status === 'active') || subsList[0] || null;
     return { session, profile: prof, subscription: sub, payments: pays || [] };
   }
 
@@ -114,7 +120,14 @@
     const isPaid = subscription && subscription.status === 'active' && exp && exp > new Date();
     const isTrial = !isPaid && !isAdmin && profile?.subscription_status === 'trial'
                     && trialEnd && trialEnd > new Date();
-    const autorenew = isPaid && !subscription.cancel_at_period_end && subscription.payment_method_id;
+    // Autorenew logic depends on provider:
+    //  - YooKassa: we control autorenew via saved payment_method_id (recurring charges from our side)
+    //  - Tribute:  autorenew is managed on Tribute's side — assume ON unless cancel_at_period_end
+    //  - other providers (telegram_stars, ...): treat like Tribute (external autorenew)
+    const provider = subscription?.provider || 'yookassa';
+    const autorenew = isPaid && !subscription.cancel_at_period_end && (
+      provider === 'yookassa' ? !!subscription.payment_method_id : true
+    );
 
     // Pricing label — founding members keep 30% off forever
     const isFounding = !!profile?.founding_member;
@@ -141,8 +154,12 @@
     block.innerHTML = rows;
 
     let actHtml = '';
-    if (autorenew) {
+    // Cancel-autorenew button only works for YooKassa (we own the recurrent token).
+    // Tribute users must cancel via @tribute bot; we surface a link instead.
+    if (autorenew && provider === 'yookassa') {
       actHtml += `<button class="btn btn-danger" id="btnCancelAutorenew">Отменить автопродление</button>`;
+    } else if (autorenew && provider === 'tribute') {
+      actHtml += `<a class="btn btn-secondary" href="https://t.me/tribute" target="_blank" rel="noopener">Управлять в Tribute →</a>`;
     }
     if (!isPaid && !isAdmin) {
       actHtml += `<a class="btn btn-primary" href="/members.html#pay">Оформить подписку</a>`;
@@ -187,7 +204,26 @@
     const actions = document.getElementById('paymentMethodActions');
     const hint = document.getElementById('paymentMethodHint');
 
+    const provider = subscription?.provider || 'yookassa';
     const hasCard = !!(subscription && subscription.payment_method_id);
+
+    // Tribute (and other external-billing providers): we don't hold a card token —
+    // billing is managed on their side. Show a clean informational panel instead of
+    // YooKassa-flavored "card not attached" copy.
+    if (provider === 'tribute') {
+      block.innerHTML = `
+        <div class="card-display">
+          <span class="card-icon">TRIBUTE</span>
+          <div class="card-meta">
+            <div class="card-line1">Оплата через Tribute</div>
+            <div class="card-line2">Автопродление и метод оплаты управляются в Tribute</div>
+          </div>
+        </div>
+      `;
+      actions.innerHTML = '';
+      hint.innerHTML = 'Чтобы отменить автопродление или удалить карту, откройте подписку в боте <b>@tribute</b> → «My subscriptions».';
+      return;
+    }
 
     if (hasCard) {
       const last4 = subscription.card_last4 || '••••';
