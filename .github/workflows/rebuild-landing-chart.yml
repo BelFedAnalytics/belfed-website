@@ -1,0 +1,72 @@
+name: Rebuild landing R-chart
+
+on:
+  # Nightly refresh at 00:00 UTC (03:00 MSK)
+  schedule:
+    - cron: "0 0 * * *"
+  # Manual trigger from the Actions UI
+  workflow_dispatch:
+  # The sheet is fetched every run, but leave a hook for future JSON-driven flows.
+  # Also runs on any push to main that touches the builder script itself, so
+  # updates to the builder produce a fresh chart immediately.
+  push:
+    branches: [main]
+    paths:
+      - "scripts/build_landing_chart.py"
+      - ".github/workflows/rebuild-landing-chart.yml"
+
+concurrency:
+  group: rebuild-landing-chart
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "yfinance>=0.2.40"
+
+      - name: Rebuild BELFED_CHART_DATA
+        id: build
+        run: |
+          python scripts/build_landing_chart.py 2>&1 | tee /tmp/build.log
+          if git diff --quiet -- index.html; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Write step summary
+        if: always()
+        run: |
+          {
+            echo "### Landing R-chart rebuild"
+            echo ""
+            echo "\`\`\`"
+            cat /tmp/build.log
+            echo "\`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit updated index.html
+        if: steps.build.outputs.changed == 'true'
+        run: |
+          git config user.name "Belfed Bot"
+          git config user.email "bot@belfed.com"
+          git add index.html
+          git commit -m "chore: refresh landing chart data ($(date -u +%Y-%m-%d))"
+          git push origin main
