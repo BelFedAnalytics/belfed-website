@@ -5,6 +5,7 @@
 <title>Результаты — Акции | BelFed Analytics</title>
 <link rel="preconnect" href="https://fonts.googleapis.com/">
 <link href="./equities-trades_files/css2" rel="stylesheet">
+<link rel="stylesheet" href="trade-review.css">
 <style>
 
 /* ==== Belfed shared brand tokens + header/footer (mirrors index.html) ==== */
@@ -311,6 +312,40 @@ tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
 </div>
 
 
+<script src="trade-review.js"></script>
+<script>
+(function(){
+  // Attach an "Обзор" button to each pre-rendered (static) closed trade and
+  // drop the inline TradingView link — the original analysis link now lives
+  // inside the modal card. Covers the offline fallback (sheet fetch failed).
+  function wireStaticRows(){
+    if(!window.BelfedReview)return;
+    var rows=document.querySelectorAll('tbody tr');
+    rows.forEach(function(tr){
+      var c=tr.querySelectorAll('td');
+      if(c.length<9)return;
+      var cell=c[8];
+      if(cell.querySelector('.brc-review-btn'))return;
+      var a=cell.querySelector('a.tv-link');
+      var tvLink=a?a.getAttribute('href'):'';
+      cell.innerHTML='';
+      window.BelfedReview.attachButton(cell,{
+        ticker:c[1].textContent.trim(),
+        dir:c[2].textContent.trim(),
+        entryDate:c[3].textContent.trim(),
+        exitDate:c[4].textContent.trim(),
+        entryP:c[5].textContent.trim(),
+        exitP:c[6].textContent.trim(),
+        result:c[7].textContent.trim(),
+        tvLink:tvLink
+      });
+    });
+  }
+  if(document.readyState!=='loading')wireStaticRows();
+  else document.addEventListener('DOMContentLoaded',wireStaticRows);
+  window._eqWireStaticRows=wireStaticRows;
+})();
+</script>
 <script>
 (function(){
 var css=document.createElement('style');
@@ -326,7 +361,7 @@ yf.className='yf';
 var b=document.createElement('button');
 b.className='yfb'+(i===0?' on':'');
 b.setAttribute('data-y',y);
-b.textContent=y==='all'?'Total':y;
+b.textContent=y==='all'?'Всего':y;
 yf.appendChild(b);
 });
 ph.insertBefore(wrap,h1);
@@ -428,10 +463,11 @@ if(isClosed&&!isNaN(rVal)){totalR+=rVal;closed++;if(rVal>0){wins++;winSum+=rVal;
 var dirClass=dir.toLowerCase()==='long'?'badge-long':'badge-short';
 var rClass=makeRClass(result);
 var rDisplay=formatR(result);
-var analysisCell=tvLink&&tvLink.startsWith('http')?'<a class="tv-link" href="'+tvLink+'" target="_blank">TV <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H3M9 1V7"/></svg></a>':'<span class="no-link">\u2014</span>';
 var tr=document.createElement('tr');
-tr.innerHTML='<td class="num">'+(idx+1).toString().padStart(2,'0')+'</td><td><span class="ticker">'+ticker+'</span></td><td><span class="badge '+dirClass+'">'+dir+'</span></td><td>'+entryDate+'</td><td>'+(exitDate||'\u2014')+'</td><td>'+entryP+'</td><td>'+(exitP||'\u2014')+'</td><td class="'+rClass+'">'+rDisplay+'</td><td>'+analysisCell+'</td>';
-tbody.appendChild(tr);});
+tr.innerHTML='<td class="num">'+(idx+1).toString().padStart(2,'0')+'</td><td><span class="ticker">'+ticker+'</span></td><td><span class="badge '+dirClass+'">'+dir+'</span></td><td>'+entryDate+'</td><td>'+(exitDate||'\u2014')+'</td><td>'+entryP+'</td><td>'+(exitP||'\u2014')+'</td><td class="'+rClass+'">'+rDisplay+'</td><td></td>';
+tbody.appendChild(tr);
+if(window.BelfedReview){window.BelfedReview.attachButton(tr.lastElementChild,{ticker:ticker,dir:dir,entryDate:entryDate,exitDate:exitDate,entryP:entryP,exitP:exitP,result:result,tvLink:tvLink});}
+});
         var avgWin=wins>0?(winSum/wins):0;
 var avgLoss=losses>0?(lossSum/losses):0;
 var winRate=closed>0?((wins/closed)*100):0;
