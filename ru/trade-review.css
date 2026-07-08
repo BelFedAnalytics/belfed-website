@@ -1,0 +1,62 @@
+/* BelFed trade-review modal — scoped styles for the per-trade "Review / Обзор"
+   analysis cards on trades.html / equities-trades.html (and the .ru mirror).
+   All rules are scoped under .brc-* so nothing here alters the existing page
+   design. Colour tokens (--ink, --paper, --green, …) are inherited from each
+   page's :root, which already defines them identically to the approved preview. */
+
+/* --- table trigger button (added to the existing Analysis cell) --- */
+.brc-review-btn{display:inline-flex;align-items:center;gap:5px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--gray);border:1px solid var(--rule-strong);padding:3px 10px;border-radius:99px;cursor:pointer;margin-left:8px;white-space:nowrap;vertical-align:middle}
+.brc-review-btn::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--green)}
+.brc-review-btn:hover{color:var(--ink);border-color:var(--ink);background:var(--paper-2)}
+
+/* --- modal overlay / chrome --- */
+.brc-overlay{position:fixed;inset:0;z-index:2000;display:flex;align-items:flex-start;justify-content:center;padding:6vh 16px;background:rgba(10,10,10,.55);backdrop-filter:blur(3px);overflow-y:auto}
+.brc-overlay[hidden]{display:none}
+.brc-box{background:var(--white);border:1px solid var(--rule-strong);border-radius:var(--radius-lg);max-width:560px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.brc-bar{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid var(--rule);background:var(--white);border-radius:var(--radius-lg) var(--radius-lg) 0 0}
+.brc-title{font-family:var(--font-mono);font-size:13px;letter-spacing:1px;text-transform:uppercase;color:var(--ink);margin:0}
+.brc-close{width:30px;height:30px;border:1px solid var(--rule-strong);border-radius:4px;color:var(--gray-soft);font-size:14px;line-height:1;cursor:pointer;background:none}
+.brc-close:hover{color:var(--ink);border-color:var(--ink)}
+.brc-body{padding:18px;font-family:var(--font-mono);color:var(--ink);line-height:1.6}
+
+/* --- card content (mirrors the approved preview, scoped to the modal body) --- */
+.brc-body .card{border:none;background:transparent;padding:0}
+.brc-body .card-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.brc-body .ticker{font-weight:700;letter-spacing:1px;font-size:14px}
+.brc-body .badge{display:inline-block;padding:3px 10px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;border:1px solid var(--ink)}
+.brc-body .badge-long{background:transparent;color:var(--ink)}
+.brc-body .badge-short{background:var(--ink);color:var(--white)}
+.brc-body .card-r{margin-left:auto;font-weight:700}
+.brc-body .win{color:var(--green-strong);font-weight:700}
+.brc-body .loss{color:var(--red);font-weight:700}
+.brc-body .no-link{color:var(--gray-faint)}
+.brc-body .card-meta{font-size:11px;color:var(--gray);margin:8px 0 12px}
+.brc-body .bot-intro{font-size:11px;color:var(--gray);font-weight:400;line-height:1.6;margin:2px 0 14px}
+.brc-body .timeline{list-style:none;border-left:1px solid var(--rule-strong);margin-left:6px;padding-left:16px}
+.brc-body .step{position:relative;padding-bottom:14px}
+.brc-body .step::before{content:"";position:absolute;left:-20px;top:5px;width:7px;height:7px;border-radius:50%;background:var(--green);border:2px solid var(--white)}
+.brc-body .step-h{display:flex;justify-content:space-between;gap:8px}
+.brc-body .step-lbl{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray-soft);font-weight:700}
+.brc-body .step-ts{font-size:10px;color:var(--gray-faint)}
+.brc-body .step-body{font-size:12.5px;color:var(--ink-2);line-height:1.7;margin-top:2px}
+.brc-body .steplink{display:inline-flex;align-items:center;gap:4px;margin-top:5px;font-size:10px;color:var(--gray);border:1px solid var(--rule-strong);padding:2px 7px;border-radius:99px}
+.brc-body .steplink:hover{color:var(--ink);border-color:var(--ink)}
+.brc-body .fields{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px;margin:14px 0 4px}
+.brc-body .field{display:flex;flex-direction:column;gap:3px}
+.brc-body .field-k{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--gray-soft)}
+.brc-body .field-v{font-size:13px}
+.brc-body .rc-k{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--gray-soft);font-weight:700}
+.brc-body .rc-note{font-size:12.5px;color:var(--ink-2);line-height:1.7;margin-top:12px;border-left:2px solid var(--rule-strong);padding-left:12px}
+.brc-body .rc-note-list{list-style:disc;padding-left:18px;margin:8px 0 0}
+.brc-body .rc-note-list li{font-size:12.5px;color:var(--ink-2);line-height:1.7;margin:5px 0}
+.brc-body .orig-cta{display:inline-flex;align-items:center;gap:6px;margin:4px 0 10px;font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:700;color:var(--green-strong);background:var(--green-soft);border:1px solid var(--green);border-radius:99px;padding:6px 14px;transition:background var(--t),color var(--t)}
+.brc-body .orig-cta:hover{background:var(--green);color:var(--white)}
+.brc-body .rc-method{margin-top:16px;padding-top:12px;border-top:1px dashed var(--rule-strong);color:var(--gray);font-size:11px;line-height:1.65}
+.brc-body .rc-method-h{display:block;font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--gray-faint);font-weight:700;margin-bottom:6px}
+.brc-body .rc-method ul{list-style:disc;padding-left:16px;margin:0}
+.brc-body .rc-method li{margin:4px 0}
+.brc-body .promo{margin-top:20px;padding:16px 18px;border:1px solid var(--rule-strong);border-radius:var(--radius);background:var(--paper-2);text-align:center}
+.brc-body .promo-h{display:block;font-size:12px;letter-spacing:1px;text-transform:uppercase;font-weight:700;color:var(--ink)}
+.brc-body .promo-body{font-size:12px;color:var(--gray-soft);line-height:1.65;margin:6px 0 12px}
+.brc-body .promo-btn{display:inline-flex;align-items:center;gap:6px;font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:700;color:var(--white);background:var(--ink);border:1px solid var(--ink);border-radius:99px;padding:8px 18px;transition:opacity var(--t)}
+.brc-body .promo-btn:hover{opacity:.85}

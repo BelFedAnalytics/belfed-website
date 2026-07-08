@@ -5,6 +5,7 @@
 <title id="page-title">Результаты — Крипто | BelFed Analytics</title>
 <link rel="preconnect" href="https://fonts.googleapis.com/">
 <link href="./trades_files/css2" rel="stylesheet">
+<link rel="stylesheet" href="trade-review.css">
 <style>
 
 /* ==== Belfed shared brand tokens + header/footer (mirrors index.html) ==== */
@@ -228,9 +229,11 @@ tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
 </div>
 
 
+<script src="trade-review.js"></script>
 <script>
 (function(){
   var SHEET_ID = '1bBpKZP74HEVrLZJlazz7gY7jbuBj9R5rPBcV2KklwDo';
+  var FALLBACK_URL = 'trades-fallback-crypto.json';
   var CRYPTO_GID = '1219794768';
   var EQUITIES_GID = '0';
   var isCrypto = window.location.pathname.includes('trades.html') && !window.location.pathname.includes('equities');
@@ -280,9 +283,24 @@ tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
     return(n>0?'+':'')+n.toFixed(2)+'R';
   }
 
-  fetch(csvUrl).then(function(r){return r.text();}).then(function(text){
-    var rows=parseCSV(text);
-    // Find header row (row with "Number" or "Ticker" in col B)
+  function fetchWithTimeout(url,ms){
+    return new Promise(function(resolve,reject){
+      var done=false;
+      var t=setTimeout(function(){if(!done){done=true;reject(new Error('timeout'));}},ms);
+      fetch(url).then(function(r){
+        if(done)return;done=true;clearTimeout(t);
+        if(!r.ok){reject(new Error('http '+r.status));return;}
+        resolve(r);
+      }).catch(function(e){if(!done){done=true;clearTimeout(t);reject(e);}});
+    });
+  }
+
+  function showError(){
+    var tbody=document.querySelector('tbody');
+    if(tbody)tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:40px;color:#888;letter-spacing:1px;font-size:12px;">Не удалось загрузить сделки. Попробуйте обновить страницу.</td></tr>';
+  }
+
+  function handleRows(rows){
     var dataRows=[];
     for(var i=0;i<rows.length;i++){
       var r=rows[i];
@@ -322,9 +340,6 @@ tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
       var dirClass=dir.toLowerCase()==='long'?'badge-long':'badge-short';
       var rClass=makeRClass(result);
       var rDisplay=formatR(result);
-      var analysisCell=tvLink&&tvLink.startsWith('http')
-        ?'<a class="tv-link" href="'+tvLink+'" target="_blank">TV <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 9L9 1M9 1H3M9 1V7"/></svg></a>'
-        :'<span class="no-link">—</span>';
 
       var tr=document.createElement('tr');
       tr.innerHTML='<td class="num">'+(idx+1).toString().padStart(2,'0')+'</td>'
@@ -335,8 +350,14 @@ tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
         +'<td>'+entryP+'</td>'
         +'<td>'+(exitP||'—')+'</td>'
         +'<td class="'+rClass+'">'+rDisplay+'</td>'
-        +'<td>'+analysisCell+'</td>';
+        +'<td></td>';
       tbody.appendChild(tr);
+      if(window.BelfedReview){
+        window.BelfedReview.attachButton(tr.lastElementChild,{
+          ticker:ticker,dir:dir,entryDate:entryDate,exitDate:exitDate,
+          entryP:entryP,exitP:exitP,result:result,tvLink:tvLink
+        });
+      }
     });
 
     // Update stats-bar
@@ -365,8 +386,17 @@ tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
     if(swr)swr.textContent=winRate.toFixed(1)+'%';
     if(saw)saw.textContent=(avgWin>0?'+':'')+avgWin.toFixed(2)+'R';
     if(sal)sal.textContent=avgLoss.toFixed(2)+'R';
+  }
 
-  }).catch(function(e){console.error('Failed to load trades:',e);});
+  fetchWithTimeout(csvUrl,7000)
+    .then(function(r){return r.text();})
+    .then(function(text){handleRows(parseCSV(text));})
+    .catch(function(){
+      fetch(FALLBACK_URL)
+        .then(function(r){return r.json();})
+        .then(function(rows){handleRows(rows);})
+        .catch(function(e){console.error('Failed to load trades:',e);showError();});
+    });
 })();
 </script>
 
@@ -385,7 +415,7 @@ yf.className='yf';
 var b=document.createElement('button');
 b.className='yfb'+(i===0?' on':'');
 b.setAttribute('data-y',y);
-b.textContent=y==='all'?'Total':y;
+b.textContent=y==='all'?'Всего':y;
 yf.appendChild(b);
 });
 ph.insertBefore(wrap,h1);
