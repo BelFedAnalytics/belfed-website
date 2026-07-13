@@ -284,6 +284,11 @@
         submitBtn.disabled = true;
         submitBtn.textContent = 'Подождите...';
 
+        // Structured, sanitized attribution (anonymous_id + first/last touch,
+        // no PII). Legacy flat utmPayload() is kept alongside for backward
+        // compatibility with the currently-deployed function.
+        var attribution = (window.belfedAnalytics && window.belfedAnalytics.attributionPayload)
+          ? window.belfedAnalytics.attributionPayload() : {};
         fetch(SUPABASE_URL + '/functions/v1/trial-intent-create', {
           method: 'POST',
           headers: {
@@ -297,7 +302,12 @@
             source: source,
             intent_type: 'trial',
             accept_privacy: true,
-            accept_terms: true
+            accept_terms: true,
+            anonymous_id: attribution.anonymous_id || null,
+            attribution_key: attribution.attribution_key || null,
+            first_touch: attribution.first_touch || null,
+            last_touch: attribution.last_touch || null,
+            landing_page: attribution.landing_page || null
           }, (window.belfedAnalytics ? window.belfedAnalytics.utmPayload() : {})))
         }).then(function(r) {
           return r.json().then(function(body) { return { status: r.status, body: body }; });
@@ -342,6 +352,7 @@
       });
     })();
   </script>
+<script src="/belfed-attribution.js"></script>
 <script src="/belfed-analytics.js"></script>
 </body>
 </html>

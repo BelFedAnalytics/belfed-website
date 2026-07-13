@@ -23,6 +23,7 @@
 //   { "ok": true, "user_id": "...", "trial_end": "...", "invite_link": "https://t.me/+...", "created": true, "lang": "ru" }
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders } from "../_shared/attribution.ts";
 
 const SUPABASE_URL          = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY      = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -46,13 +47,11 @@ const TRIAL_DAYS            = (() => {
   return Number.isFinite(n) && n > 0 ? n : 14;
 })();
 
-const cors = {
-  "Access-Control-Allow-Origin":  "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-bot-secret",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-const json = (b: unknown, s = 200) =>
-  new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
+// CORS is locked to the production web origins (see _shared/attribution.ts).
+// The bot is a server-side caller (no Origin header) and authenticates via the
+// x-bot-secret shared secret, so the origin allowlist does not affect it — it
+// only blocks cross-origin browser reads.
+const CORS_EXTRA_HEADERS = "x-bot-secret";
 
 function pickChannelId(lang: string): string {
   if (lang === "en" && TRADING_CHANNEL_ID_EN) return TRADING_CHANNEL_ID_EN;
@@ -83,6 +82,10 @@ async function createInviteLink(chatId: string, expireSeconds = 24 * 3600): Prom
 }
 
 Deno.serve(async (req) => {
+  const cors = corsHeaders(req, CORS_EXTRA_HEADERS);
+  const json = (b: unknown, s = 200) =>
+    new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
+
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST")    return new Response("Method Not Allowed", { status: 405, headers: cors });
 
@@ -104,6 +107,11 @@ Deno.serve(async (req) => {
   const source = body?.source ? String(body.source).trim() : "telegram_direct";
   const langRaw = body?.lang ? String(body.lang).trim().toLowerCase() : "ru";
   const lang = (langRaw === "en") ? "en" : "ru";
+  // One-shot token issued by trial-intent-create; carries the marketing
+  // attribution captured at signup. Bot sends `intent_token`; accept the
+  // `trial_intent_token` alias too. Never logged.
+  const intentTokenRaw = body?.intent_token ?? body?.trial_intent_token ?? "";
+  const intentToken = intentTokenRaw ? String(intentTokenRaw).trim().slice(0, 128) : "";
 
   if (!telegramId || !/^\d+$/.test(telegramId)) {
     return json({ ok: false, error: "telegram_id_required" }, 400);
@@ -129,8 +137,24 @@ Deno.serve(async (req) => {
   const effectiveLang = (result?.lang === "en") ? "en" : "ru";
   const chatId = pickChannelId(effectiveLang);
 
+  // Bind the signup-time marketing attribution to the resolved profile and
+  // write the idempotent 'trial' conversion event. Best-effort: it must never
+  // block or fail the trial claim, and it no-ops when there is no intent token.
+  const linkAttribution = async (uid: string | null | undefined) => {
+    if (!intentToken || !uid) return;
+    try {
+      await admin.rpc("link_trial_intent_attribution", {
+        p_token: intentToken,
+        p_user_id: uid,
+      });
+    } catch (e) {
+      console.warn("link_trial_intent_attribution failed:", (e as Error).message);
+    }
+  };
+
   if (!result?.ok) {
     if (result?.error === "trial_already_used" && result?.subscription_status === "active") {
+      await linkAttribution(result.user_id);
       const inviteLink = await createInviteLink(chatId);
       return json({
         ok: true,
@@ -149,6 +173,8 @@ Deno.serve(async (req) => {
       lang: effectiveLang,
     }, 409);
   }
+
+  await linkAttribution(result.user_id);
 
   const inviteLink = await createInviteLink(chatId);
   if (!inviteLink) {
