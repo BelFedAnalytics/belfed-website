@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://script.google.com https://docs.google.com; img-src 'self'; frame-src 'none';">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="index, follow">
+  <title>Удаление данных пользователей | BelFed Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com/">
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --black: #0a0a0a;
+      --white: #f5f5f0;
+      --gray: #888;
+      --light-gray: #e8e8e3;
+      --border: #d0d0ca;
+      --font: 'Courier Prime', 'Courier New', monospace;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); background: var(--white); color: var(--black); font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: var(--white); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; height: 56px; }
+    .nav-logo { font-size: 17px; font-weight: 700; letter-spacing: 0.05em; text-decoration: none; color: var(--black); }
+    .nav-links { display: flex; gap: 32px; list-style: none; }
+    .nav-links a { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; color: var(--black); transition: opacity 0.2s; }
+    .nav-links a:hover { opacity: 0.5; }
+    main { padding-top: 56px; }
+    .legal-content { max-width: 720px; padding: 60px 40px 80px; }
+    .legal-tag { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); margin-bottom: 24px; }
+    .legal-content h1 { font-size: clamp(28px, 4vw, 40px); font-weight: 700; line-height: 1.2; margin-bottom: 12px; }
+    .legal-updated { font-size: 12px; color: var(--gray); margin-bottom: 40px; }
+    .legal-content h2 { font-size: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 40px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    .legal-content p { font-size: 14px; line-height: 1.8; color: #333; margin-bottom: 16px; }
+    .legal-content ul, .legal-content ol { font-size: 14px; line-height: 1.8; color: #333; margin-bottom: 16px; padding-left: 24px; }
+    .legal-content li { margin-bottom: 8px; }
+    .legal-content strong { color: var(--black); }
+    .legal-content table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 14px; }
+    .legal-content table th, .legal-content table td { padding: 10px 12px; border: 1px solid var(--border); color: #333; text-align: left; vertical-align: top; }
+    .legal-content table th { background: var(--light-gray); font-weight: 700; color: var(--black); }
+    .breadcrumb { font-size: 12px; color: var(--gray); margin-bottom: 32px; }
+    .breadcrumb a { color: var(--gray); text-decoration: none; }
+    .breadcrumb a:hover { color: var(--black); }
+    .callout { border: 1px solid var(--border); background: #fff; padding: 16px 20px; margin-bottom: 24px; }
+    .callout .contact-value { font-size: 15px; font-weight: 700; color: var(--black); }
+    footer { border-top: 1px solid var(--border); padding: 24px 40px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--gray); flex-wrap: wrap; gap: 12px; }
+    footer a { color: var(--gray); text-decoration: none; }
+    footer a:hover { color: var(--black); }
+    .footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
+    @media(max-width: 768px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      .legal-content { padding: 40px 20px 60px; }
+      footer { flex-direction: column; gap: 12px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/ru/" class="nav-logo">BELFED_</a>
+    <ul class="nav-links">
+      <li><a href="/ru/">Главная</a></li>
+      <li><a href="/ru/trades.html">Сделки</a></li>
+      <li><a href="/ru/products.html">Продукты</a></li>
+      <li><a href="/ru/about.html">О нас</a></li>
+      <li><a href="/ru/contacts.html">Контакты</a></li>
+    </ul>
+    <a href="/dashboard.html" class="nav-cta" style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;text-decoration:none;color:var(--white);background:var(--black);padding:10px 20px;border:1px solid var(--black);">Личный кабинет</a>
+  </nav>
+
+  <main>
+    <div class="legal-content">
+      <div class="breadcrumb"><a href="/ru/">Главная</a> → Удаление данных пользователей</div>
+
+      <div class="legal-tag">// УДАЛЕНИЕ ДАННЫХ</div>
+      <h1>Инструкция по удалению данных пользователей</h1>
+      <p class="legal-updated">Дата последнего обновления: 13 июля 2026 г. Версия 1.0</p>
+
+      <p>На этой странице описано, как запросить удаление данных, которые BelFed Analytics может хранить в связи с вашим использованием сервиса, в том числе данных, полученных через <strong>Threads API</strong> от Meta Platforms, Inc. Страница является публичной и доступна без авторизации. Полный контекст обработки данных приведён в <a href="/ru/privacy.html">Политике конфиденциальности</a>.</p>
+
+      <div class="callout">
+        <p style="margin-bottom:6px;">Электронная почта для запросов на удаление:</p>
+        <p class="contact-value" style="margin:0;"><a href="mailto:contact@belfed.com?subject=Удаление%20данных%20Threads">contact@belfed.com</a></p>
+      </div>
+
+      <h2>1. Кто может подать запрос</h2>
+      <p>Запрос может подать любой пользователь, который авторизовал BelFed в Threads или чьи связанные данные, по его мнению, мы можем обрабатывать. Отдельно можно запросить удаление данных учётной записи на сайтах BelFed и в Telegram (см. раздел «Ваши права» в Политике конфиденциальности).</p>
+
+      <h2>2. Подтверждение личности</h2>
+      <p>Чтобы удалить именно ваши данные и не затронуть чужие, мы проводим базовую проверку личности. Для этого достаточно, чтобы запрос:</p>
+      <ul>
+        <li>содержал имя пользователя (username) вашего аккаунта Threads и ссылку на профиль;</li>
+        <li>был отправлен способом, подтверждающим контроль над аккаунтом, — например, с адреса электронной почты, привязанного к аккаунту, либо был подтверждён ответом на публичное упоминание / из-под самого аккаунта Threads.</li>
+      </ul>
+      <p><strong>Мы никогда не просим присылать пароли, коды двухфакторной аутентификации или токены доступа.</strong> Не указывайте их в письме. Если предоставленных сведений недостаточно для однозначной идентификации, мы можем задать уточняющий вопрос, не требующий передачи секретов.</p>
+
+      <h2>3. Как отправить запрос</h2>
+      <ol>
+        <li>Напишите на <a href="mailto:contact@belfed.com?subject=Удаление%20данных%20Threads">contact@belfed.com</a> с темой <strong>«Удаление данных Threads»</strong>.</li>
+        <li>Укажите имя пользователя (username) аккаунта Threads и ссылку на профиль.</li>
+        <li>По желанию опишите, какие данные нужно удалить (все связанные данные или конкретные публикации/упоминания).</li>
+        <li>Отправьте письмо. Дополнительно вы можете отозвать доступ BelFed в настройках приложений вашего аккаунта Meta/Threads — это прекращает дальнейший сбор данных.</li>
+      </ol>
+
+      <h2>4. Что будет удалено</h2>
+      <p>По подтверждённому запросу мы удаляем связанные с вашим аккаунтом данные, которые хранятся у нас, в том числе:</p>
+      <ul>
+        <li>сохранённые идентификаторы и канонические URL постов;</li>
+        <li>публичные имена пользователей (username), полученные через API;</li>
+        <li>короткие публичные выдержки из публикаций;</li>
+        <li>наблюдаемые метрики вовлечённости;</li>
+        <li>производные оценки (derived scores) и черновики ответов.</li>
+      </ul>
+      <p>Мы не храним приватные сообщения Threads, пароли и токены доступа на публичном сайте, поэтому такие данные удалять не требуется.</p>
+
+      <h2>5. Сроки и подтверждение</h2>
+      <p>Мы подтверждаем получение запроса и выполняем удаление в срок <strong>не более 30 календарных дней</strong>. После завершения мы направляем письменное подтверждение на адрес, с которого поступил запрос. Если запрос требует уточнения, отсчёт срока начинается с момента получения необходимых сведений.</p>
+
+      <h2>6. Исключения (законное хранение)</h2>
+      <p>Отдельные данные могут сохраняться дольше, если этого требует закон, — например, бухгалтерские и налоговые документы или платёжные чеки (54-ФЗ, Налоговый кодекс РФ). Такие данные удаляются по истечении установленного законом срока хранения. Полностью обезличенные агрегированные показатели, не позволяющие идентифицировать лицо, могут сохраняться в аналитических целях.</p>
+
+      <h2>7. Контакты</h2>
+      <p>По вопросам удаления данных обращайтесь к Оператору — Индивидуальному предпринимателю Федорову Артёму Игоревичу:<br>
+      e-mail: <a href="mailto:contact@belfed.com?subject=Удаление%20данных%20Threads">contact@belfed.com</a><br>
+      тема письма: «Удаление данных Threads»</p>
+    </div>
+  </main>
+
+  <footer>
+    <span>&copy; 2025&ndash;2026 BelFed Analytics</span>
+    <div class="footer-links">
+      <a href="/ru/disclaimer.html">Ограничение ответственности</a>
+      <a href="/ru/oferta.html">Договор-оферта</a>
+      <a href="/ru/privacy.html">Политика конфиденциальности</a>
+      <a href="/ru/data-deletion.html">Удаление данных</a>
+      <a href="/ru/contacts.html">Контакты</a>
+    </div>
+    <span>Не финансовая рекомендация.</span>
+  </footer>
+</body>
+</html>
