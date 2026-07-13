@@ -11,7 +11,7 @@
 //       utm_source, utm_medium, utm_campaign, utm_content, utm_term,
 //       referrer, landing_page, captured_at
 //   • NO PII (email / telegram / name) is ever placed in an attribution
-//     touch or in conversion_attribution.metadata.
+//     touch or in conversion_funnel_events.metadata.
 //   • Every string is trimmed, stripped of control chars and length-capped.
 //   • anonymous_id is a random UUID persisted in localStorage — it carries
 //     no personal data, only a stable pseudonymous handle.
@@ -142,7 +142,7 @@
     return payload;
   }
 
-  // Canonical conversion_attribution.event_key builders. Mirrors the SQL in
+  // Canonical conversion_funnel_events.event_key builders. Mirrors the SQL in
   // the migration so tests can assert both sides agree.
   function signupEventKey(token) { return 'trial-intent:' + sanitizeString(token, 128); }
   function trialEventKey(token) { return 'trial-claim:' + sanitizeString(token, 128); }

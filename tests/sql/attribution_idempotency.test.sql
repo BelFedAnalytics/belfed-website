@@ -19,7 +19,7 @@ DO $$
 DECLARE n int; src text;
 BEGIN
   SELECT count(*), max(utm_source) INTO n, src
-  FROM public.conversion_attribution WHERE event_key = 'trial-intent:__t_test__';
+  FROM public.conversion_funnel_events WHERE event_key = 'trial-intent:__t_test__';
   ASSERT n = 1, format('expected 1 signup row, got %s', n);
   ASSERT src = 'threads', format('replay must not mutate utm_source, got %s', src);
 END $$;
@@ -42,7 +42,7 @@ BEGIN
   DECLARE n int; camp text;
   BEGIN
     SELECT count(*), max(utm_campaign) INTO n, camp
-    FROM public.conversion_attribution WHERE event_key = 'yookassa:__pay_test__';
+    FROM public.conversion_funnel_events WHERE event_key = 'yookassa:__pay_test__';
     ASSERT n = 1, format('expected 1 payment row, got %s', n);
     ASSERT camp = 'launch', format('payment must inherit utm_campaign, got %s', camp);
   END;

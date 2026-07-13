@@ -1,17 +1,17 @@
 // ===========================================
-// BelFed Attribution — server-side sanitizer + CORS allowlist
+// BelFed Attribution — server-side sanitizer
 // ===========================================
 // Server mirror of the browser sanitizer in /belfed-attribution.js. Every field
 // that arrives from an untrusted client is RE-VALIDATED here before it is
 // persisted, so a tampered browser payload cannot inject control chars, PII, or
-// oversized values into trial_intents / conversion_attribution.
+// oversized values into trial_intents / conversion_funnel_events.
 //
 // Design rules (kept in lock-step with /belfed-attribution.js):
 //   • Only these marketing fields are ever kept on a touch:
 //       utm_source, utm_medium, utm_campaign, utm_content, utm_term,
 //       referrer, landing_page, captured_at
 //   • NO PII (email / telegram / name) is ever stored in an attribution touch
-//     or in conversion_attribution.metadata.
+//     or in conversion_funnel_events.metadata.
 //   • Every string is trimmed, stripped of control chars and length-capped.
 
 export const UTM_KEYS = [
@@ -137,7 +137,7 @@ export function buildAttributionPayload(
   };
 }
 
-// Canonical conversion_attribution.event_key builders — mirror the SQL helpers
+// Canonical conversion_funnel_events.event_key builders — mirror the SQL helpers
 // in the migration so both sides agree on idempotency keys.
 export function signupEventKey(token: string): string {
   return "trial-intent:" + sanitizeString(token, 128);
@@ -147,37 +147,4 @@ export function trialEventKey(token: string): string {
 }
 export function paymentEventKey(provider: string, paymentId: string): string {
   return sanitizeString(provider, 32) + ":" + sanitizeString(paymentId, 200);
-}
-
-// ---- CORS allowlist (no wildcard) -------------------------------------------
-// Only the production web origins may call the browser-facing functions.
-const ALLOWED_ORIGINS = new Set<string>([
-  "https://belfed.ru",
-  "https://www.belfed.ru",
-  "https://belfed.com",
-  "https://www.belfed.com",
-]);
-
-// Return the CORS headers for a request. When the Origin header is a known
-// production origin, it is reflected; otherwise no ACAO header is emitted (the
-// browser then blocks the cross-origin read). Non-browser callers (the bot,
-// webhooks — no Origin header) are unaffected.
-export function corsHeaders(req: Request, extraAllowHeaders = ""): Record<string, string> {
-  const origin = req.headers.get("Origin") ?? "";
-  const allowHeaders =
-    "authorization, x-client-info, apikey, content-type" +
-    (extraAllowHeaders ? ", " + extraAllowHeaders : "");
-  const headers: Record<string, string> = {
-    "Access-Control-Allow-Headers": allowHeaders,
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Vary": "Origin",
-  };
-  if (ALLOWED_ORIGINS.has(origin)) {
-    headers["Access-Control-Allow-Origin"] = origin;
-  }
-  return headers;
-}
-
-export function isAllowedOrigin(origin: string): boolean {
-  return ALLOWED_ORIGINS.has(origin);
 }

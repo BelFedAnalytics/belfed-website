@@ -4,11 +4,22 @@
 --
 -- End-to-end funnel: landing UTM → anonymous session → signup (trial-intent)
 -- → trial claim (Telegram) → payment. Each stage writes ONE idempotent row to
--- public.conversion_attribution keyed by a stable event_key, so replays
+-- public.conversion_funnel_events keyed by a stable event_key, so replays
 -- (double webhook, retried bot claim, resent form) never duplicate a
 -- conversion.
 --
--- PII rule: conversion_attribution stores ONLY pseudonymous anonymous_id +
+-- !!! TABLE NAMING — READ THIS !!!
+-- We deliberately DO NOT reuse the pre-existing public.conversion_attribution
+-- table. That table already exists in production with a DIFFERENT purpose
+-- (Threads *content* attribution: queue_id / experiment_id / thread_id /
+-- published_url, with attribution_model + metadata + occurred_at all NOT NULL
+-- and NO event_key column). Overloading it would (a) fail our NOT-NULL-free
+-- inserts, (b) require an ALTER that mutates a live analytics table, and (c)
+-- pollute existing content dashboards with funnel rows. This migration creates
+-- a separate, purpose-built table instead. conversion_attribution is left
+-- untouched.
+--
+-- PII rule: conversion_funnel_events stores ONLY pseudonymous anonymous_id +
 -- allowlisted UTM/referrer/landing_page. Email / telegram_id / names never
 -- land here. The browser (belfed-attribution.js) and the edge functions
 -- (_shared/attribution.ts) both sanitize; this migration is the last line of
@@ -18,25 +29,26 @@
 -- NOT EXISTS throughout so it applies cleanly against the live DB where
 -- trial_intents already exists (it is not created by any repo migration).
 --
--- !!! REVIEW BEFORE DEPLOY — apply_successful_payment !!!
--- The repo's migration history for apply_successful_payment is BEHIND the
--- deployed function (the live version is provider-aware and upserts a
--- provider-scoped subscriptions row; the last repo copy in
--- 20260424_002 is not). Section E below CREATE-OR-REPLACEs it with a faithful
--- provider-aware reconstruction (mirroring apply_stars_payment from
--- 20260603_011) PLUS the new payment-attribution write. A maintainer MUST diff
--- Section E against the live body (select pg_get_functiondef('public.apply_successful_payment'::regproc))
--- and, if they differ, port ONLY the marked "attribution" block into the live
--- function instead of applying Section E wholesale. record_payment_attribution
--- (Section D) is standalone and safe to apply on its own.
+-- !!! apply_successful_payment (Section E) !!!
+-- Section E is a VERBATIM copy of the deployed provider-aware body
+-- (select pg_get_functiondef('public.apply_successful_payment'::regproc)),
+-- with exactly ONE addition: a guarded PERFORM public.record_payment_attribution
+-- immediately before RETURN v_new. Every line of live logic — the admin
+-- no-downgrade guard, the YooKassa saved-card capture, the provider-scoped
+-- subscriptions upsert — is preserved. The 10-arg signature (p_provider DEFAULT
+-- 'yookassa') and the timestamptz return are unchanged, so both callers
+-- (yookassa-webhook: 9 args; tribute-webhook: 10 args incl. p_provider) keep
+-- working. record_payment_attribution (Section D) is standalone and safe on its
+-- own. Re-diff Section E against live at deploy time; if live has drifted since
+-- capture, port ONLY the marked ATTRIBUTION block into the current body.
 -- =========================================================================
 
 BEGIN;
 
 -- -------------------------------------------------------------------------
--- A) conversion_attribution — one idempotent row per funnel event
+-- A) conversion_funnel_events — one idempotent row per funnel event
 -- -------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS public.conversion_attribution (
+CREATE TABLE IF NOT EXISTS public.conversion_funnel_events (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   profile_id      uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
   anonymous_id    text,
@@ -56,9 +68,8 @@ CREATE TABLE IF NOT EXISTS public.conversion_attribution (
   created_at      timestamptz NOT NULL DEFAULT now()
 );
 
--- Defensive ALTERs — in case the table already exists in the live DB with an
--- older shape (these are no-ops when the column is already present).
-ALTER TABLE public.conversion_attribution
+-- Defensive ADD COLUMNs — no-ops when the column already exists (safe re-run).
+ALTER TABLE public.conversion_funnel_events
   ADD COLUMN IF NOT EXISTS profile_id      uuid,
   ADD COLUMN IF NOT EXISTS anonymous_id    text,
   ADD COLUMN IF NOT EXISTS attribution_key text,
@@ -77,26 +88,27 @@ ALTER TABLE public.conversion_attribution
   ADD COLUMN IF NOT EXISTS created_at      timestamptz NOT NULL DEFAULT now();
 
 -- Idempotency: at most one row per non-null event_key.
-CREATE UNIQUE INDEX IF NOT EXISTS ux_conversion_attribution_event_key
-  ON public.conversion_attribution(event_key)
+CREATE UNIQUE INDEX IF NOT EXISTS ux_conversion_funnel_events_event_key
+  ON public.conversion_funnel_events(event_key)
   WHERE event_key IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_conversion_attribution_profile
-  ON public.conversion_attribution(profile_id);
-CREATE INDEX IF NOT EXISTS idx_conversion_attribution_anon
-  ON public.conversion_attribution(anonymous_id);
+CREATE INDEX IF NOT EXISTS idx_conversion_funnel_events_profile
+  ON public.conversion_funnel_events(profile_id);
+CREATE INDEX IF NOT EXISTS idx_conversion_funnel_events_anon
+  ON public.conversion_funnel_events(anonymous_id);
 
 -- RLS: internal analytics table. service_role bypasses RLS; nobody else reads.
-ALTER TABLE public.conversion_attribution ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public.conversion_attribution FROM anon, authenticated;
+ALTER TABLE public.conversion_funnel_events ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.conversion_funnel_events FROM anon, authenticated;
 -- (no policies → anon/authenticated get no access; edge fns use service_role)
 
 -- -------------------------------------------------------------------------
 -- B) trial_intents — attach attribution to the signup intent
 -- -------------------------------------------------------------------------
--- trial_intents already exists in the live DB (created out-of-band; referenced
--- by migrations 001/008/009 and bot.py). CREATE IF NOT EXISTS is a safety net
--- for fresh environments; the ADD COLUMN IF NOT EXISTS lines are the real work.
+-- trial_intents already exists in the live DB (token, email, lang, source,
+-- intent_type, consent_*, privacy/terms_consent_at, expires_at, consumed_*,
+-- profile_id). CREATE IF NOT EXISTS is a safety net for fresh environments;
+-- the ADD COLUMN IF NOT EXISTS lines are the real, additive work.
 CREATE TABLE IF NOT EXISTS public.trial_intents (
   token       text PRIMARY KEY,
   email       text,
@@ -146,7 +158,7 @@ BEGIN
     RAISE EXCEPTION 'event_type_required';
   END IF;
 
-  INSERT INTO public.conversion_attribution (
+  INSERT INTO public.conversion_funnel_events (
     profile_id, anonymous_id, attribution_key, event_type, event_key,
     utm_source, utm_medium, utm_campaign, utm_content, utm_term,
     referrer, landing_page, value, currency, metadata
@@ -211,12 +223,14 @@ BEGIN
          landing_page    = COALESCE(NULLIF(p_landing_page, ''), landing_page)
    WHERE token = p_token;
 
+  -- attribution_key is set to the opaque trial token so the later 'trial' event
+  -- (written by the bot with the same token) shares one attribution handle.
   RETURN public.record_conversion_event(
     p_event_type      => 'signup',
     p_event_key       => 'trial-intent:' || p_token,
     p_profile_id      => p_profile_id,
     p_anonymous_id    => p_anonymous_id,
-    p_attribution_key => p_attribution_key,
+    p_attribution_key => COALESCE(NULLIF(p_attribution_key, ''), p_token),
     p_touch           => v_touch,
     p_landing_page    => p_landing_page
   );
@@ -229,7 +243,9 @@ GRANT  EXECUTE ON FUNCTION public.record_signup_attribution(text,text,text,jsonb
 -- --- C.2) link_trial_intent_attribution — called by bot-claim-trial ---------
 -- After the bot resolves the trial to a user, bind the intent to that profile
 -- and write the 'trial' conversion event (event_key 'trial-claim:<token>'),
--- inheriting UTM from the touch captured at signup time.
+-- inheriting UTM from the touch captured at signup time. p_token is the opaque
+-- trial token the bot forwards (bot PR #5 sends it as both intent_token and
+-- attribution_key).
 CREATE OR REPLACE FUNCTION public.link_trial_intent_attribution(
   p_token   text,
   p_user_id uuid
@@ -263,7 +279,7 @@ BEGIN
     p_event_key       => 'trial-claim:' || p_token,
     p_profile_id      => p_user_id,
     p_anonymous_id    => v_intent.anonymous_id,
-    p_attribution_key => v_intent.attribution_key,
+    p_attribution_key => COALESCE(NULLIF(v_intent.attribution_key, ''), p_token),
     p_touch           => v_touch,
     p_landing_page    => v_intent.landing_page
   );
@@ -293,7 +309,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $function$
 DECLARE
-  v_prior public.conversion_attribution%ROWTYPE;
+  v_prior public.conversion_funnel_events%ROWTYPE;
   v_touch jsonb := '{}'::jsonb;
   v_anon  text;
   v_akey  text;
@@ -306,7 +322,7 @@ BEGIN
 
   -- Inherit attribution from the paying profile's latest signup/trial event.
   SELECT * INTO v_prior
-  FROM public.conversion_attribution
+  FROM public.conversion_funnel_events
   WHERE profile_id = p_profile_id
     AND event_type IN ('signup', 'trial')
   ORDER BY created_at DESC
@@ -344,14 +360,13 @@ REVOKE ALL ON FUNCTION public.record_payment_attribution(text,text,uuid,numeric,
 GRANT  EXECUTE ON FUNCTION public.record_payment_attribution(text,text,uuid,numeric,text) TO service_role;
 
 -- -------------------------------------------------------------------------
--- E) apply_successful_payment — provider-aware + payment attribution
+-- E) apply_successful_payment — VERBATIM live body + attribution call
 -- -------------------------------------------------------------------------
--- !!! RECONCILE WITH THE DEPLOYED BODY BEFORE APPLYING (see header note). !!!
--- This reconstruction mirrors the sibling apply_stars_payment (20260603_011):
--- idempotent payment upsert, trial-aware access extension, provider-scoped
--- subscriptions upsert. The ONLY genuinely new behavior is the marked
--- "ATTRIBUTION" block, which records the idempotent 'payment' conversion event.
--- If the live body differs from this, port ONLY that block into it.
+-- Body below is copied verbatim from the deployed function
+-- (pg_get_functiondef('public.apply_successful_payment'::regproc)). The ONLY
+-- change vs. live is the marked ATTRIBUTION block added right before RETURN.
+-- Re-diff against live at deploy time; if live has drifted, port ONLY the
+-- ATTRIBUTION block rather than applying this wholesale.
 CREATE OR REPLACE FUNCTION public.apply_successful_payment(
   p_provider_payment_id text,
   p_user_id             uuid,
@@ -359,96 +374,125 @@ CREATE OR REPLACE FUNCTION public.apply_successful_payment(
   p_currency            text,
   p_plan                text,
   p_period_months       integer,
-  p_paid_at             timestamptz,
+  p_paid_at             timestamp with time zone,
   p_raw                 jsonb,
   p_is_test             boolean,
-  p_provider            text DEFAULT 'yookassa'
+  p_provider            text DEFAULT 'yookassa'::text
 )
-RETURNS timestamptz
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
+ RETURNS timestamp with time zone
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
 AS $function$
-DECLARE
+declare
   v_current         timestamptz;
   v_trial_end       timestamptz;
   v_base            timestamptz;
   v_new             timestamptz;
-  v_months          integer := COALESCE(p_period_months, 1);
-  v_provider        text    := COALESCE(NULLIF(p_provider, ''), 'yookassa');
+  v_method_id       text;
+  v_method_saved    boolean;
   v_existing_sub_id uuid;
-BEGIN
-  -- 1. Idempotent payment row (by provider, provider_payment_id).
-  INSERT INTO public.payments (
+  v_is_admin        boolean;
+  v_provider        text := coalesce(nullif(trim(p_provider), ''), 'yookassa');
+begin
+  -- 1) Persist payment (works for any provider, keyed by (provider, provider_payment_id))
+  insert into public.payments (
     user_id, provider, provider_payment_id, amount, currency, status,
     plan, period_months, description, is_test, paid_at, raw_event, created_at
-  ) VALUES (
+  ) values (
     p_user_id, v_provider, p_provider_payment_id, p_amount, p_currency, 'succeeded',
-    p_plan, v_months, 'BelFed subscription', p_is_test, p_paid_at, p_raw, now()
+    p_plan, p_period_months, 'BelFed subscription', p_is_test, p_paid_at, p_raw, now()
   )
-  ON CONFLICT (provider, provider_payment_id) DO UPDATE
-     SET status    = 'succeeded',
-         paid_at   = EXCLUDED.paid_at,
-         raw_event = EXCLUDED.raw_event;
+  on conflict (provider, provider_payment_id) do update
+     set status    = 'succeeded',
+         paid_at   = excluded.paid_at,
+         raw_event = excluded.raw_event;
 
-  -- 2. Extend access from the later of current expiry / trial_end / now().
-  SELECT subscription_expires_at, trial_end INTO v_current, v_trial_end
-  FROM public.profiles WHERE id = p_user_id FOR UPDATE;
+  -- 2) Compute new access expiry from current profile state
+  select subscription_expires_at, trial_end, (subscription_status = 'admin')
+    into v_current, v_trial_end, v_is_admin
+  from public.profiles where id = p_user_id for update;
 
-  v_base := GREATEST(COALESCE(v_current, now()), COALESCE(v_trial_end, now()), now());
-  v_new  := v_base + make_interval(months => v_months);
+  v_base := greatest(coalesce(v_current, now()), coalesce(v_trial_end, now()), now());
+  v_new  := v_base + make_interval(months => coalesce(p_period_months, 1));
 
-  UPDATE public.profiles
-     SET subscription_status     = 'active',
-         subscription_expires_at = v_new,
-         subscription_plan       = p_plan,
+  -- 3) YooKassa embeds saved card in payload; Tribute does not (its 'method' is the Telegram user)
+  if v_provider = 'yookassa' then
+    v_method_id    := p_raw->'object'->'payment_method'->>'id';
+    v_method_saved := coalesce((p_raw->'object'->'payment_method'->>'saved')::boolean, false);
+  else
+    v_method_id    := null;
+    v_method_saved := false;
+  end if;
+
+  -- 4) Extend paid access on profile (admin users are never downgraded/overwritten)
+  update public.profiles
+     set subscription_status     = case when v_is_admin then subscription_status else 'active' end,
+         subscription_expires_at = case when v_is_admin then subscription_expires_at else v_new end,
+         subscription_plan       = case when v_is_admin then subscription_plan       else p_plan end,
          updated_at              = now()
-   WHERE id = p_user_id;
+   where id = p_user_id;
 
-  -- 3. Provider-scoped subscriptions upsert (mirrors apply_stars_payment).
-  SELECT id INTO v_existing_sub_id
-  FROM public.subscriptions
-  WHERE user_id = p_user_id
-    AND status IN ('active','trialing','past_due')
-  ORDER BY created_at DESC
-  LIMIT 1
-  FOR UPDATE;
+  -- 5) Upsert subscription row for the SAME provider only.
+  --    This prevents Tribute payments from overwriting a YooKassa row (and vice versa).
+  select id into v_existing_sub_id
+  from public.subscriptions
+  where user_id = p_user_id
+    and provider = v_provider
+    and status in ('active','trialing','past_due')
+  order by created_at desc
+  limit 1
+  for update;
 
-  IF v_existing_sub_id IS NOT NULL THEN
-    UPDATE public.subscriptions
-       SET plan_code            = COALESCE(p_plan, plan_code),
-           provider             = v_provider,
-           status               = 'active',
-           current_period_end   = v_new,
-           cancel_at_period_end  = false,
-           failed_attempts      = 0,
-           last_charge_error    = NULL,
+  if v_existing_sub_id is not null then
+    update public.subscriptions
+       set plan_code = p_plan,
+           status = 'active',
+           current_period_end = v_new,
+           cancel_at_period_end = false,
+           payment_method_id = case
+                                 when v_method_saved and v_method_id is not null then v_method_id
+                                 else payment_method_id
+                               end,
+           next_billing_at = v_new,
+           amount_rub = case when upper(p_currency) = 'RUB' then p_amount::int else amount_rub end,
+           failed_attempts = 0,
+           last_charge_error = null,
            last_charge_attempt_at = now(),
-           updated_at           = now()
-     WHERE id = v_existing_sub_id;
-  ELSE
-    INSERT INTO public.subscriptions (
-      user_id, plan_code, provider, status, current_period_end,
-      cancel_at_period_end, failed_attempts
-    ) VALUES (
-      p_user_id, p_plan, v_provider, 'active', v_new, false, 0
+           cancel_reason = null,
+           updated_at = now()
+     where id = v_existing_sub_id;
+  else
+    insert into public.subscriptions (
+      user_id, plan_code, provider, provider_subscription_id,
+      status, current_period_end, cancel_at_period_end,
+      payment_method_id, next_billing_at, amount_rub, failed_attempts,
+      currency
+    ) values (
+      p_user_id, p_plan, v_provider, p_provider_payment_id,
+      'active', v_new, false,
+      case when v_method_saved then v_method_id else null end,
+      v_new,
+      case when upper(p_currency) = 'RUB' then p_amount::int else null end,
+      0,
+      lower(p_currency)
     );
-  END IF;
+  end if;
 
-  -- 4. ATTRIBUTION (new) — idempotent 'payment' conversion event. A replayed
-  --    webhook re-enters here but record_payment_attribution DO-NOTHINGs on the
-  --    '<provider>:<payment_id>' event_key, so revenue is never double-counted.
-  BEGIN
-    PERFORM public.record_payment_attribution(
+  -- ATTRIBUTION (added vs. live) — idempotent 'payment' conversion event.
+  -- A replayed webhook re-enters here, but record_payment_attribution
+  -- DO-NOTHINGs on the '<provider>:<payment_id>' event_key, so revenue is
+  -- never double-counted. Wrapped so attribution can never fail a real payment.
+  begin
+    perform public.record_payment_attribution(
       v_provider, p_provider_payment_id, p_user_id, p_amount, p_currency
     );
-  EXCEPTION WHEN OTHERS THEN
-    -- Attribution must never break a real payment. Swallow + log.
-    RAISE WARNING 'record_payment_attribution failed: %', SQLERRM;
-  END;
+  exception when others then
+    raise warning 'record_payment_attribution failed: %', sqlerrm;
+  end;
 
-  RETURN v_new;
-END;
+  return v_new;
+end;
 $function$;
 
 REVOKE ALL ON FUNCTION public.apply_successful_payment(text,uuid,numeric,text,text,integer,timestamptz,jsonb,boolean,text) FROM PUBLIC, anon, authenticated;
@@ -465,5 +509,5 @@ COMMIT;
 --   '{"utm_source":"threads","utm_medium":"social"}'::jsonb,'/ru/');
 -- select public.record_conversion_event('signup','trial-intent:tok_demo',
 --   null,'anon-demo','akey-demo','{}'::jsonb,'/ru/');  -- expect NULL
--- select count(*) from public.conversion_attribution where event_key='trial-intent:tok_demo'; -- expect 1
--- delete from public.conversion_attribution where event_key='trial-intent:tok_demo';
+-- select count(*) from public.conversion_funnel_events where event_key='trial-intent:tok_demo'; -- expect 1
+-- delete from public.conversion_funnel_events where event_key='trial-intent:tok_demo';

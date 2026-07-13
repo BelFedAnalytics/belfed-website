@@ -1,6 +1,6 @@
 'use strict';
 // Models the DB idempotency contract enforced by
-// ux_conversion_attribution_event_key (unique partial index) +
+// ux_conversion_funnel_events_event_key (unique partial index) +
 // record_conversion_event's ON CONFLICT (event_key) DO NOTHING.
 //
 // The real guarantee lives in Postgres (see the migration + SQL test), which
