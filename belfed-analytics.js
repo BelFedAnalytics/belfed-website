@@ -95,6 +95,38 @@
     });
   }
 
+  // Stable pseudonymous id (delegated to BelfedAttribution; no PII).
+  function anonId() {
+    if (w.BelfedAttribution) return w.BelfedAttribution.getAnonymousId();
+    return null;
+  }
+
+  // Structured, sanitized attribution payload for trusted server writes
+  // (trial-intent-create). Contains anonymous_id + first/last touch only —
+  // never email/telegram. Falls back to {} when BelfedAttribution is absent.
+  function attributionPayload() {
+    var A = w.BelfedAttribution;
+    if (!A) return {};
+    var first = safeParse(lsGet(FIRST_KEY));
+    var last = safeParse(lsGet(LAST_KEY));
+    var landing = (w.location && w.location.pathname) || null;
+    function toTouch(o) {
+      if (!o || !Object.keys(o).length) return null;
+      return {
+        utm_source: o.utm_source, utm_medium: o.utm_medium,
+        utm_campaign: o.utm_campaign, utm_content: o.utm_content,
+        utm_term: o.utm_term,
+        referrer: o._referrer, landing_page: landing, captured_at: o._ts,
+      };
+    }
+    return A.buildAttributionPayload({
+      anonymous_id: A.getAnonymousId(),
+      landing_page: landing,
+      first_touch: toTouch(first),
+      last_touch: toTouch(last),
+    });
+  }
+
   // Record a funnel event.
   function track(name, props) {
     var evt = { event: name, ts: new Date().toISOString() };
@@ -140,6 +172,8 @@
     track: track,
     utm: effectiveUTM,
     utmPayload: utmPayload,
+    attributionPayload: attributionPayload,
+    anonId: anonId,
     propagateUTM: propagateUTM,
     isDebug: isDebug
   };

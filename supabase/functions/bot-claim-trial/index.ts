@@ -21,6 +21,18 @@
 //
 // RESPONSE 200:
 //   { "ok": true, "user_id": "...", "trial_end": "...", "invite_link": "https://t.me/+...", "created": true, "lang": "ru" }
+//
+// ── ATTRIBUTION ADD-ON (this repo) ────────────────────────────────────────
+// This file is the LIVE deployed source (version 21) with a single additive
+// change: after the trial is resolved to a profile, it forwards the opaque
+// trial token (bot PR #5 sends it as `intent_token` AND `attribution_key`,
+// both equal to the token minted by trial-intent-create) to
+// link_trial_intent_attribution, which writes the idempotent 'trial'
+// conversion event and binds the signup-time attribution to the profile.
+// Everything else is untouched — crucially the claim_trial_by_telegram RPC is
+// still called with the EXACT 5-argument set so PostgREST resolves the 5-arg
+// overload unambiguously (an 11-arg overload also exists). Attribution is
+// best-effort and never blocks or fails the claim.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -105,12 +117,23 @@ Deno.serve(async (req) => {
   const langRaw = body?.lang ? String(body.lang).trim().toLowerCase() : "ru";
   const lang = (langRaw === "en") ? "en" : "ru";
 
+  // ATTRIBUTION add-on — opaque trial token forwarded by the bot. Per bot PR #5
+  // the payload carries it as both `intent_token` and `attribution_key`, both
+  // equal to the token minted by trial-intent-create. Accept any of them; never
+  // logged.
+  const intentTokenRaw =
+    body?.intent_token ?? body?.trial_intent_token ?? body?.attribution_key ?? "";
+  const intentToken = intentTokenRaw ? String(intentTokenRaw).trim().slice(0, 128) : "";
+
   if (!telegramId || !/^\d+$/.test(telegramId)) {
     return json({ ok: false, error: "telegram_id_required" }, 400);
   }
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
+  // NOTE: exactly 5 named args — matches the 5-arg claim_trial_by_telegram
+  // overload. Do NOT add p_email/consent params here; that would collide with
+  // the 11-arg overload and trigger PostgREST function-ambiguity (PGRST203).
   const { data: claimRes, error: claimErr } = await admin.rpc("claim_trial_by_telegram", {
     p_telegram_id: telegramId,
     p_telegram_username: telegramUsername,
@@ -129,8 +152,24 @@ Deno.serve(async (req) => {
   const effectiveLang = (result?.lang === "en") ? "en" : "ru";
   const chatId = pickChannelId(effectiveLang);
 
+  // ATTRIBUTION add-on — bind signup attribution to the resolved profile and
+  // write the idempotent 'trial' conversion event. Best-effort: never blocks or
+  // fails the claim, and no-ops when there is no intent token.
+  const linkAttribution = async (uid: string | null | undefined) => {
+    if (!intentToken || !uid) return;
+    try {
+      await admin.rpc("link_trial_intent_attribution", {
+        p_token: intentToken,
+        p_user_id: uid,
+      });
+    } catch (e) {
+      console.warn("link_trial_intent_attribution failed:", (e as Error).message);
+    }
+  };
+
   if (!result?.ok) {
     if (result?.error === "trial_already_used" && result?.subscription_status === "active") {
+      await linkAttribution(result.user_id);
       const inviteLink = await createInviteLink(chatId);
       return json({
         ok: true,
@@ -149,6 +188,8 @@ Deno.serve(async (req) => {
       lang: effectiveLang,
     }, 409);
   }
+
+  await linkAttribution(result.user_id);
 
   const inviteLink = await createInviteLink(chatId);
   if (!inviteLink) {

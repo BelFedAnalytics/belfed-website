@@ -243,7 +243,16 @@ async function handleSignUp() {
       accept_terms: true
     };
     if (typeof window !== 'undefined' && window.belfedAnalytics) {
+      // Legacy flat UTM (backward compat) + structured attribution (no PII).
       intentBody = Object.assign(intentBody, window.belfedAnalytics.utmPayload());
+      if (window.belfedAnalytics.attributionPayload) {
+        var _attr = window.belfedAnalytics.attributionPayload();
+        intentBody.anonymous_id = _attr.anonymous_id || null;
+        intentBody.attribution_key = _attr.attribution_key || null;
+        intentBody.first_touch = _attr.first_touch || null;
+        intentBody.last_touch = _attr.last_touch || null;
+        intentBody.landing_page = _attr.landing_page || null;
+      }
     }
     var intentRes = await fetch(SUPABASE_URL + '/functions/v1/trial-intent-create', {
       method: 'POST',

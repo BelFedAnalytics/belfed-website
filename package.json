@@ -1,0 +1,10 @@
+{
+  "name": "belfed-website",
+  "version": "1.0.0",
+  "private": true,
+  "description": "BelFed Analytics marketing site + attribution layer",
+  "scripts": {
+    "test": "node --test tests/",
+    "test:smoke": "node --check belfed-attribution.js && node --check belfed-analytics.js && node --check belfed-auth.js && node --test tests/"
+  }
+}
