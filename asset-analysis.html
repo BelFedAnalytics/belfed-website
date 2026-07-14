@@ -56,7 +56,22 @@ header h1{font-size:18px;letter-spacing:3px;font-weight:bold}
 
 .card-image{background:#0e1419;cursor:pointer;position:relative;overflow:hidden}
 .card-image img{display:block;width:100%;max-height:520px;object-fit:contain;background:#0e1419}
-.img-multi{position:absolute;top:10px;right:10px;background:#f5f2eb;color:#000;font-size:10px;font-weight:bold;letter-spacing:1px;padding:4px 8px;border:1px solid #000}
+.img-multi{position:absolute;top:10px;right:10px;background:#f5f2eb;color:#000;font-size:10px;font-weight:bold;letter-spacing:1px;padding:4px 8px;border:1px solid #000;z-index:3}
+
+/* Inline chart switcher — prev/next chevrons at the left/right edges of a multi-image card */
+.card-nav{position:absolute;top:50%;transform:translateY(-50%);width:42px;height:72px;display:flex;align-items:center;justify-content:center;background:rgba(245,242,235,0.80);color:#000;border:1px solid #000;font-family:'Courier New',monospace;font-size:26px;font-weight:bold;line-height:1;cursor:pointer;opacity:0;transition:opacity .22s ease,background .18s ease,color .18s ease;z-index:2;user-select:none;-webkit-tap-highlight-color:transparent}
+.card-nav.left{left:0;border-left:0;border-radius:0 3px 3px 0}
+.card-nav.right{right:0;border-right:0;border-radius:3px 0 0 3px}
+/* Proximity reveal: JS sets --near-left/--near-right (0–1) on .card-image as the
+   cursor approaches each edge, so the arrows stay near-invisible until sought out. */
+.card-image{--near-left:0;--near-right:0}
+.card-nav.left{opacity:calc(var(--near-left, 0) * .9)}
+.card-nav.right{opacity:calc(var(--near-right, 0) * .9)}
+.card-nav:hover{opacity:1 !important;background:#f5f2eb}
+.card-nav:active{background:#000;color:#f5f2eb}
+.card-nav:focus-visible{outline:2px solid #f5f2eb;outline-offset:2px;opacity:1 !important}
+@media(hover:none){.card-nav{opacity:.65 !important}}
+@media(max-width:900px){.card-nav{width:38px;height:58px;font-size:22px}.img-hint{display:none}}
 
 .card-body{padding:16px 20px}
 .reply-quote{background:#f5f2eb;border-left:3px solid #000;padding:10px 14px;margin-bottom:14px;font-size:12px}
@@ -456,9 +471,11 @@ function renderCard(p) {
               '<img src="' + escapeHtml(imgs[0]) + '" alt="" loading="lazy">' +
               '</div>';
   } else if (imgs.length > 1) {
-    imgHtml = '<div class="card-image" data-images=\'' + JSON.stringify(imgs).replace(/'/g, '&#39;') + '\'>' +
+    imgHtml = '<div class="card-image" data-images=\'' + JSON.stringify(imgs).replace(/'/g, '&#39;') + '\' data-idx="0">' +
               '<img src="' + escapeHtml(imgs[0]) + '" alt="" loading="lazy">' +
-              '<div class="img-multi">1 / ' + imgs.length + ' · ОТКРЫТЬ ВСЕ</div>' +
+              '<button type="button" class="card-nav left" aria-label="Предыдущий график" data-dir="-1">&lsaquo;</button>' +
+              '<button type="button" class="card-nav right" aria-label="Следующий график" data-dir="1">&rsaquo;</button>' +
+              '<div class="img-multi"><span class="img-counter">1</span> / ' + imgs.length + ' <span class="img-hint">&middot; КЛИК ДЛЯ ЗУМА</span></div>' +
               '</div>';
   }
 
@@ -617,6 +634,7 @@ function renderFeed() {
   feed.innerHTML = state.filtered.map(renderCard).join('');
   count.textContent = '// ' + state.filtered.length + ' тем · всего ' + state.posts.length + ' постов';
   bindLightboxes();
+  bindCardNav();
   bindThreadToggles();
   bindCopyButtons();
   // After render, handle permalink scrolling if URL matched
@@ -833,7 +851,54 @@ document.addEventListener('keydown', function(e) {
 function bindLightboxes() {
   document.querySelectorAll('.card-image').forEach(function(el) {
     el.addEventListener('click', function() {
-      try { var imgs = JSON.parse(el.getAttribute('data-images')); openLightbox(imgs, 0); } catch (e) {}
+      try {
+        var imgs = JSON.parse(el.getAttribute('data-images'));
+        var idx = parseInt(el.getAttribute('data-idx'), 10);
+        if (isNaN(idx) || idx < 0 || idx >= imgs.length) idx = 0;
+        openLightbox(imgs, idx);
+      } catch (e) {}
+    });
+  });
+}
+
+// Inline prev/next switching for multi-image cards (left/right edge chevrons).
+function stepCardImage(el, dir) {
+  var imgs;
+  try { imgs = JSON.parse(el.getAttribute('data-images')); } catch (e) { return; }
+  if (!imgs || imgs.length < 2) return;
+  var idx = parseInt(el.getAttribute('data-idx'), 10) || 0;
+  idx = (idx + dir + imgs.length) % imgs.length;
+  el.setAttribute('data-idx', String(idx));
+  var img = el.querySelector('img');
+  if (img) img.src = imgs[idx];
+  var counter = el.querySelector('.img-counter');
+  if (counter) counter.textContent = String(idx + 1);
+}
+function bindCardNav() {
+  document.querySelectorAll('.card-image').forEach(function(el) {
+    var navBtns = el.querySelectorAll('.card-nav');
+    if (!navBtns.length) return;
+    navBtns.forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var dir = parseInt(btn.getAttribute('data-dir'), 10) || 1;
+        stepCardImage(el, dir);
+      });
+    });
+    // Proximity reveal: arrows stay near-invisible until the cursor approaches
+    // that specific edge, then ease in — subtle by default, findable on intent.
+    var EDGE_ZONE = 110; // px from each edge where reveal begins
+    el.addEventListener('mousemove', function(e) {
+      var rect = el.getBoundingClientRect();
+      var x = e.clientX - rect.left;
+      var nearLeft = Math.max(0, 1 - x / EDGE_ZONE);
+      var nearRight = Math.max(0, 1 - (rect.width - x) / EDGE_ZONE);
+      el.style.setProperty('--near-left', nearLeft.toFixed(2));
+      el.style.setProperty('--near-right', nearRight.toFixed(2));
+    });
+    el.addEventListener('mouseleave', function() {
+      el.style.setProperty('--near-left', 0);
+      el.style.setProperty('--near-right', 0);
     });
   });
 }
