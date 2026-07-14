@@ -346,7 +346,11 @@ var YAHOO_PROXY='https://script.google.com/macros/s/AKfycbyXYFW0kFYR4aa9mCvX_wew
 // in supabase/functions/crypto-price/index.ts. On the Crypto tab we always go
 // directly to crypto-price and ignore Yahoo entirely (Yahoo returns stock
 // symbols with the same letters, e.g. VVV → Valvoline instead of Venice token).
-var COINGECKO_MAP={'TAO':'bittensor','RENDER':'render-token','RNDR':'render-token','VVV':'venice-token'};
+// NOTE: values here are only used as a gate to decide whether to attempt the
+// crypto-price edge-function fallback on the Equities tab. The authoritative
+// source map (incl. OKX/Bybit for XAU/XAG/CL commodity perps) lives server-side
+// in supabase/functions/crypto-price/index.ts.
+var COINGECKO_MAP={'TAO':'bittensor','RENDER':'render-token','RNDR':'render-token','VVV':'venice-token','XAU':'pax-gold','XAG':'kinesis-silver','CL':'crude-oil'};
 var allTrades=[];var livePrices={};
 function mskTime(){return new Date().toLocaleString('en-GB',{timeZone:'Europe/Moscow',year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})+' MSK';}
 function parseNum(v){if(v===null||v===undefined||v==='')return NaN;var s=String(v).trim().replace(/ /g,'').replace(/,/g,'.');return parseFloat(s);}
@@ -390,7 +394,7 @@ if(isCrypto){
     });
     openTrades.forEach(function(t){if(livePrices[t.ticker])t.livePrice=livePrices[t.ticker];});
     var missingTickers=uniqueTickers.filter(function(t){return !livePrices[t];});
-    var srcNote='Цены: CoinGecko';
+    var srcNote='Цены: OKX/Bybit/CoinGecko';
     if(missingTickers.length){srcNote+=' — нет данных для: '+missingTickers.join(', ')+' (добавьте маппинг в crypto-price edge function)';}
     note.textContent=fetched>0?srcNote+' ('+fetched+'/'+uniqueTickers.length+' тикеров)':'Не удалось получить крипто-цены: '+missingTickers.join(', ');
   }catch(err){console.error('[BFD prices] CoinGecko error:',err);note.textContent='Ошибка получения крипто-цен: '+err.message;}
@@ -433,8 +437,8 @@ if(missing.length){
     } else { cgError='HTTP '+cgRes.status; }
   }catch(cgErr){console.error('[BFD prices] CoinGecko fallback error:',cgErr);cgError=cgErr.message||String(cgErr);}
 }
-var srcNote=cgFetched>0?'Цены: Yahoo Finance + CoinGecko':'Цены: Yahoo Finance';
-if(missing.length && cgFetched<missing.length){srcNote+=' — крипто-цены недоступны'+(cgError?' ('+cgError+')':'');}
+var srcNote=cgFetched>0?'Цены: Yahoo Finance + биржи (OKX/Bybit)':'Цены: Yahoo Finance';
+if(missing.length && cgFetched<missing.length){srcNote+=' — цены недоступны для: '+missing.filter(function(t){return !livePrices[t];}).join(', ')+(cgError?' ('+cgError+')':'');}
 note.textContent=fetched>0?srcNote+' ('+fetched+'/'+uniqueTickers.length+' тикеров)':'Не удалось получить лайв-цены';
 }catch(err){console.error('Yahoo proxy error:',err);note.textContent='Ошибка получения цен: '+err.message;}
 renderOpenTrades(allTrades);renderOpenedThisWeek(allTrades);renderAlerts(allTrades);renderActionable(allTrades);
