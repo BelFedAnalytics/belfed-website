@@ -106,6 +106,8 @@ label[data-tooltip]::before{content:'?';position:absolute;right:0;top:50%;transf
 .badge-partial{display:inline-block;padding:2px 6px;background:#ff9500;color:white;font-size:10px;border-radius:3px;margin-left:6px;letter-spacing:0.5px;font-weight:bold;vertical-align:middle}
 td.col-rem-partial{background:#fff4e0;color:#ff9500;font-weight:bold}
 .partial-hint{font-size:11px;opacity:0.7;margin-top:4px;letter-spacing:0.3px;text-transform:none}
+.char-counter{font-size:10px;letter-spacing:1px;opacity:0.6;text-align:right;margin-top:2px}
+.char-counter.warn{color:var(--amber);opacity:1;font-weight:bold}
 .btn-partial{background:#ff9500;color:#fff;border-color:#ff9500}
 .btn-partial:hover{background:#e68500}
 @media(max-width:700px){body{padding:14px 10px;font-size:12px}h1{font-size:16px;letter-spacing:1px}th,td{padding:6px 7px;font-size:10px}.section{padding:16px 14px}.asset-picker-btn{padding:24px 14px;min-width:140px}.asset-picker-btn .ap-emoji{font-size:32px}}
@@ -333,10 +335,12 @@ td.col-rem-partial{background:#fff4e0;color:#ff9500;font-weight:bold}
     <label>Новый стоп</label>
     <input id="stop-new" type="number" step="any">
     <label>Комментарий RU <span class="muted" style="font-weight:normal">(опционально, появится в сигнале о переносе стопа)</span></label>
-    <textarea id="stop-comment_ru" rows="2" maxlength="4096" placeholder="пусто — комментария не будет"></textarea>
+    <textarea id="stop-comment_ru" rows="2" maxlength="4096" placeholder="пусто — комментария не будет" oninput="updateStopCommentCounter('ru')"></textarea>
+    <div class="char-counter" id="stop-counter-ru" aria-live="polite">RU: 0 / 4096</div>
     <button class="secondary" type="button" onclick="translateStopComment()" style="margin-top:8px;font-size:11px;padding:7px 14px">Перевести RU → EN</button>
     <label>Комментарий EN <span class="muted" style="font-weight:normal">(опционально, появится в сигнале о переносе стопа)</span></label>
-    <textarea id="stop-comment_en" rows="2" maxlength="4096" placeholder="empty — no comment will be shown"></textarea>
+    <textarea id="stop-comment_en" rows="2" maxlength="4096" placeholder="empty — no comment will be shown" oninput="updateStopCommentCounter('en')"></textarea>
+    <div class="char-counter" id="stop-counter-en" aria-live="polite">EN: 0 / 4096</div>
     <div class="checkbox-row"><input type="checkbox" id="stop-publish-ru"><label for="stop-publish-ru" style="margin:0">Опубликовать RU</label></div>
     <div class="checkbox-row"><input type="checkbox" id="stop-publish-en"><label for="stop-publish-en" style="margin:0">Опубликовать EN</label></div>
     <div class="btn-row">
@@ -1075,12 +1079,23 @@ function limitTelegramInput(text) {
   return Array.from(String(text ?? '')).slice(0, STOP_COMMENT_INPUT_LIMIT).join('');
 }
 
+function updateStopCommentCounter(lang) {
+  const input = document.getElementById(`stop-comment_${lang}`);
+  const counter = document.getElementById(`stop-counter-${lang}`);
+  if (!input || !counter) return;
+  const count = Array.from(input.value).length;
+  counter.textContent = `${lang.toUpperCase()}: ${count} / ${STOP_COMMENT_INPUT_LIMIT}`;
+  counter.classList.toggle('warn', count >= Math.floor(STOP_COMMENT_INPUT_LIMIT * 0.9));
+}
+
 function openMoveStop(id, ticker, currentStop) {
   modalCtx = { id, ticker, currentStop };
   document.getElementById('stop-info').textContent = `#${id} ${ticker} — current stop ${fmt(currentStop)}`;
   document.getElementById('stop-new').value = '';
   document.getElementById('stop-comment_ru').value = '';
   document.getElementById('stop-comment_en').value = '';
+  updateStopCommentCounter('ru');
+  updateStopCommentCounter('en');
   document.getElementById('stop-publish-ru').checked = false;
   document.getElementById('stop-publish-en').checked = false;
   document.getElementById('stop-msg').innerHTML = '';
@@ -1094,6 +1109,7 @@ async function translateStopComment() {
   const r = await adminAction({ action: 'translate', text: ru, source: 'ru', target: 'en' });
   if (r.ok && r.data?.translation) {
     document.getElementById('stop-comment_en').value = limitTelegramInput(r.data.translation);
+    updateStopCommentCounter('en');
     showMsg('stop-msg', `✓ Переведено через ${r.data.provider || 'AI'}`, 'ok');
   } else {
     showMsg('stop-msg', `Перевод не удался: ${r.data?.error || r.status || r.error}`, 'err');
