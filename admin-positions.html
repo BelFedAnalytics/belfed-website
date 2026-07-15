@@ -333,10 +333,10 @@ td.col-rem-partial{background:#fff4e0;color:#ff9500;font-weight:bold}
     <label>Новый стоп</label>
     <input id="stop-new" type="number" step="any">
     <label>Комментарий RU <span class="muted" style="font-weight:normal">(опционально, появится в сигнале о переносе стопа)</span></label>
-    <textarea id="stop-comment_ru" rows="2" maxlength="280" placeholder="пусто — комментария не будет"></textarea>
+    <textarea id="stop-comment_ru" rows="2" maxlength="4096" placeholder="пусто — комментария не будет"></textarea>
     <button class="secondary" type="button" onclick="translateStopComment()" style="margin-top:8px;font-size:11px;padding:7px 14px">Перевести RU → EN</button>
     <label>Комментарий EN <span class="muted" style="font-weight:normal">(опционально, появится в сигнале о переносе стопа)</span></label>
-    <textarea id="stop-comment_en" rows="2" maxlength="280" placeholder="empty — no comment will be shown"></textarea>
+    <textarea id="stop-comment_en" rows="2" maxlength="4096" placeholder="empty — no comment will be shown"></textarea>
     <div class="checkbox-row"><input type="checkbox" id="stop-publish-ru"><label for="stop-publish-ru" style="margin:0">Опубликовать RU</label></div>
     <div class="checkbox-row"><input type="checkbox" id="stop-publish-en"><label for="stop-publish-en" style="margin:0">Опубликовать EN</label></div>
     <div class="btn-row">
@@ -1069,6 +1069,12 @@ async function confirmClose() {
 }
 
 // ========== Move stop ==========
+const STOP_COMMENT_INPUT_LIMIT = 4096;
+
+function limitTelegramInput(text) {
+  return Array.from(String(text ?? '')).slice(0, STOP_COMMENT_INPUT_LIMIT).join('');
+}
+
 function openMoveStop(id, ticker, currentStop) {
   modalCtx = { id, ticker, currentStop };
   document.getElementById('stop-info').textContent = `#${id} ${ticker} — current stop ${fmt(currentStop)}`;
@@ -1087,7 +1093,7 @@ async function translateStopComment() {
   showMsg('stop-msg', 'Переводим...', 'info');
   const r = await adminAction({ action: 'translate', text: ru, source: 'ru', target: 'en' });
   if (r.ok && r.data?.translation) {
-    document.getElementById('stop-comment_en').value = r.data.translation;
+    document.getElementById('stop-comment_en').value = limitTelegramInput(r.data.translation);
     showMsg('stop-msg', `✓ Переведено через ${r.data.provider || 'AI'}`, 'ok');
   } else {
     showMsg('stop-msg', `Перевод не удался: ${r.data?.error || r.status || r.error}`, 'err');
