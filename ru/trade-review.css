@@ -19,6 +19,17 @@
 .brc-close:hover{color:var(--ink);border-color:var(--ink)}
 .brc-body{padding:18px;font-family:var(--font-mono);color:var(--ink);line-height:1.6}
 
+/* --- embedded TradingView chart snapshot (top of card) --- */
+.brc-chart{margin:0 0 16px;border:1px solid var(--rule-strong);background:var(--paper-2,#efefe7);position:relative}
+.brc-chart img{display:block;width:100%;height:auto}
+.brc-chart figcaption{padding:10px;border-top:1px solid var(--rule-strong);display:flex;justify-content:center}
+.brc-chart .brc-chart-cta{display:inline-flex;align-items:center;gap:7px;font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:700;color:var(--green-strong);background:var(--green-soft);border:1px solid var(--green);border-radius:99px;padding:8px 18px;text-decoration:none;transition:background var(--t),color var(--t)}
+.brc-chart .brc-chart-cta:hover{background:var(--green);color:var(--white)}
+.brc-chart .brc-chart-cta svg{flex:none}
+.brc-chart-plain{font-size:9.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--gray,#888)}
+.brc-body .brc-inline-link{color:var(--green-strong);font-weight:700;text-decoration:none;border-bottom:1px solid var(--green,currentColor);white-space:nowrap}
+.brc-body .brc-inline-link:hover{color:var(--ink);border-bottom-color:var(--ink)}
+
 /* --- card content (mirrors the approved preview, scoped to the modal body) --- */
 .brc-body .card{border:none;background:transparent;padding:0}
 .brc-body .card-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}

@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru" data-theme="light"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://script.google.com https://docs.google.com; img-src 'self'; frame-src 'none';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://script.google.com https://docs.google.com; img-src 'self' https://s3.tradingview.com data:; frame-src 'none';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title id="page-title">Результаты — Крипто | BelFed Analytics</title>
 <link rel="preconnect" href="https://fonts.googleapis.com/">
@@ -326,6 +326,7 @@ tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
       var exitP=(r[8]||'').trim();
       var result=(r[9]||'').trim();
       var tvLink=(r[10]||'').trim();
+      var snap=(r[26]||'').trim();
       if(!ticker)return;
             if(status.toLowerCase()!=='closed')return;
 
@@ -355,7 +356,7 @@ tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
       if(window.BelfedReview){
         window.BelfedReview.attachButton(tr.lastElementChild,{
           ticker:ticker,dir:dir,entryDate:entryDate,exitDate:exitDate,
-          entryP:entryP,exitP:exitP,result:result,tvLink:tvLink
+          entryP:entryP,exitP:exitP,result:result,tvLink:tvLink,snap:snap
         });
       }
     });

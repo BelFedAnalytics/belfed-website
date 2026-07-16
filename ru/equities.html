@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru" data-theme="light"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://script.google.com https://docs.google.com; img-src 'self'; frame-src 'none';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://script.google.com https://docs.google.com; img-src 'self' https://s3.tradingview.com data:; frame-src 'none';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Результаты — Акции | BelFed Analytics</title>
 <link rel="preconnect" href="https://fonts.googleapis.com/">
@@ -455,6 +455,7 @@ var entryP=(r[6]||'').trim();
 var exitP=(r[8]||'').trim();
 var result=(r[9]||'').trim();
 var tvLink=(r[10]||'').trim();
+var snap=(r[26]||'').trim();
 if(!ticker)return;
 var rVal=parseFloat(result.replace(',','.'));
 var isClosed=status.toLowerCase()==='closed';
@@ -466,7 +467,7 @@ var rDisplay=formatR(result);
 var tr=document.createElement('tr');
 tr.innerHTML='<td class="num">'+(idx+1).toString().padStart(2,'0')+'</td><td><span class="ticker">'+ticker+'</span></td><td><span class="badge '+dirClass+'">'+dir+'</span></td><td>'+entryDate+'</td><td>'+(exitDate||'\u2014')+'</td><td>'+entryP+'</td><td>'+(exitP||'\u2014')+'</td><td class="'+rClass+'">'+rDisplay+'</td><td></td>';
 tbody.appendChild(tr);
-if(window.BelfedReview){window.BelfedReview.attachButton(tr.lastElementChild,{ticker:ticker,dir:dir,entryDate:entryDate,exitDate:exitDate,entryP:entryP,exitP:exitP,result:result,tvLink:tvLink});}
+if(window.BelfedReview){window.BelfedReview.attachButton(tr.lastElementChild,{ticker:ticker,dir:dir,entryDate:entryDate,exitDate:exitDate,entryP:entryP,exitP:exitP,result:result,tvLink:tvLink,snap:snap});}
 });
         var avgWin=wins>0?(winSum/wins):0;
 var avgLoss=losses>0?(lossSum/losses):0;
