@@ -111,16 +111,54 @@ Deno.serve(async (req) => {
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
+  // Best-effort activation-attempt logging (never blocks the claim). See
+  // migration 20260717_026_trial_activation_attempts.sql. RLS-protected table
+  // with no public policies; stores telegram_id (owner needs to identify users
+  // who could not activate) but never username, email, secrets or raw errors.
+  const logAttempt = async (phase: "started" | "succeeded" | "failed", extra: {
+    userId?: string | null;
+    errorCode?: string | null;
+  } = {}) => {
+    try {
+      await admin.from("trial_activation_attempts").insert({
+        telegram_id: parseInt(telegramId, 10),
+        source,
+        lang,
+        phase,
+        user_id: extra.userId ?? null,
+        error_code: extra.errorCode ?? null,
+      });
+    } catch (e) {
+      // Logging must never affect the user-facing outcome.
+      console.warn("activation-attempt log insert failed:", (e as any)?.message ?? e);
+    }
+  };
+
+  await logAttempt("started");
+
   const { data: claimRes, error: claimErr } = await admin.rpc("claim_trial_by_telegram", {
     p_telegram_id: telegramId,
     p_telegram_username: telegramUsername,
     p_trial_days: TRIAL_DAYS,
     p_source: source,
     p_lang: lang,
+    // The 11-arg overload (migration 017) coexists with a legacy 5-arg overload
+    // in production. Passing ALL 11 named params keeps PostgREST resolution
+    // unambiguous (avoids PGRST203). Optional consent/email fields are null here;
+    // the bot flow has no consent context — consent is captured on the web path.
+    p_email: null,
+    p_privacy_consent_at: null,
+    p_terms_consent_at: null,
+    p_consent_ip: null,
+    p_consent_ua: null,
+    p_consent_locale: null,
   });
 
   if (claimErr) {
     console.error("claim_trial RPC failed:", claimErr);
+    // claimErr.code is a stable, non-sensitive identifier (e.g. PGRST203);
+    // the raw message may echo request detail, so it is not persisted.
+    await logAttempt("failed", { errorCode: (claimErr as any)?.code ?? "db_error" });
     return json({ ok: false, error: "db_error", detail: claimErr.message }, 500);
   }
 
@@ -131,6 +169,7 @@ Deno.serve(async (req) => {
 
   if (!result?.ok) {
     if (result?.error === "trial_already_used" && result?.subscription_status === "active") {
+      await logAttempt("succeeded", { userId: result?.user_id ?? null });
       const inviteLink = await createInviteLink(chatId);
       return json({
         ok: true,
@@ -140,6 +179,10 @@ Deno.serve(async (req) => {
         lang: effectiveLang,
       });
     }
+    await logAttempt("failed", {
+      userId: result?.user_id ?? null,
+      errorCode: result?.error ?? "claim_failed",
+    });
     return json({
       ok: false,
       error: result?.error ?? "claim_failed",
@@ -149,6 +192,8 @@ Deno.serve(async (req) => {
       lang: effectiveLang,
     }, 409);
   }
+
+  await logAttempt("succeeded", { userId: result?.user_id ?? null });
 
   const inviteLink = await createInviteLink(chatId);
   if (!inviteLink) {
