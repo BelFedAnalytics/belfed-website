@@ -174,6 +174,15 @@ async function resolveUserId(p: {
         p_trial_days: 0,
         p_source: "tribute_payment",
         p_lang: p.lang,
+        // Pass all 11 named params so PostgREST resolves unambiguously between
+        // the legacy 5-arg overload and the 11-arg overload (avoids PGRST203).
+        // Email is linked separately below via link_telegram_email.
+        p_email: null,
+        p_privacy_consent_at: null,
+        p_terms_consent_at: null,
+        p_consent_ip: null,
+        p_consent_ua: null,
+        p_consent_locale: null,
       });
       const uid = (claim as any)?.user_id ?? null;
       if (uid) {
