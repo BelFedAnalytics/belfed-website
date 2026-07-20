@@ -156,12 +156,38 @@
            cap + "</figure>";
   }
 
+  // Asset-class token ("eq"/"cr") from whatever the page passes.
+  function acToken(v) {
+    v = String(v || "").toLowerCase();
+    if (v === "cr" || v === "crypto") return "cr";
+    if (v === "eq" || v === "equities" || v === "stock") return "eq";
+    return "";
+  }
+
   function keyFor(data) {
     var t = (data.ticker || "").toUpperCase();
-    return {
-      full: t + "|" + toISO(data.entryDate) + "|" + toISO(data.exitDate),
-      pair: t + "|" + toISO(data.entryDate),
-    };
+    var f = toISO(data.entryDate), x = toISO(data.exitDate);
+    var ac = acToken(data.assetClass);
+    var dr = (data.dir || "").trim().toLowerCase().charAt(0);
+    var keys = { full: t + "|" + f + "|" + x, pair: t + "|" + f };
+    // Collision-safe qualified key (asset class + direction). Trades that share
+    // ticker+dates across crypto/equities or long/short never borrow each
+    // other's card. Mirrors ru_card_build.key_safe: ac#d#TICKER|entry|exit.
+    if (ac && dr) keys.safe = ac + "#" + dr + "#" + t + "|" + f + "|" + x;
+    return keys;
+  }
+
+  function isMemberYes(v) {
+    return String(v == null ? "" : v).trim().toLowerCase() === "yes";
+  }
+
+  // Small filled dot marking a trade whose signal was published to members in
+  // real time. Rendered next to the ticker on the results pages.
+  var MEMBER_DOT_TITLE = { en: "Signal published to members in real time",
+                           ru: "Сигнал публиковался участникам в реальном времени" }[LANG];
+  function memberDotHTML() {
+    return '<span class="brc-member-dot" role="img" aria-label="' +
+           esc(MEMBER_DOT_TITLE) + '" title="' + esc(MEMBER_DOT_TITLE) + '"></span>';
   }
 
   // Fallback legacy card for trades not present in the manifest. No fake timeline.
@@ -315,7 +341,7 @@
     var title = (data.ticker || "") + " — " + T.review;
     var k = keyFor(data);
     getManifest().then(function (m) {
-      var entry = m[k.full] || m[k.pair];
+      var entry = (k.safe && m[k.safe]) || m[k.full] || m[k.pair];
       var chart = chartHTML(data);
       var card;
       if (entry && entry[LANG]) {
@@ -350,5 +376,8 @@
   }
   ready(buildOverlay);
 
-  window.BelfedReview = { attachButton: attachButton, lang: LANG };
+  window.BelfedReview = {
+    attachButton: attachButton, lang: LANG,
+    isMemberYes: isMemberYes, memberDotHTML: memberDotHTML,
+  };
 })();

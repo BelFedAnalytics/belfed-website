@@ -287,21 +287,23 @@ tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
     document.title='Результаты — Акции | Belfed Analytics';
   }
 
+  // RFC 4180 stream scanner: commas, newlines and CRLF delimit only OUTSIDE
+  // quotes, so a quoted note cell containing an embedded newline (col N) stays a
+  // single field and does not shift later columns (Members-Signal at idx 14/19).
   function parseCSV(text){
-    var lines=text.split(/\r?\n/);
-    var results=[];
-    for(var i=0;i<lines.length;i++){
-      var cols=[]; var cur=''; var inQ=false;
-      for(var c=0;c<lines[i].length;c++){
-        var ch=lines[i][c];
-        if(ch=='"'&&inQ&&lines[i][c+1]=='"'){cur+='"';c++;}
-        else if(ch=='"'){inQ=!inQ;}
-        else if(ch==','&&!inQ){cols.push(cur.trim());cur='';}
-        else{cur+=ch;}
+    var results=[];var cols=[];var cur='';var inQ=false;
+    for(var i=0;i<text.length;i++){
+      var ch=text[i];
+      if(ch=='"'&&inQ&&text[i+1]=='"'){cur+='"';i++;}
+      else if(ch=='"'){inQ=!inQ;}
+      else if(ch==','&&!inQ){cols.push(cur.trim());cur='';}
+      else if((ch=='\n'||ch=='\r')&&!inQ){
+        if(ch=='\r'&&text[i+1]=='\n')i++;
+        cols.push(cur.trim());results.push(cols);cols=[];cur='';
       }
-      cols.push(cur.trim());
-      results.push(cols);
+      else{cur+=ch;}
     }
+    if(cur!==''||cols.length){cols.push(cur.trim());results.push(cols);}
     return results;
   }
 
@@ -360,6 +362,7 @@ tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
       var result=(r[9]||'').trim();
       var tvLink=(r[10]||'').trim();
       var snap=(r[26]||'').trim();
+      var memberYes=window.BelfedReview&&window.BelfedReview.isMemberYes(r[14]);
       if(!ticker)return;
             if(status.toLowerCase()!=='closed')return;
 
@@ -376,8 +379,9 @@ tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
       var rDisplay=formatR(result);
 
       var tr=document.createElement('tr');
+      var dot=memberYes?window.BelfedReview.memberDotHTML():'';
       tr.innerHTML='<td class="num">'+(idx+1).toString().padStart(2,'0')+'</td>'
-        +'<td><span class="ticker">'+ticker+'</span></td>'
+        +'<td><span class="ticker">'+ticker+'</span>'+dot+'</td>'
         +'<td><span class="badge '+dirClass+'">'+dir+'</span></td>'
         +'<td>'+entryDate+'</td>'
         +'<td>'+(exitDate||'—')+'</td>'
@@ -389,7 +393,8 @@ tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
       if(window.BelfedReview){
         window.BelfedReview.attachButton(tr.lastElementChild,{
           ticker:ticker,dir:dir,entryDate:entryDate,exitDate:exitDate,
-          entryP:entryP,exitP:exitP,result:result,tvLink:tvLink,snap:snap
+          entryP:entryP,exitP:exitP,result:result,tvLink:tvLink,snap:snap,
+          assetClass:'cr'
         });
       }
     });

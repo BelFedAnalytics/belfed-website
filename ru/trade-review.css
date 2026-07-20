@@ -4,6 +4,9 @@
    design. Colour tokens (--ink, --paper, --green, …) are inherited from each
    page's :root, which already defines them identically to the approved preview. */
 
+/* --- member-signal dot (marks trades published to members in real time) --- */
+.brc-member-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green-strong,#1a8f4c);margin-left:7px;vertical-align:middle;flex:0 0 auto}
+
 /* --- table trigger button (added to the existing Analysis cell) --- */
 .brc-review-btn{display:inline-flex;align-items:center;gap:5px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--gray);border:1px solid var(--rule-strong);padding:3px 10px;border-radius:99px;cursor:pointer;margin-left:8px;white-space:nowrap;vertical-align:middle}
 .brc-review-btn::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--green)}
