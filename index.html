@@ -49,7 +49,7 @@
       --black: #0a0a0a;
       --ink: #161614;
       --ink-2: #2a2a26;
-      --gray: #888888;
+      --gray: #686862;
       --gray-soft: #6b6b6b;
       --gray-faint: #b3b3a8;
 
@@ -57,7 +57,7 @@
       --green-soft: #1a6b3a14;
       --green-strong: #14542d;
       --red: #8b1a1a;
-      --gold: #b8860b;
+      --gold: #8a6408;
 
       --shadow-soft: 0 1px 0 #1a1a1a0d, 0 8px 24px #1a1a1a0a;
       --shadow-frame: 0 1px 0 #1a1a1a14, 0 12px 40px #1a1a1a12;
@@ -404,11 +404,11 @@
       padding: 32px;
       box-shadow: var(--shadow-frame), var(--glow);
     }
-    .form-card h4 {
+    .form-card h3 {
       font-size: 13px; letter-spacing: 0.12em; color: var(--gray-soft);
       text-transform: uppercase; margin-bottom: 22px;
     }
-    .form-card h4::before { content: "// "; color: var(--gray-faint); }
+    .form-card h3::before { content: "// "; color: var(--gray-faint); }
     .field { margin-bottom: 18px; }
     .field label {
       display: block; font-family: var(--font-mono); font-size: 11px;
@@ -489,10 +489,10 @@
     .step { padding: 32px 24px; border-right: 1px solid var(--rule); }
     .step:last-child { border-right: none; }
     .step-n {
-      font-family: var(--font-mono); font-size: 11px; color: var(--gray-faint); letter-spacing: 0.16em;
+      font-family: var(--font-mono); font-size: 11px; color: var(--gray); letter-spacing: 0.16em;
       margin-bottom: 16px;
     }
-    .step h4 { font-size: 16px; margin-bottom: 8px; }
+    .step h3 { font-size: 16px; margin-bottom: 8px; }
     .step p { font-family: var(--font-sans); font-size: 12.5px; color: var(--ink-2); line-height: 1.7; letter-spacing: 0.005em; }
 
     /* PRICING */
@@ -600,7 +600,7 @@
     footer { padding: 48px 0 32px; background: var(--paper); }
     .foot-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 36px; }
     .foot-brand p { font-family: var(--font-sans); font-size: 12px; color: var(--gray-soft); margin-top: 12px; max-width: 32ch; line-height: 1.7; letter-spacing: 0.005em; }
-    .foot-col h5 { font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gray-soft); margin-bottom: 14px; }
+    .foot-col h3 { font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gray-soft); margin-bottom: 14px; }
     .foot-col ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
     .foot-col a { font-family: var(--font-mono); font-size: 13px; color: var(--ink-2); }
     .foot-col a:hover { color: var(--green-strong); }
@@ -1026,11 +1026,11 @@
             
           </div>
           <div class="perf-controls">
-            <div class="perf-seg" role="tablist" aria-label="Market">
+            <div class="perf-seg" role="group" aria-label="Market">
               <button class="active" data-market="eq" type="button">Акции</button>
               <button data-market="cr" type="button">Крипто</button>
             </div>
-            <div class="perf-seg" role="tablist" aria-label="Year">
+            <div class="perf-seg" role="group" aria-label="Year">
               <button data-year="2025" type="button">2025</button>
               <button class="active" data-year="2026" type="button">2026 YTD</button>
               <button data-year="all" type="button">Всё</button>
@@ -1059,7 +1059,7 @@
   <div class="wrap">
     <div class="record-grid">
       <div class="record-col">
-        <span class="label">2026 Акции <span style="opacity:.6;font-weight:400;">YTD</span></span>
+        <span class="label">2026 Акции <span style="font-weight:400;">YTD</span></span>
         <div class="record-r">+90.70R</div>
         <div class="record-meta">
           <span><b>56,1%</b> прибыльных сделок</span>
@@ -1077,7 +1077,7 @@
         </div>
       </div>
       <div class="record-col">
-        <span class="label">Крипто <span style="opacity:.6;font-weight:400;">всё время</span></span>
+        <span class="label">Крипто <span style="font-weight:400;">всё время</span></span>
         <div class="record-r">+99.12R</div>
         <div class="record-meta">
           <span><b>43,2%</b> прибыльных сделок</span>
@@ -1275,7 +1275,7 @@
         <form class="form-card" id="leadForm" novalidate>
           <input type="text" id="website" name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true">
           <div class="form-body">
-            <h4>Запросите бесплатный анализ</h4>
+            <h3>Запросите бесплатный анализ</h3>
             <div class="field">
               <label for="ticker">Тикер / Актив</label>
               <input id="ticker" name="ticker" type="text" placeholder="например NVDA · BTC · XAU" required />
@@ -1326,7 +1326,7 @@
             <div class="checkmark">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
-            <h4 style="border:none;color:var(--green-strong);">Запрос получен</h4>
+            <h3 style="border:none;color:var(--green-strong);">Запрос получен</h3>
             <h3 style="margin:8px 0 12px;">Вы в списке.</h3>
             <p style="font-family:var(--font-sans);font-size:12.5px;color:var(--ink-2);line-height:1.7;letter-spacing:0.005em;">Мы пришлём <span id="thanksEmail" style="color:var(--black);font-family:var(--font-mono);">вам</span> Belfed-анализ актива <span id="thanksTicker" style="color:var(--green-strong);font-family:var(--font-mono);font-weight:700;">ваш тикер</span> в течение 3 рабочих дней.</p>
             <a href="#pricing" class="btn btn-ghost" style="margin-top:20px;">Пока вы ждёте — начните 14-дневный бесплатный доступ</a>
@@ -1347,22 +1347,22 @@
     <div class="steps">
       <div class="step r">
         <div class="step-n">01 →</div>
-        <h4>Начните 14-дневный бесплатный доступ</h4>
+        <h3>Начните 14-дневный бесплатный доступ</h3>
         <p>Регистрация по email. Карта не нужна.</p>
       </div>
       <div class="step r">
         <div class="step-n">02 →</div>
-        <h4>Получите доступ к личному кабинету пользователя на сайте</h4>
+        <h3>Получите доступ к личному кабинету пользователя на сайте</h3>
         <p>Дашборд, аналитика, отчёты и разборы активов открываются сразу после регистрации.</p>
       </div>
       <div class="step r">
         <div class="step-n">03 →</div>
-        <h4>Подключите Telegram</h4>
+        <h3>Подключите Telegram</h3>
         <p>Получите личное приглашение в наше закрытое сообщество для мгновенных оповещений.</p>
       </div>
       <div class="step r">
         <div class="step-n">04 →</div>
-        <h4>Получайте аналитику и торговые возможности</h4>
+        <h3>Получайте аналитику и торговые возможности</h3>
         <p>Ежедневная и еженедельная аналитика рынка плюс торговые идеи, которые мы реально берём.</p>
       </div>
     </div>
@@ -1516,15 +1516,15 @@
         <p>Независимые глобальные инвестиционные исследования. Рыночная аналитика и торговые идеи по акциям, крипто и сырью.</p>
       </div>
       <div class="foot-col">
-        <h5>Продукт</h5>
+        <h3>Продукт</h3>
         <ul><li><a href="#tour">Что вы получаете</a></li><li><a href="#how">Как это работает</a></li><li><a href="#pricing">Тарифы</a></li><li><a href="/ru/trades.html" target="_blank" rel="noopener">История сделок</a></li><li><a href="#free-analysis">Бесплатный анализ</a></li></ul>
       </div>
       <div class="foot-col">
-        <h5>Сообщество</h5>
+        <h3>Сообщество</h3>
         <ul><li><a href="https://t.me/BelFedFreeEN" target="_blank" rel="noopener">Telegram · EN</a></li><li><a href="https://t.me/BelFedFreeRU" target="_blank" rel="noopener">Telegram · RU</a></li><li><a href="https://tradingview.com/u/BelFed_Analytics" target="_blank" rel="noopener">TradingView</a></li><li><a href="https://x.com/art_the_trader" target="_blank" rel="noopener">X / Twitter</a></li></ul>
       </div>
       <div class="foot-col">
-        <h5>Юридическое</h5>
+        <h3>Юридическое</h3>
         <ul><li><a href="/ru/oferta.html">Оферта</a></li><li><a href="/ru/privacy.html">Политика конфиденциальности</a></li><li><a href="/disclaimer.html">Раскрытие рисков</a></li><li><a href="mailto:hello@belfed.com">Контакты</a></li></ul>
       </div>
     </div>
