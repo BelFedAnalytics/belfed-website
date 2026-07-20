@@ -146,6 +146,11 @@ tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
 </style>
 </head>
 <body>
+<style>
+.skip-link{position:absolute;left:-9999px;top:0;z-index:1000;background:var(--black);color:var(--white);padding:10px 16px;border-radius:4px;font-weight:700}
+.skip-link:focus{left:8px;top:8px}
+</style>
+<a class="skip-link" href="#main-content">Перейти к основному содержимому</a>
 
 <nav class="nav" aria-label="Primary">
   <a href="/" class="logo" aria-label="Belfed home">BELFED<span class="cursor">_</span></a>
@@ -172,6 +177,7 @@ tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
     </button>
   </div>
 </nav>
+<main id="main-content">
 <div class="page-header">
   <div class="page-label">// История сделок · Все закрытые позиции · Акции</div>
   <h1 class="page-title">Акции</h1>
@@ -299,6 +305,7 @@ tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
 <div class="disclaimer">
 Впервые сталкиваетесь с R-мультипликаторами? <a href="/ru/disclaimer.html" style="color:#888;text-decoration:underline;text-underline-offset:2px;">Как мы измеряем результаты</a> — краткое объяснение того, как читать эту таблицу. Прошлые результаты не гарантируют будущих. R-мультипликаторы рассчитываются относительно начального риска на сделку (1R = сумма риска). Эта страница обновляется вручную после закрытия каждой позиции. Никакие позиции не удаляются и не редактируются задным числом.
 </div>
+</main>
 <footer>
   <div class="wrap">
     <div class="foot-grid">

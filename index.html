@@ -964,6 +964,11 @@
   </script>
 </head>
 <body>
+<style>
+.skip-link{position:absolute;left:-9999px;top:0;z-index:1000;background:var(--black);color:var(--white);padding:10px 16px;border-radius:4px;font-weight:700}
+.skip-link:focus{left:8px;top:8px}
+</style>
+<a class="skip-link" href="#main-content">Перейти к основному содержимому</a>
 
 <!-- ============ NAV ============ -->
 <nav class="nav" aria-label="Primary">
@@ -992,6 +997,7 @@
   </div>
 </nav>
 
+<main id="main-content">
 <!-- ============ HERO ============ -->
 <header class="hero">
   <div class="wrap">
@@ -1498,6 +1504,8 @@
     </div>
   </div>
 </section>
+
+</main>
 
 <!-- ============ FOOTER ============ -->
 <footer>
