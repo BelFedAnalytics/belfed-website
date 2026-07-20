@@ -338,7 +338,7 @@
     btn.className = "brc-review-btn";
     btn.textContent = T.review;
     btn.setAttribute("aria-haspopup", "dialog");
-    btn.setAttribute("aria-label", T.reviewAria + " " + (data.ticker || ""));
+    btn.setAttribute("aria-label", T.review + ": " + T.reviewAria + " " + (data.ticker || ""));
     btn.setAttribute("data-brc", JSON.stringify(data));
     btn.addEventListener("click", function () { openFor(btn); });
     cell.appendChild(btn);

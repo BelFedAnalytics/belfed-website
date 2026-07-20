@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Belfed">
+  <rect width="64" height="64" fill="#0a0a0a"/>
+  <text x="32" y="46" font-family="'Courier New',monospace" font-size="44" font-weight="700" text-anchor="middle" fill="#f5f5f0">B</text>
+  <rect x="18" y="52" width="28" height="3" fill="#1a6b3a"/>
+</svg>

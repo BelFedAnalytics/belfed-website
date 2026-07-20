@@ -2,9 +2,35 @@
 <html lang="ru" data-theme="light"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://script.google.com https://docs.google.com; img-src 'self' https://s3.tradingview.com data:; frame-src 'none';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title id="page-title">Результаты — Крипто | BelFed Analytics</title>
-<link rel="preconnect" href="https://fonts.googleapis.com/">
-<link href="./trades_files/css2" rel="stylesheet">
+<title id="page-title">Результаты — Крипто | Belfed Analytics</title>
+<meta name="description" content="Публичный трек-рекорд сделок Belfed по криптовалютам: каждая позиция с датами входа и выхода, риском и результатом в R. Прозрачная методология, регулярные обновления.">
+<link rel="canonical" href="https://belfed.ru/ru/trades.html">
+<link rel="alternate" hreflang="ru" href="https://belfed.ru/ru/trades.html">
+<link rel="alternate" hreflang="en" href="https://belfed.com/trades.html">
+<link rel="alternate" hreflang="x-default" href="https://belfed.com/trades.html">
+<meta name="theme-color" content="#f5f5f0">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/logo-belfed-512.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Belfed">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:title" content="Результаты — Крипто | Belfed">
+<meta property="og:description" content="Публичный трек-рекорд сделок Belfed по криптовалютам: даты входа и выхода, риск и результат в R.">
+<meta property="og:url" content="https://belfed.ru/ru/trades.html">
+<meta property="og:image" content="https://belfed.ru/og-belfed.png">
+<meta property="og:image:alt" content="Belfed — публичный трек-рекорд сделок">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Результаты — Крипто | Belfed">
+<meta name="twitter:description" content="Публичный трек-рекорд сделок Belfed по криптовалютам: даты входа и выхода, риск и результат в R.">
+<meta name="twitter:image" content="https://belfed.ru/og-belfed.png">
+<meta name="twitter:image:alt" content="Belfed — публичный трек-рекорд сделок">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="trade-review.css">
 <style>
 
@@ -15,7 +41,7 @@
   --white:#f5f5f0;--paper:#efefe7;--paper-2:#e7e7dd;
   --rule:#1a1a1a14;--rule-strong:#1a1a1a26;
   --black:#0a0a0a;--ink:#161614;--ink-2:#2a2a26;
-  --gray:#888;--gray-soft:#6b6b6b;--gray-faint:#b3b3a8;
+  --gray:#686862;--gray-soft:#6b6b6b;--gray-faint:#b3b3a8;
   --green:#1a6b3a;--green-soft:#1a6b3a14;--green-strong:#14542d;
   --red:#8b1a1a;--gold:#b8860b;
   --radius:4px;--radius-lg:8px;
@@ -65,7 +91,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 footer{padding:48px 0 32px;background:var(--paper);color:var(--ink);border-top:1px solid var(--rule);margin-top:48px}
 .foot-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:36px}
 .foot-brand p{font-family:var(--font-sans);font-size:12px;color:var(--gray-soft);margin-top:12px;max-width:32ch;line-height:1.7;letter-spacing:.005em}
-.foot-col h5{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gray-soft);margin-bottom:14px}
+.foot-col h2{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gray-soft);margin-bottom:14px}
 .foot-col ul{list-style:none;display:flex;flex-direction:column;gap:8px}
 .foot-col a{font-family:var(--font-mono);font-size:13px;color:var(--ink-2)}
 .foot-col a:hover{color:var(--green-strong)}
@@ -96,7 +122,7 @@ thead th{padding:16px 14px;text-align:left;font-size:10px;letter-spacing:1.5px;t
 tbody tr{border-bottom:1px solid var(--rule);transition:background .15s}
 tbody tr:hover{background:var(--paper)}
 tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
-.num{color:var(--gray-faint);font-size:11px}
+.num{color:var(--gray-soft);font-size:11px}
 .ticker{font-weight:700;letter-spacing:1px;font-size:14px}
 .badge{display:inline-block;padding:3px 10px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;border:1px solid var(--ink)}
 .badge-long{background:transparent;color:var(--ink)}
@@ -123,6 +149,11 @@ tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
 </style>
 </head>
 <body>
+<style>
+.skip-link{position:absolute;left:-9999px;top:0;z-index:1000;background:var(--black);color:var(--white);padding:10px 16px;border-radius:4px;font-weight:700}
+.skip-link:focus{left:8px;top:8px}
+</style>
+<a class="skip-link" href="#main-content">Перейти к основному содержимому</a>
 
 <nav class="nav" aria-label="Primary">
   <a href="/" class="logo" aria-label="Belfed home">BELFED<span class="cursor">_</span></a>
@@ -149,6 +180,7 @@ tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
     </button>
   </div>
 </nav>
+<main id="main-content">
 <div class="page-header">
   <div class="page-label">// История сделок · Все закрытые позиции · Крипто</div>
   <h1 class="page-title">Крипто</h1>
@@ -191,8 +223,9 @@ tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
 </div>
 
 <div class="disclaimer">
-Впервые сталкиваетесь с R-мультипликаторами? <a href="/ru/disclaimer.html" style="color:#888;text-decoration:underline;text-underline-offset:2px;">Как мы измеряем результаты</a> — краткое объяснение того, как читать эту таблицу. Прошлые результаты не гарантируют будущих. R-мультипликаторы рассчитываются относительно начального риска на сделку (1R = сумма риска). Эта страница обновляется вручную после закрытия каждой позиции. Никакие позиции не удаляются и не редактируются задным числом.
+Впервые сталкиваетесь с R-мультипликаторами? <a href="/ru/disclaimer.html" style="color:#686862;text-decoration:underline;text-underline-offset:2px;">Как мы измеряем результаты</a> — краткое объяснение того, как читать эту таблицу. Прошлые результаты не гарантируют будущих. R-мультипликаторы рассчитываются относительно начального риска на сделку (1R = сумма риска). Эта страница обновляется вручную после закрытия каждой позиции. Никакие позиции не удаляются и не редактируются задным числом.
 </div>
+</main>
 <footer>
   <div class="wrap">
     <div class="foot-grid">
@@ -201,15 +234,15 @@ tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
         <p>Независимая аналитика мировых рынков. Обзоры и торговые идеи по акциям, крипте и сырьевым активам.</p>
       </div>
       <div class="foot-col">
-        <h5>Продукт</h5>
+        <h2>Продукт</h2>
         <ul><li><a href="/#tour">Что внутри</a></li><li><a href="/#how">Как это работает</a></li><li><a href="/#pricing">Цены</a></li><li><a href="/ru/trades.html">Результаты</a></li><li><a href="/ru/#free-analysis">Бесплатный анализ</a></li></ul>
       </div>
       <div class="foot-col">
-        <h5>Сообщество</h5>
+        <h2>Сообщество</h2>
         <ul><li><a href="https://t.me/BelFedFreeRU" target="_blank" rel="noopener">Telegram · RU</a></li><li><a href="https://t.me/BelFedFreeEN" target="_blank" rel="noopener">Telegram · EN</a></li><li><a href="https://tradingview.com/u/BelFed_Analytics" target="_blank" rel="noopener">TradingView</a></li><li><a href="https://x.com/art_the_trader" target="_blank" rel="noopener">X / Twitter</a></li></ul>
       </div>
       <div class="foot-col">
-        <h5>Правовое</h5>
+        <h2>Правовое</h2>
         <ul><li><a href="/ru/oferta.html">Оферта</a></li><li><a href="/ru/privacy.html">Политика конфиденциальности</a></li><li><a href="/ru/disclaimer.html">Раскрытие рисков</a></li><li><a href="mailto:hello@belfed.com">Контакт</a></li></ul>
       </div>
     </div>
@@ -220,12 +253,12 @@ tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
   </div>
 </footer>
 
-<div style="border-top: 1px solid #e0e0e0; padding: 16px 40px; font-size: 12px; color: #888; text-align: center;">
-    <a href="/ru/disclaimer.html" style="color: #888; margin: 0 12px;">Ограничение ответственности</a>
-    <a href="/ru/oferta.html" style="color: #888; margin: 0 12px;">Договор-оферта</a>
-    <a href="/ru/privacy.html" style="color: #888; margin: 0 12px;">Политика конфиденциальности</a>
-    <a href="/ru/contacts.html" style="color: #888; margin: 0 12px;">Контакты</a>
-    <span style="margin: 0 12px;">&copy; 2026 BelFed Analytics</span>
+<div style="border-top: 1px solid #e0e0e0; padding: 16px 40px; font-size: 12px; color: #686862; text-align: center;">
+    <a href="/ru/disclaimer.html" style="color: #686862; margin: 0 12px;">Ограничение ответственности</a>
+    <a href="/ru/oferta.html" style="color: #686862; margin: 0 12px;">Договор-оферта</a>
+    <a href="/ru/privacy.html" style="color: #686862; margin: 0 12px;">Политика конфиденциальности</a>
+    <a href="/ru/contacts.html" style="color: #686862; margin: 0 12px;">Контакты</a>
+    <span style="margin: 0 12px;">&copy; 2026 Belfed Analytics</span>
 </div>
 
 
@@ -246,12 +279,12 @@ tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
   var cryptoLink = document.querySelector('a[href*="trades.html"]');
   if(equitiesLink){
     equitiesLink.addEventListener('click',function(){
-      if(titleEl) titleEl.textContent='Результаты — Акции | BelFed Analytics';
+      if(titleEl) titleEl.textContent='Результаты — Акции | Belfed Analytics';
     });
   }
   if(!isCrypto && titleEl){
-    titleEl.textContent='Результаты — Акции | BelFed Analytics';
-    document.title='Результаты — Акции | BelFed Analytics';
+    titleEl.textContent='Результаты — Акции | Belfed Analytics';
+    document.title='Результаты — Акции | Belfed Analytics';
   }
 
   function parseCSV(text){
@@ -404,7 +437,7 @@ tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
   <script>
 (function(){
 var css=document.createElement('style');
-css.textContent='.pht{display:flex;align-items:baseline;justify-content:space-between;gap:24px}.yf{display:flex;gap:8px;align-items:center}.yfb{font-family:inherit;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 14px;border:1px solid #ccc;background:transparent;color:#888;cursor:pointer;transition:all .2s}.yfb:hover{border-color:#111;color:#111}.yfb.on{background:#111;color:#fff;border-color:#111}';
+css.textContent='.pht{display:flex;align-items:baseline;justify-content:space-between;gap:24px}.yf{display:flex;gap:8px;align-items:center}.yfb{font-family:inherit;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 14px;border:1px solid #ccc;background:transparent;color:#686862;cursor:pointer;transition:all .2s}.yfb:hover{border-color:#111;color:#111}.yfb.on{background:#111;color:#fff;border-color:#111}';
 document.head.appendChild(css);
 var h1=document.querySelector('.page-title');
 var ph=h1.parentNode;
