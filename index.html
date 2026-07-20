@@ -812,6 +812,7 @@
       0%, 100% { transform: scale(1); opacity: 1; }
       50% { transform: scale(1.6); opacity: 0.55; }
     }
+    @media (prefers-reduced-motion: reduce) { .perf-final-dot.pulse { animation: none; } }
 
     /* ============ TRACK RECORD AUTO-UPDATE NOTE + PULSE BEAM ============ */
     .record-r { font-size: clamp(40px, 5.6vw, 68px); }
