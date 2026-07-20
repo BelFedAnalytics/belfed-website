@@ -9,5 +9,9 @@ Disallow: /auth.html
 Disallow: /confirm.html
 Disallow: /reset-password.html
 Disallow: /unsubscribe.html
+Disallow: /analytics.html
+Disallow: /analytics-view.html
+Disallow: /asset-analysis.html
+Disallow: /stock-analysis.html
 
 Sitemap: https://belfed.ru/sitemap.xml
