@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+# Private / gated shells — not for indexing (assets and public pages remain crawlable)
+Disallow: /admin
+Disallow: /dashboard.html
+Disallow: /billing.html
+Disallow: /auth.html
+Disallow: /confirm.html
+Disallow: /reset-password.html
+Disallow: /unsubscribe.html
+
+Sitemap: https://belfed.ru/sitemap.xml
