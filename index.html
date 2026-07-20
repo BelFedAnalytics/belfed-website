@@ -772,7 +772,7 @@
       fill: var(--green-strong); stroke: var(--white); stroke-width: 2;
       filter: drop-shadow(0 0 4px var(--green-strong));
     }
-    .perf-final-dot.pulse { animation: ewPulse 2.4s ease-in-out infinite; transform-origin: center; }
+    .perf-final-dot.pulse { animation: ewPulse 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
     .perf-final-bench { fill: #b08642; stroke: var(--white); stroke-width: 1.5; }
 
     .perf-legend {
@@ -809,8 +809,8 @@
     .perf-annot.dn { color: var(--red); border-color: var(--red); }
     .perf-annot::before { content: "→ "; color: var(--gray-soft); }
     @keyframes ewPulse {
-      0%, 100% { r: 5; opacity: 1; }
-      50% { r: 8; opacity: 0.55; }
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.6); opacity: 0.55; }
     }
 
     /* ============ TRACK RECORD AUTO-UPDATE NOTE + PULSE BEAM ============ */
@@ -829,16 +829,17 @@
       min-width: 80px;
     }
     .auto-beam::after {
-      content: ""; position: absolute; top: 0; left: -30%;
+      content: ""; position: absolute; top: 0; left: 0;
       width: 30%; height: 100%;
       background: linear-gradient(90deg, transparent, var(--green-strong) 50%, transparent);
       animation: beam 3.2s ease-in-out infinite;
       box-shadow: 0 0 8px var(--green);
+      will-change: transform;
     }
     @keyframes beam {
-      0% { left: -30%; }
-      60% { left: 100%; }
-      100% { left: 100%; }
+      0% { transform: translateX(-100%); }
+      60% { transform: translateX(333.333%); }
+      100% { transform: translateX(333.333%); }
     }
     .auto-note .dot-live {
       width: 6px; height: 6px; border-radius: 50%;
@@ -1155,7 +1156,7 @@
         <div class="frame">
           <div class="frame-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.belfed.com / dashboard</span></div>
           <div class="frame-body">
-            <video class="lazy-video" autoplay muted loop playsinline preload="metadata" poster="video/ru/dashboard.jpg" aria-label="Belfed dashboard preview">
+            <video class="lazy-video" width="1280" height="858" autoplay muted loop playsinline preload="none" data-poster="video/ru/dashboard.jpg" aria-label="Belfed dashboard preview">
               <source data-src="video/ru/dashboard.mp4" type="video/mp4">
             </video>
           </div>
@@ -1179,7 +1180,7 @@
         <div class="frame">
           <div class="frame-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.belfed.com / analytics / timeline</span></div>
           <div class="frame-body">
-            <video class="lazy-video" autoplay muted loop playsinline preload="metadata" poster="video/ru/timeline.jpg" aria-label="Belfed analytics timeline preview">
+            <video class="lazy-video" width="1280" height="858" autoplay muted loop playsinline preload="none" data-poster="video/ru/timeline.jpg" aria-label="Belfed analytics timeline preview">
               <source data-src="video/ru/timeline.mp4" type="video/mp4">            </video>
           </div>
         </div>
@@ -1197,7 +1198,7 @@
         <div class="frame">
           <div class="frame-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.belfed.com / analytics / reports</span></div>
           <div class="frame-body">
-            <video class="lazy-video" autoplay muted loop playsinline preload="metadata" poster="video/ru/reports.jpg" aria-label="Belfed analytics reports library preview">
+            <video class="lazy-video" width="1280" height="858" autoplay muted loop playsinline preload="none" data-poster="video/ru/reports.jpg" aria-label="Belfed analytics reports library preview">
               <source data-src="video/ru/reports.mp4" type="video/mp4">            </video>
           </div>
         </div>
@@ -1220,7 +1221,7 @@
         <div class="frame">
           <div class="frame-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.belfed.com / asset-analysis</span></div>
           <div class="frame-body">
-            <video class="lazy-video" autoplay muted loop playsinline preload="metadata" poster="video/ru/asset.jpg" aria-label="Belfed asset analysis preview">
+            <video class="lazy-video" width="1280" height="858" autoplay muted loop playsinline preload="none" data-poster="video/ru/asset.jpg" aria-label="Belfed asset analysis preview">
               <source data-src="video/ru/asset.mp4" type="video/mp4">            </video>
           </div>
         </div>
@@ -1247,7 +1248,7 @@
             <span class="url" style="margin-left:8px;">t.me/BelFedFreeEN — Belfed канал</span>
           </div>
           <div class="frame-body">
-            <video class="lazy-video" autoplay muted loop playsinline preload="metadata" poster="video/telegram.jpg" aria-label="Belfed Telegram channel preview">
+            <video class="lazy-video" width="1400" height="1218" autoplay muted loop playsinline preload="none" data-poster="video/telegram.jpg" aria-label="Belfed Telegram channel preview">
               <source data-src="video/telegram.mp4" type="video/mp4">            </video>
           </div>
         </div>
@@ -1719,6 +1720,7 @@
     var vids = document.querySelectorAll('video.lazy-video');
     function loadVideo(v) {
       if (v.dataset.loaded) return;
+      if (v.dataset.poster) { v.poster = v.dataset.poster; v.removeAttribute('data-poster'); }
       v.querySelectorAll('source[data-src]').forEach(function (s) {
         s.src = s.dataset.src;
         s.removeAttribute('data-src');
