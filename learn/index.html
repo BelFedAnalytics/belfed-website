@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Belfed Обучение: материалы о трейдинге и рынках</title>
+  <meta name="description" content="Понятные материалы об R-мультипликаторах, свинг-трейдинге и управлении риском от Belfed — независимые исследования, без хайпа, с проверяемыми источниками." />
+  <link rel="canonical" href="https://belfed.ru/learn/" />
+  <meta name="theme-color" content="#f5f5f0" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/logo-belfed-512.png" />
+  <link rel="alternate" hreflang="ru" href="https://belfed.ru/learn/" />
+  <link rel="alternate" hreflang="en" href="https://belfed.com/learn/" />
+  <link rel="alternate" hreflang="x-default" href="https://belfed.com/learn/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Belfed" />
+  <meta property="og:locale" content="ru_RU" />
+  <meta property="og:title" content="Belfed Обучение: материалы о трейдинге и рынках" />
+  <meta property="og:description" content="Понятные материалы об R-мультипликаторах, свинг-трейдинге и управлении риском от Belfed — независимые исследования, без хайпа, с проверяемыми источниками." />
+  <meta property="og:url" content="https://belfed.ru/learn/" />
+  <meta property="og:image" content="https://belfed.ru/og-belfed.png" />
+  <meta property="og:image:alt" content="Belfed Обучение — материалы о трейдинге и рыночных исследованиях" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Belfed Обучение: материалы о трейдинге и рынках" />
+  <meta name="twitter:description" content="Понятные материалы об R-мультипликаторах, свинг-трейдинге и управлении риском от Belfed — независимые исследования, без хайпа, с проверяемыми источниками." />
+  <meta name="twitter:image" content="https://belfed.ru/og-belfed.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet"></noscript>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --font-mono: 'Courier Prime', 'Courier New', ui-monospace, monospace;
+      --white: #f5f5f0; --paper: #efefe7; --paper-2: #e7e7dd;
+      --rule: #1a1a1a14; --rule-strong: #1a1a1a26;
+      --black: #0a0a0a; --ink: #161614; --ink-2: #2a2a26;
+      --gray: #686862; --gray-soft: #6b6b6b; --gray-faint: #b3b3a8;
+      --green: #1a6b3a; --green-soft: #1a6b3a14; --green-strong: #14542d;
+      --radius: 8px; --radius-lg: 12px; --t: 0.2s ease;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font-mono); background: var(--white); color: var(--ink);
+      font-size: 15px; line-height: 1.65; -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+    .wrap { width: 100%; max-width: 920px; margin: 0 auto; padding: 0 28px; }
+    .skip-link { position: absolute; left: -9999px; top: 0; z-index: 1000; background: var(--black); color: var(--white); padding: 10px 16px; border-radius: 4px; font-weight: 700; }
+    .skip-link:focus { left: 8px; top: 8px; }
+    /* NAV */
+    .nav {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 28px; background: color-mix(in oklab, var(--white) 88%, transparent);
+      backdrop-filter: blur(10px); border-bottom: 1px solid var(--rule);
+    }
+    .logo { font-family: var(--font-mono); font-weight: 700; font-size: 17px; letter-spacing: 0.22em; color: var(--black); white-space: nowrap; }
+    .logo .cursor { color: var(--green); margin-left: 2px; }
+    .nav-links { display: flex; align-items: center; gap: 28px; list-style: none; }
+    .nav-links a { font-family: var(--font-mono); font-size: 13px; color: var(--gray-soft); letter-spacing: 0.04em; }
+    .nav-links a:hover { color: var(--black); }
+    .nav-links a.active { color: var(--black); }
+    .nav-learn { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+    .nav-beta {
+      font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--green-strong); background: var(--green-soft);
+      border: 1px solid var(--rule-strong); padding: 1px 5px; border-radius: 99px; line-height: 1.4;
+      position: relative; top: -1px;
+    }
+    .nav-right { display: flex; align-items: center; gap: 14px; }
+    .lang-globe a {
+      width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 50%; color: var(--gray-soft); font-family: var(--font-mono); font-size: 9px;
+      font-weight: 700; letter-spacing: 0.04em; position: relative; transition: color var(--t), background var(--t);
+    }
+    .lang-globe a:hover { color: var(--ink); background: var(--paper); }
+    .lang-globe .lang-code { position: absolute; bottom: -2px; right: -2px; background: var(--black); color: var(--white); font-size: 8px; padding: 1px 4px; border-radius: 6px; letter-spacing: 0.05em; line-height: 1.1; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-weight: 700; font-size: 13px; letter-spacing: 0.02em; border-radius: 6px; padding: 10px 18px; border: 1px solid transparent; cursor: pointer; transition: background var(--t), color var(--t), border-color var(--t); }
+    .btn-sm { padding: 8px 14px; font-size: 12px; }
+    .btn-primary { background: var(--green-strong); color: var(--white); }
+    .btn-primary:hover { background: var(--green); }
+    .btn-ghost { background: transparent; color: var(--ink); border-color: var(--rule-strong); }
+    .btn-ghost:hover { border-color: var(--ink); }
+    .hamburger { display: none; width: 36px; height: 36px; align-items: center; justify-content: center; color: var(--gray-soft); border-radius: 4px; background: transparent; border: 1px solid var(--rule-strong); }
+    .menu-drop { display: none; }
+    /* BREADCRUMB */
+    .crumb { font-family: var(--font-mono); font-size: 12px; color: var(--gray-soft); letter-spacing: 0.04em; padding: 24px 0 0; }
+    .crumb ol { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .crumb a { color: var(--green-strong); }
+    .crumb a:hover { text-decoration: underline; text-underline-offset: 3px; }
+    .crumb .sep { color: var(--gray-faint); }
+    .crumb [aria-current="page"] { color: var(--gray-soft); }
+    /* HUB HEADER */
+    .learn-head { padding: 40px 0 8px; }
+    .learn-eyebrow { font-family: var(--font-mono); font-size: 11px; color: var(--gray-soft); letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 16px; }
+    .learn-head h1 { font-family: var(--font-mono); font-weight: 700; font-size: clamp(28px, 4.4vw, 44px); line-height: 1.18; letter-spacing: -0.01em; color: var(--black); }
+    .learn-intro { padding: 24px 0 8px; max-width: 760px; font-size: 15px; line-height: 1.7; color: var(--ink-2); }
+    .learn-intro a { color: var(--green-strong); font-weight: 700; }
+    .learn-intro a:hover { text-decoration: underline; text-underline-offset: 3px; }
+    /* CATEGORY GRID */
+    .learn-cat-grid { margin: 40px 0 8px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .learn-cat-card { padding: 22px 20px; border: 1px solid var(--rule-strong); border-radius: var(--radius-lg); background: var(--paper); }
+    .learn-cat-card h3 { font-family: var(--font-mono); font-size: 16px; font-weight: 700; color: var(--ink); line-height: 1.3; margin-bottom: 10px; }
+    .learn-cat-card p { font-size: 13.5px; line-height: 1.6; color: var(--ink-2); margin-bottom: 14px; }
+    .learn-cat-status { display: inline-block; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--green-strong); background: var(--green-soft); border: 1px solid var(--rule-strong); padding: 4px 10px; border-radius: 99px; }
+    /* ARTICLE LIST */
+    .learn-section-label { margin: 52px 0 20px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gray-soft); }
+    .learn-article-list { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    .learn-article-card { padding: 24px; border: 1px solid var(--rule-strong); border-radius: var(--radius-lg); background: var(--paper); transition: border-color var(--t); }
+    .learn-article-card:hover { border-color: var(--ink); }
+    .learn-article-cat { display: inline-block; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gray-soft); margin-bottom: 10px; }
+    .learn-article-card h3 { font-family: var(--font-mono); font-size: 19px; font-weight: 700; line-height: 1.3; color: var(--black); margin-bottom: 10px; }
+    .learn-article-card h3 a:hover { color: var(--green-strong); text-decoration: underline; text-underline-offset: 3px; }
+    .learn-article-card p { font-size: 14px; line-height: 1.65; color: var(--ink-2); margin-bottom: 14px; }
+    .learn-article-meta { font-family: var(--font-mono); font-size: 11px; color: var(--gray-soft); letter-spacing: 0.04em; }
+    /* CTA */
+    .learn-cta { margin: 60px 0 0; padding: 40px 32px; border: 1px solid var(--rule-strong); border-radius: var(--radius-lg); background: var(--paper); text-align: center; }
+    .learn-cta h2 { font-family: var(--font-mono); font-size: clamp(20px, 3vw, 28px); font-weight: 700; line-height: 1.25; color: var(--black); margin-bottom: 14px; }
+    .learn-cta p { max-width: 620px; margin: 0 auto 24px; font-size: 14px; line-height: 1.7; color: var(--ink-2); }
+    .learn-cta .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .learn-disclaimer { margin: 28px 0 0; font-family: var(--font-mono); font-size: 12px; line-height: 1.7; color: var(--gray-soft); }
+    .learn-disclaimer a { color: var(--green-strong); font-weight: 700; }
+    .learn-disclaimer a:hover { text-decoration: underline; text-underline-offset: 3px; }
+    /* FOOTER */
+    footer { margin-top: 72px; border-top: 1px solid var(--rule); background: var(--paper); }
+    .foot-grid { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 28px; padding: 48px 0 32px; }
+    .foot-brand p { margin-top: 14px; font-size: 13px; line-height: 1.6; color: var(--gray-soft); max-width: 320px; }
+    .foot-col h3 { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gray-soft); margin-bottom: 14px; }
+    .foot-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .foot-col a { font-size: 13px; color: var(--ink-2); }
+    .foot-col a:hover { color: var(--black); }
+    .foot-bottom { padding: 20px 0 40px; border-top: 1px solid var(--rule); display: flex; flex-direction: column; gap: 10px; font-size: 12px; color: var(--gray-soft); line-height: 1.6; }
+    @media (max-width: 820px) {
+      .learn-cat-grid { grid-template-columns: 1fr; }
+      .foot-grid { grid-template-columns: 1fr 1fr; gap: 24px; }
+    }
+    @media (max-width: 640px) {
+      .nav-links { display: none; }
+      .hamburger { display: inline-flex; }
+      .menu-drop.open { display: block; position: fixed; top: 60px; left: 0; right: 0; background: var(--white); border-bottom: 1px solid var(--rule); padding: 12px 20px 18px; z-index: 99; }
+      .menu-drop.open ul { list-style: none; display: flex; flex-direction: column; }
+      .menu-drop.open a { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 14px; color: var(--ink); border-bottom: 1px solid var(--rule); }
+      .menu-drop.open li:last-child a { border-bottom: none; }
+      .foot-grid { grid-template-columns: 1fr; }
+      .learn-cta { padding: 32px 20px; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  </style>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "@id": "https://belfed.ru/learn/#webpage",
+    "url": "https://belfed.ru/learn/",
+    "name": "Belfed Обучение: материалы о трейдинге и рынках",
+    "description": "Понятные материалы об R-мультипликаторах, свинг-трейдинге и управлении риском от Belfed.",
+    "inLanguage": "ru",
+    "isPartOf": { "@id": "https://belfed.ru/#website" },
+    "publisher": { "@id": "https://belfed.ru/#organization" },
+    "hasPart": [
+      { "@type": "Article", "@id": "https://belfed.ru/learn/r-multiplikator.html#article" },
+      { "@type": "Article", "@id": "https://belfed.ru/learn/sving-treyding.html#article" }
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Главная", "item": "https://belfed.ru/" },
+      { "@type": "ListItem", "position": 2, "name": "Обучение", "item": "https://belfed.ru/learn/" }
+    ]
+  }
+  </script>
+</head>
+<body>
+<a class="skip-link" href="#main-content">Перейти к основному содержимому</a>
+
+<nav class="nav" aria-label="Primary">
+  <a href="/" class="logo" aria-label="Belfed home">BELFED<span class="cursor" aria-hidden="true">_</span></a>
+  <ul class="nav-links" role="list">
+    <li><a href="/">Главная</a></li>
+    <li><a href="/ru/trades.html" target="_blank" rel="noopener">История сделок ↗</a></li>
+    <li><a href="/learn/" class="nav-learn active" aria-current="page" aria-label="Обучение, бета">Обучение<span class="nav-beta" aria-hidden="true">бета</span></a></li>
+    <li><a href="/#pricing">Тарифы</a></li>
+  </ul>
+  <div class="nav-right">
+    <div class="lang-globe" role="group" aria-label="Язык">
+      <a href="https://belfed.com/learn/" aria-label="Switch to English">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18"/></svg><span class="lang-code">EN</span>
+      </a>
+    </div>
+    <a href="/#pricing" class="btn btn-primary btn-sm">Бесплатный доступ</a>
+    <button class="hamburger" id="ham" aria-label="Меню" aria-expanded="false" aria-controls="menuDrop">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </div>
+</nav>
+<div class="menu-drop" id="menuDrop">
+  <ul role="list">
+    <li><a href="/">Главная</a></li>
+    <li><a href="/ru/trades.html">История сделок</a></li>
+    <li><a href="/learn/" aria-current="page">Обучение<span class="nav-beta" aria-hidden="true">бета</span></a></li>
+    <li><a href="/#pricing">Тарифы</a></li>
+    <li><a href="/members.html">Войти</a></li>
+  </ul>
+</div>
+
+<main id="main-content">
+  <div class="wrap">
+    <nav class="crumb" aria-label="Хлебные крошки">
+      <ol>
+        <li><a href="/">Главная</a></li>
+        <li class="sep" aria-hidden="true">/</li>
+        <li aria-current="page">Обучение</li>
+      </ol>
+    </nav>
+
+    <header class="learn-head">
+      <div class="learn-eyebrow">// Belfed Обучение</div>
+      <h1>Belfed Обучение: понятные материалы о трейдинге и рыночных исследованиях.</h1>
+    </header>
+
+    <p class="learn-intro">Belfed Обучение — раздел, где мы объясняем понятия, лежащие в основе наших исследований, тем же спокойным языком без хайпа, что и в наших обзорах. Эти материалы носят исключительно образовательный характер — они не являются индивидуальной инвестиционной рекомендацией, и ничто здесь не является призывом купить или продать какой-либо актив. Если вы хотите увидеть исследование в действии, а не только в теории, каждая опубликованная нами идея зафиксирована в <a href="https://belfed.ru/ru/trades.html">публичной истории сделок</a> — с победами и убытками без исключений.</p>
+
+    <h2 class="learn-section-label">Темы</h2>
+    <div class="learn-cat-grid">
+      <div class="learn-cat-card">
+        <h3>Измерение риска и результатов</h3>
+        <p>Как правильно читать историю сделок: R-мультипликаторы, процент прибыльных сделок, математическое ожидание и расчёт размера позиции.</p>
+        <span class="learn-cat-status">1 материал опубликован</span>
+      </div>
+      <div class="learn-cat-card">
+        <h3>Стратегии и таймфреймы</h3>
+        <p>Свинг-, дневная и позиционная торговля: чем они отличаются друг от друга и какие риски несёт каждая.</p>
+        <span class="learn-cat-status">1 материал опубликован</span>
+      </div>
+      <div class="learn-cat-card">
+        <h3>Как оценивать сервисы сигналов и исследований</h3>
+        <p>Что проверить перед тем, как платить за чужие торговые идеи — включая наши.</p>
+        <span class="learn-cat-status">Скоро</span>
+      </div>
+    </div>
+
+    <h2 class="learn-section-label">Материалы</h2>
+    <div class="learn-article-list">
+      <article class="learn-article-card">
+        <span class="learn-article-cat">Измерение риска и результатов</span>
+        <h3><a href="/learn/r-multiplikator.html">Что такое R-мультипликатор? Понятное руководство</a></h3>
+        <p>Почему профессиональные и серьёзные частные трейдеры измеряют результат в R, а не в рублях или процентах, формула, разобранные примеры и почему один процент прибыльных сделок может обманывать.</p>
+        <span class="learn-article-meta">Образовательный материал · Обновлено в июле 2026</span>
+      </article>
+      <article class="learn-article-card">
+        <span class="learn-article-cat">Стратегии и таймфреймы</span>
+        <h3><a href="/learn/sving-treyding.html">Что такое свинг-трейдинг? Стратегия, таймфреймы, риски и примеры</a></h3>
+        <p>Нейтральный взгляд на свинг-трейдинг: чем он отличается от дневной и позиционной торговли, реальные риски и просадки, и как выглядит типичный свинг-сетап.</p>
+        <span class="learn-article-meta">Образовательный материал · Обновлено в июле 2026</span>
+      </article>
+    </div>
+
+    <div class="learn-cta">
+      <h2>Хотите увидеть это на практике, а не только в теории?</h2>
+      <p>Каждый сетап, который мы публикуем, построен на той же риск-ориентированной логике, что описана в этих материалах — а каждая закрытая сделка, победа или убыток, есть в публичной истории.</p>
+      <div class="cta-row">
+        <a href="https://belfed.ru/ru/trades.html" class="btn btn-ghost">Смотреть публичную историю сделок</a>
+        <a href="/#pricing" class="btn btn-primary">Начать 14-дневный бесплатный доступ</a>
+      </div>
+    </div>
+    <p class="learn-disclaimer">Раздел «Belfed Обучение» носит исключительно образовательный и информационный характер. Ничто на этой странице и на связанных с ней страницах не является инвестиционной, финансовой, налоговой или юридической консультацией, а также не является индивидуальной инвестиционной рекомендацией или призывом купить или продать какой-либо актив. Торговля связана с существенным риском потери средств, включая возможную потерю всей вложенной суммы. Полный текст — в разделе <a href="/disclaimer.html">Раскрытие рисков</a>.</p>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <span class="logo">BELFED<span class="cursor" aria-hidden="true">_</span></span>
+        <p>Независимые глобальные инвестиционные исследования. Рыночная аналитика и торговые идеи по акциям, крипто и сырью.</p>
+      </div>
+      <div class="foot-col">
+        <h3>Продукт</h3>
+        <ul><li><a href="/#tour">Что вы получаете</a></li><li><a href="/#pricing">Тарифы</a></li><li><a href="/ru/trades.html" target="_blank" rel="noopener">История сделок</a></li><li><a href="/learn/">Обучение</a></li></ul>
+      </div>
+      <div class="foot-col">
+        <h3>Сообщество</h3>
+        <ul><li><a href="https://t.me/BelFedFreeRU" target="_blank" rel="noopener">Telegram · RU</a></li><li><a href="https://tradingview.com/u/BelFed_Analytics" target="_blank" rel="noopener">TradingView</a></li><li><a href="https://x.com/art_the_trader" target="_blank" rel="noopener">X / Twitter</a></li></ul>
+      </div>
+      <div class="foot-col">
+        <h3>Юридическое</h3>
+        <ul><li><a href="/ru/oferta.html">Оферта</a></li><li><a href="/ru/privacy.html">Политика конфиденциальности</a></li><li><a href="/disclaimer.html">Раскрытие рисков</a></li></ul>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 Belfed Analytics. Все права защищены. · Платежи через Tribute.</span>
+      <span>Раскрытие рисков: трейдинг сопряжён со значительным риском убытков. Прошлые результаты не гарантируют будущих. Ничего на этом сайте не является финансовой рекомендацией.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var ham = document.getElementById('ham');
+    var drop = document.getElementById('menuDrop');
+    if (!ham || !drop) return;
+    ham.addEventListener('click', function () {
+      var open = drop.classList.toggle('open');
+      ham.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    drop.querySelectorAll('a').forEach(function (a) {
+      a.addEventListener('click', function () { drop.classList.remove('open'); ham.setAttribute('aria-expanded', 'false'); });
+    });
+  })();
+</script>
+</body>
+</html>

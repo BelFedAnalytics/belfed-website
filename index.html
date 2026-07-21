@@ -157,6 +157,16 @@
       color: var(--gray-soft); letter-spacing: 0.04em;
     }
     .nav-links a:hover { color: var(--black); }
+    /* Learn nav item + minimalist BETA badge (subtle, AA contrast, no layout shift) */
+    .nav-learn { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+    .nav-beta {
+      font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--green-strong); background: var(--green-soft);
+      border: 1px solid var(--rule-strong);
+      padding: 1px 5px; border-radius: 99px; line-height: 1.4;
+      position: relative; top: -1px;
+    }
 
     .nav-right { display: flex; align-items: center; gap: 14px; }
     /* Language switcher — globe icon with target lang badge, same on all viewports */
@@ -322,6 +332,13 @@
     }
     .record-foot a { color: var(--green-strong); }
     .record-foot a:hover { text-decoration: underline; text-underline-offset: 4px; }
+    .perf-framing {
+      margin: 0 0 28px; max-width: 760px;
+      font-family: var(--font-mono); font-size: 13px; line-height: 1.7;
+      color: var(--gray-soft); letter-spacing: 0.01em;
+    }
+    .perf-framing a { color: var(--green-strong); font-weight: 700; white-space: nowrap; }
+    .perf-framing a:hover { text-decoration: underline; text-underline-offset: 3px; }
 
     /* SECTION */
     section.sec { padding: clamp(64px, 8vw, 112px) 0; border-bottom: 1px solid var(--rule); }
@@ -979,6 +996,7 @@
     <li><a href="#tour" data-spy="tour">Что вы получаете</a></li>
     <li><a href="#how" data-spy="how">Как это работает</a></li>
     <li><a href="/ru/trades.html" target="_blank" rel="noopener">История сделок ↗</a></li>
+    <li><a href="/learn/" class="nav-learn" aria-label="Обучение, бета">Обучение<span class="nav-beta" aria-hidden="true">бета</span></a></li>
     <li><a href="#pricing" data-spy="pricing">Тарифы</a></li>
     <li><a href="#faq" data-spy="faq">FAQ</a></li>
   </ul>
@@ -1007,7 +1025,7 @@
       <div>
         <div class="eyebrow"><span class="pulse"></span>Платформа рыночной аналитики и трейдинга</div>
         <h1>Рыночный контекст и <span class="acc">торговые возможности</span> для поддержки ваших инвестиционных решений.</h1>
-        <p class="hero-sub">Ежедневная аналитика и торговые возможности на мировых рынках акций, криптовалют и биржевых товаров.<br><br>Вся информация в удобном личном кабинете, по email и в Telegram.</p>
+        <p class="hero-sub">Ежедневная аналитика и торговые возможности на мировых рынках акций, криптовалют и биржевых товаров.<br><br>Вся информация в удобном личном кабинете, по email и в Telegram.<br><br><em>Каждая идея — результат исследования, а не сигнал без объяснений: вход, стоп и цель публикуются с открытым тезисом.</em></p>
         <div class="hero-cta">
           <a href="#pricing" class="btn btn-primary">Начать 14-дневный бесплатный доступ →</a>
           <a href="/ru/trades.html" target="_blank" rel="noopener" class="btn btn-ghost">Смотреть публичную историю сделок</a>
@@ -1059,6 +1077,7 @@
 <!-- ============ TRACK RECORD STRIP ============ -->
 <section class="record" id="record" aria-label="Публичный трек-рекорд">
   <div class="wrap">
+    <p class="perf-framing">Результаты ниже измеряются в R-мультипликаторах — прибыль или убыток по сделке выражается как множитель от суммы, которая была реально поставлена под риск. Так позиция на 5 000 ₽ и позиция на 500 000 ₽, дошедшие до цели, сравнимы на равных. <a href="/learn/r-multiplikator.html">Как считается R-мультипликатор →</a></p>
     <div class="record-grid">
       <div class="record-col">
         <span class="label">2026 Акции <span style="font-weight:400;">YTD</span></span>
@@ -1427,6 +1446,7 @@
           <h3 class="about-pillar-h">Удержание позиций от нескольких дней до нескольких недель.</h3>
           <p class="about-pillar-p">Среднесрочные торговые идеи по акциям, криптовалютам, валютным парам и сырьевым товарам.</p>
           <p class="about-pillar-p">Для каждой идеи указаны точка входа, уровень риска и защитный стоп, а также целевые параметры по прибыли. Торговые идеи на рост или на снижение, с фиксированным размером риска на позицию.</p>
+          <p class="about-pillar-p"><a href="/learn/sving-treyding.html" style="color:var(--green-strong);font-weight:700;">Что такое свинг-трейдинг и как читать такой сетап →</a></p>
         </div>
         <div class="about-pillar">
           <div class="about-pillar-kicker">// Макро-аналитика и аллокация капитала</div>
@@ -1519,7 +1539,7 @@
       </div>
       <div class="foot-col">
         <h3>Продукт</h3>
-        <ul><li><a href="#tour">Что вы получаете</a></li><li><a href="#how">Как это работает</a></li><li><a href="#pricing">Тарифы</a></li><li><a href="/ru/trades.html" target="_blank" rel="noopener">История сделок</a></li><li><a href="#free-analysis">Бесплатный анализ</a></li></ul>
+        <ul><li><a href="#tour">Что вы получаете</a></li><li><a href="#how">Как это работает</a></li><li><a href="#pricing">Тарифы</a></li><li><a href="/ru/trades.html" target="_blank" rel="noopener">История сделок</a></li><li><a href="/learn/">Обучение</a></li><li><a href="#free-analysis">Бесплатный анализ</a></li></ul>
       </div>
       <div class="foot-col">
         <h3>Сообщество</h3>

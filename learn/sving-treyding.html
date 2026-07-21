@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Что такое свинг-трейдинг? Стратегия, таймфреймы, риски</title>
+  <meta name="description" content="Нейтральное руководство по свинг-трейдингу: отличия от дневной и позиционной торговли, реальные риски, расчёт размера позиции и разобранные примеры." />
+  <link rel="canonical" href="https://belfed.ru/learn/sving-treyding.html" />
+  <meta name="theme-color" content="#f5f5f0" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/logo-belfed-512.png" />
+  <link rel="alternate" hreflang="ru" href="https://belfed.ru/learn/sving-treyding.html" />
+  <link rel="alternate" hreflang="en" href="https://belfed.com/learn/what-is-swing-trading.html" />
+  <link rel="alternate" hreflang="x-default" href="https://belfed.com/learn/what-is-swing-trading.html" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Belfed" />
+  <meta property="og:locale" content="ru_RU" />
+  <meta property="og:title" content="Что такое свинг-трейдинг? Стратегия, таймфреймы, риски" />
+  <meta property="og:description" content="Нейтральное руководство по свинг-трейдингу: отличия от дневной и позиционной торговли, реальные риски, расчёт размера позиции и разобранные примеры." />
+  <meta property="og:url" content="https://belfed.ru/learn/sving-treyding.html" />
+  <meta property="og:image" content="https://belfed.ru/og-belfed.png" />
+  <meta property="og:image:alt" content="Belfed Обучение — что такое свинг-трейдинг" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Что такое свинг-трейдинг? Стратегия, таймфреймы, риски" />
+  <meta name="twitter:description" content="Нейтральное руководство по свинг-трейдингу: отличия от дневной и позиционной торговли, реальные риски, расчёт размера позиции и разобранные примеры." />
+  <meta name="twitter:image" content="https://belfed.ru/og-belfed.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet"></noscript>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --font-mono: 'Courier Prime', 'Courier New', ui-monospace, monospace;
+      --white: #f5f5f0; --paper: #efefe7; --paper-2: #e7e7dd;
+      --rule: #1a1a1a14; --rule-strong: #1a1a1a26;
+      --black: #0a0a0a; --ink: #161614; --ink-2: #2a2a26;
+      --gray: #686862; --gray-soft: #6b6b6b; --gray-faint: #b3b3a8;
+      --green: #1a6b3a; --green-soft: #1a6b3a14; --green-strong: #14542d;
+      --radius: 8px; --radius-lg: 12px; --t: 0.2s ease;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font-mono); background: var(--white); color: var(--ink);
+      font-size: 15px; line-height: 1.65; -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+    .wrap { width: 100%; max-width: 920px; margin: 0 auto; padding: 0 28px; }
+    .skip-link { position: absolute; left: -9999px; top: 0; z-index: 1000; background: var(--black); color: var(--white); padding: 10px 16px; border-radius: 4px; font-weight: 700; }
+    .skip-link:focus { left: 8px; top: 8px; }
+    /* NAV */
+    .nav {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 28px; background: color-mix(in oklab, var(--white) 88%, transparent);
+      backdrop-filter: blur(10px); border-bottom: 1px solid var(--rule);
+    }
+    .logo { font-family: var(--font-mono); font-weight: 700; font-size: 17px; letter-spacing: 0.22em; color: var(--black); white-space: nowrap; }
+    .logo .cursor { color: var(--green); margin-left: 2px; }
+    .nav-links { display: flex; align-items: center; gap: 28px; list-style: none; }
+    .nav-links a { font-family: var(--font-mono); font-size: 13px; color: var(--gray-soft); letter-spacing: 0.04em; }
+    .nav-links a:hover { color: var(--black); }
+    .nav-links a.active { color: var(--black); }
+    .nav-learn { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+    .nav-beta {
+      font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--green-strong); background: var(--green-soft);
+      border: 1px solid var(--rule-strong); padding: 1px 5px; border-radius: 99px; line-height: 1.4;
+      position: relative; top: -1px;
+    }
+    .nav-right { display: flex; align-items: center; gap: 14px; }
+    .lang-globe a {
+      width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 50%; color: var(--gray-soft); font-family: var(--font-mono); font-size: 9px;
+      font-weight: 700; letter-spacing: 0.04em; position: relative; transition: color var(--t), background var(--t);
+    }
+    .lang-globe a:hover { color: var(--ink); background: var(--paper); }
+    .lang-globe .lang-code { position: absolute; bottom: -2px; right: -2px; background: var(--black); color: var(--white); font-size: 8px; padding: 1px 4px; border-radius: 6px; letter-spacing: 0.05em; line-height: 1.1; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-weight: 700; font-size: 13px; letter-spacing: 0.02em; border-radius: 6px; padding: 10px 18px; border: 1px solid transparent; cursor: pointer; transition: background var(--t), color var(--t), border-color var(--t); }
+    .btn-sm { padding: 8px 14px; font-size: 12px; }
+    .btn-primary { background: var(--green-strong); color: var(--white); }
+    .btn-primary:hover { background: var(--green); }
+    .btn-ghost { background: transparent; color: var(--ink); border-color: var(--rule-strong); }
+    .btn-ghost:hover { border-color: var(--ink); }
+    .hamburger { display: none; width: 36px; height: 36px; align-items: center; justify-content: center; color: var(--gray-soft); border-radius: 4px; background: transparent; border: 1px solid var(--rule-strong); }
+    .menu-drop { display: none; }
+    /* BREADCRUMB */
+    .crumb { font-family: var(--font-mono); font-size: 12px; color: var(--gray-soft); letter-spacing: 0.04em; padding: 24px 0 0; }
+    .crumb ol { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .crumb a { color: var(--green-strong); }
+    .crumb a:hover { text-decoration: underline; text-underline-offset: 3px; }
+    .crumb .sep { color: var(--gray-faint); }
+    .crumb [aria-current="page"] { color: var(--gray-soft); }
+    /* ARTICLE */
+    .article { max-width: 720px; margin: 0 auto; }
+    .article-head { padding: 36px 0 8px; }
+    .article-eyebrow { font-family: var(--font-mono); font-size: 11px; color: var(--gray-soft); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 16px; }
+    .article-head h1 { font-family: var(--font-mono); font-weight: 700; font-size: clamp(26px, 4vw, 40px); line-height: 1.2; letter-spacing: -0.01em; color: var(--black); }
+    .article-byline { margin-top: 18px; font-family: var(--font-mono); font-size: 12px; color: var(--gray-soft); letter-spacing: 0.03em; line-height: 1.7; }
+    .article-body { padding: 8px 0 0; }
+    .article-body p { margin: 0 0 20px; font-size: 15.5px; line-height: 1.75; color: var(--ink-2); }
+    .article-body h2 { font-family: var(--font-mono); font-weight: 700; font-size: clamp(20px, 2.6vw, 26px); line-height: 1.3; color: var(--black); margin: 40px 0 16px; letter-spacing: -0.005em; }
+    .article-body a { color: var(--green-strong); font-weight: 700; }
+    .article-body a:hover { text-decoration: underline; text-underline-offset: 3px; }
+    .article-body ul, .article-body ol { margin: 0 0 20px; padding-left: 22px; }
+    .article-body li { margin: 0 0 12px; font-size: 15.5px; line-height: 1.75; color: var(--ink-2); }
+    .article-body strong { color: var(--ink); }
+    .disclaimer-box { margin: 0 0 28px; padding: 18px 20px; border: 1px solid var(--rule-strong); border-left: 3px solid var(--green-strong); border-radius: var(--radius); background: var(--paper); }
+    .disclaimer-box p { margin: 0; font-size: 13px; line-height: 1.7; color: var(--gray-soft); font-style: italic; }
+    .table-scroll { margin: 0 0 24px; overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--rule-strong); border-radius: var(--radius); }
+    table.cmp { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 13px; min-width: 560px; }
+    table.cmp caption { text-align: left; padding: 12px 14px; font-size: 12px; color: var(--gray-soft); letter-spacing: 0.04em; border-bottom: 1px solid var(--rule); }
+    table.cmp th, table.cmp td { padding: 12px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--rule); line-height: 1.5; }
+    table.cmp thead th { color: var(--black); font-weight: 700; background: var(--paper); }
+    table.cmp tbody th { color: var(--ink); font-weight: 700; background: color-mix(in oklab, var(--paper) 60%, transparent); }
+    table.cmp td { color: var(--ink-2); }
+    table.cmp tr:last-child th, table.cmp tr:last-child td { border-bottom: none; }
+    .faq-q { margin: 24px 0 8px; font-family: var(--font-mono); font-weight: 700; font-size: 16px; line-height: 1.4; color: var(--black); }
+    .article-end-note { margin: 32px 0 0; padding: 18px 20px; border-top: 1px solid var(--rule-strong); font-size: 12px; line-height: 1.7; color: var(--gray-soft); font-style: italic; }
+    /* CTA */
+    .learn-cta { margin: 56px auto 0; max-width: 720px; padding: 36px 32px; border: 1px solid var(--rule-strong); border-radius: var(--radius-lg); background: var(--paper); text-align: center; }
+    .learn-cta h2 { font-family: var(--font-mono); font-size: clamp(19px, 2.6vw, 25px); font-weight: 700; line-height: 1.25; color: var(--black); margin-bottom: 14px; }
+    .learn-cta p { max-width: 560px; margin: 0 auto 24px; font-size: 14px; line-height: 1.7; color: var(--ink-2); }
+    .learn-cta .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    /* FOOTER */
+    footer { margin-top: 72px; border-top: 1px solid var(--rule); background: var(--paper); }
+    .foot-grid { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 28px; padding: 48px 0 32px; }
+    .foot-brand p { margin-top: 14px; font-size: 13px; line-height: 1.6; color: var(--gray-soft); max-width: 320px; }
+    .foot-col h3 { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gray-soft); margin-bottom: 14px; }
+    .foot-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .foot-col a { font-size: 13px; color: var(--ink-2); }
+    .foot-col a:hover { color: var(--black); }
+    .foot-bottom { padding: 20px 0 40px; border-top: 1px solid var(--rule); display: flex; flex-direction: column; gap: 10px; font-size: 12px; color: var(--gray-soft); line-height: 1.6; }
+    @media (max-width: 820px) {
+      .foot-grid { grid-template-columns: 1fr 1fr; gap: 24px; }
+    }
+    @media (max-width: 640px) {
+      .nav-links { display: none; }
+      .hamburger { display: inline-flex; }
+      .menu-drop.open { display: block; position: fixed; top: 60px; left: 0; right: 0; background: var(--white); border-bottom: 1px solid var(--rule); padding: 12px 20px 18px; z-index: 99; }
+      .menu-drop.open ul { list-style: none; display: flex; flex-direction: column; }
+      .menu-drop.open a { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 14px; color: var(--ink); border-bottom: 1px solid var(--rule); }
+      .menu-drop.open li:last-child a { border-bottom: none; }
+      .foot-grid { grid-template-columns: 1fr; }
+      .learn-cta { padding: 32px 20px; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  </style>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "@id": "https://belfed.ru/learn/sving-treyding.html#article",
+    "headline": "Что такое свинг-трейдинг? Стратегия, таймфреймы, риски и примеры",
+    "description": "Нейтральное руководство по свинг-трейдингу: отличия от дневной и позиционной торговли, реальные риски, расчёт размера позиции и разобранные примеры.",
+    "url": "https://belfed.ru/learn/sving-treyding.html",
+    "datePublished": "2026-07-20",
+    "dateModified": "2026-07-20",
+    "author": { "@type": "Organization", "@id": "https://belfed.ru/#organization", "name": "Belfed" },
+    "publisher": { "@id": "https://belfed.ru/#organization" },
+    "mainEntityOfPage": "https://belfed.ru/learn/sving-treyding.html",
+    "image": "https://belfed.ru/og-belfed.png",
+    "articleSection": "Стратегии и таймфреймы",
+    "inLanguage": "ru"
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Главная", "item": "https://belfed.ru/" },
+      { "@type": "ListItem", "position": 2, "name": "Обучение", "item": "https://belfed.ru/learn/" },
+      { "@type": "ListItem", "position": 3, "name": "Что такое свинг-трейдинг?", "item": "https://belfed.ru/learn/sving-treyding.html" }
+    ]
+  }
+  </script>
+</head>
+<body>
+<a class="skip-link" href="#main-content">Перейти к основному содержимому</a>
+
+<nav class="nav" aria-label="Primary">
+  <a href="/" class="logo" aria-label="Belfed home">BELFED<span class="cursor" aria-hidden="true">_</span></a>
+  <ul class="nav-links" role="list">
+    <li><a href="/">Главная</a></li>
+    <li><a href="/ru/trades.html" target="_blank" rel="noopener">История сделок ↗</a></li>
+    <li><a href="/learn/" class="nav-learn active" aria-current="page" aria-label="Обучение, бета">Обучение<span class="nav-beta" aria-hidden="true">бета</span></a></li>
+    <li><a href="/#pricing">Тарифы</a></li>
+  </ul>
+  <div class="nav-right">
+    <div class="lang-globe" role="group" aria-label="Язык">
+      <a href="https://belfed.com/learn/what-is-swing-trading.html" aria-label="Switch to English">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18"/></svg><span class="lang-code">EN</span>
+      </a>
+    </div>
+    <a href="/#pricing" class="btn btn-primary btn-sm">Бесплатный доступ</a>
+    <button class="hamburger" id="ham" aria-label="Меню" aria-expanded="false" aria-controls="menuDrop">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </div>
+</nav>
+<div class="menu-drop" id="menuDrop">
+  <ul role="list">
+    <li><a href="/">Главная</a></li>
+    <li><a href="/ru/trades.html">История сделок</a></li>
+    <li><a href="/learn/" aria-current="page">Обучение<span class="nav-beta" aria-hidden="true">бета</span></a></li>
+    <li><a href="/#pricing">Тарифы</a></li>
+    <li><a href="/members.html">Войти</a></li>
+  </ul>
+</div>
+
+<main id="main-content">
+  <div class="wrap">
+    <nav class="crumb" aria-label="Хлебные крошки">
+      <ol>
+        <li><a href="/">Главная</a></li>
+        <li class="sep" aria-hidden="true">/</li>
+        <li><a href="/learn/">Обучение</a></li>
+        <li class="sep" aria-hidden="true">/</li>
+        <li aria-current="page">Что такое свинг-трейдинг?</li>
+      </ol>
+    </nav>
+
+    <article class="article">
+      <header class="article-head">
+        <div class="article-eyebrow">// Стратегии и таймфреймы</div>
+        <h1>Что такое свинг-трейдинг? Стратегия, таймфреймы, риски и примеры</h1>
+        <p class="article-byline">Автор: Команда исследований Belfed · Опубликовано 20 июля 2026 · Обновлено 20 июля 2026 · Образовательный материал</p>
+      </header>
+
+      <div class="article-body">
+        <div class="disclaimer-box">
+          <p>Образовательный материал. Ничто в этой статье не является инвестиционной, финансовой или торговой консультацией, и не должно использоваться как основание для принятия инвестиционных решений. Торговля и инвестирование связаны с существенным риском потери средств, включая потерю основного капитала, а прошлые результаты не гарантируют результатов в будущем. Проводите собственный анализ и рассмотрите консультацию с лицензированным финансовым специалистом перед принятием инвестиционных решений.</p>
+        </div>
+
+        <p>Свинг-трейдинг (от англ. <em>swing</em> — «качели», «взмах») находится между дневной торговлей и позиционной торговлей практически по всем значимым параметрам: сколько времени вы держите позицию, сколько внимания это требует и какую часть рыночного движения вы пытаетесь захватить. Этот материал объясняет, что такое свинг-трейдинг на практике, чем он отличается от стратегий по обе стороны от него, какие риски он несёт на самом деле, и как выглядит типичный свинг-сетап.</p>
+
+        <h2>Что означает свинг-трейдинг</h2>
+        <p>Свинг-трейдинг — это техническая, а часто и частично основанная на фундаментальных факторах стратегия, цель которой — заработать на рыночном движении («свинге»), которое разворачивается за период от нескольких дней до нескольких недель, а не в рамках одной торговой сессии и не за месяцы или годы (<a href="https://www.investopedia.com/terms/s/swing.asp" target="_blank" rel="noopener nofollow">Investopedia: What Is a Swing?</a>). Свинг-трейдер, как правило, держит позицию через одно определённое движение — пробой, откат в рамках более крупного тренда или разворот — и закрывает её, когда движение реализовалось или когда тезис оказался неверным (<a href="https://www.home.saxo/learn/guides/trading-strategies/what-is-swing-trading" target="_blank" rel="noopener nofollow">Saxo: What is Swing Trading</a>).</p>
+        <p>Этот стиль работает на разных классах активов — акции, крипто, валюты и сырьё все демонстрируют многодневные направленные движения — поэтому это распространённый подход для трейдеров, которые следят за несколькими рынками, а не специализируются на одном инструменте.</p>
+
+        <h2>Свинг-трейдинг vs. дневная торговля vs. позиционная торговля</h2>
+        <p>Три стиля лучше воспринимать как спектр по горизонту удержания позиции и требуемому вниманию, а не как заведомо лучший или худший подход:</p>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Сравнение стилей торговли">
+          <table class="cmp">
+            <caption>Сравнение трёх стилей торговли по горизонту удержания и требуемому вниманию</caption>
+            <thead>
+              <tr>
+                <th scope="col">Параметр</th>
+                <th scope="col">Дневная торговля (дейтрейдинг)</th>
+                <th scope="col">Свинг-трейдинг</th>
+                <th scope="col">Позиционная торговля</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Типичный горизонт удержания</th>
+                <td>Внутри дня; позиции закрываются в тот же день</td>
+                <td>От нескольких дней до нескольких недель</td>
+                <td>От недель до месяцев, иногда лет</td>
+              </tr>
+              <tr>
+                <th scope="row">Основной драйвер</th>
+                <td>Внутридневное движение цены, поток заявок</td>
+                <td>Многодневная техническая структура, катализаторы</td>
+                <td>Макротренд, фундаментальные факторы, долгосрочные темы</td>
+              </tr>
+              <tr>
+                <th scope="row">Требуемое время у экрана</th>
+                <td>Высокое; почти непрерывный мониторинг во время торговой сессии</td>
+                <td>Умеренное; периодические проверки</td>
+                <td>Низкое; редкий пересмотр</td>
+              </tr>
+              <tr>
+                <th scope="row">Риск в выходные/ночью</th>
+                <td>Как правило, исключается по конструкции стратегии</td>
+                <td>Принимается как часть стратегии</td>
+                <td>Принимается и ожидается</td>
+              </tr>
+              <tr>
+                <th scope="row">Регуляторные особенности (США, для контекста)</th>
+                <td>Исторически подпадала под маржинальные правила FINRA для «частых внутридневных трейдеров»</td>
+                <td>Не подпадает под правила, специфичные для дейтрейдинга</td>
+                <td>Не подпадает под правила, специфичные для дейтрейдинга</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p><strong>Дейтрейдинг</strong> по правилам американского регулятора FINRA определяется как покупка и продажа (или продажа и покупка) одной и той же ценной бумаги в течение одного дня на маржинальном счёте (<a href="https://www.finra.org/rules-guidance/rulebooks/finra-rules/4210" target="_blank" rel="noopener nofollow">FINRA Rule 4210</a>). На протяжении многих лет американские дейтрейдеры на маржинальных счетах, совершавшие четыре или более внутридневных сделки за пять рабочих дней, получали статус «частого внутридневного трейдера» (Pattern Day Trader, PDT) и были обязаны держать на счёте минимум 25 000 долларов собственного капитала. С 4 июня 2026 года FINRA заменила эту систему новым режимом «внутридневной маржи»: статус PDT и минимальный порог в 25 000 долларов отменены, а маржа теперь рассчитывается по реальной внутридневной экспозиции, а не по количеству сделок, с переходным периодом до 20 октября 2027 года (<a href="https://www.finra.org/investors/insights/intraday-margin-requirements" target="_blank" rel="noopener nofollow">FINRA: Understanding the New Intraday Margin Requirements</a>). Это изменение касается конкретно дейтрейдинга на маржинальных счетах в США; оно не применяется к свинг- или позиционной торговле, которые не предполагают сделок в рамках одного дня и не подпадают под эти маржинальные требования. <strong>Важно для российского читателя:</strong> это регулирование действует в юрисдикции США и напрямую не относится к брокерским счетам, открытым у российских брокеров, — правила маржинальной торговли для российских инвесторов устанавливаются Банком России и конкретным брокером. Приводим это правило здесь как иллюстрацию того, как регуляторы в принципе разграничивают дейтрейдинг и другие стили торговли, а не как применимую норму. Уточняйте актуальные маржинальные требования непосредственно у своего брокера.</p>
+        <p><strong>Позиционная торговля</strong> находится на противоположном конце спектра от дейтрейдинга: позиции удерживаются недели, месяцы или дольше, и трейдер фокусируется на направлении основного тренда — процентных ставках, отраслевых циклах, росте прибыли компаний, структурных сдвигах — а не на краткосрочных колебаниях цены (<a href="https://www.ebc.com/forex/position-trading-vs-swing-trading-10-key-differences" target="_blank" rel="noopener nofollow">EBC Financial Group: Position Trading vs Swing Trading</a>). Ни один из стилей не является заведомо лучше — правильный выбор зависит от доступного времени, темперамента и цели: например, генерировать более частые, но меньшие по размеру результаты против накопления меньшего числа более крупных, медленнее реализующихся движений (<a href="https://www.vectorvest.com/blog/swing-trading/position-trading-vs-swing-trading/" target="_blank" rel="noopener nofollow">VectorVest: Position Trading vs Swing Trading</a>).</p>
+
+        <h2>Как выглядит типичный свинг-сетап</h2>
+        <p>У дисциплинированной свинг-сделки, как правило, есть три элемента, определённые до входа, а не придуманные по ходу дела:</p>
+        <ol>
+          <li><strong>Вход</strong> — уровень цены или условие, подтверждающее тезис (например, пробой уровня сопротивления или откат к определённому уровню поддержки в рамках устоявшегося тренда).</li>
+          <li><strong>Стоп-лосс</strong> — цена, при достижении которой тезис считается неверным, и позиция закрывается, чтобы ограничить убыток. Это определяет начальный риск сделки.</li>
+          <li><strong>Цель</strong> — уровень цены, на котором тезис предположительно реализуется полностью; используется, чтобы заранее спланировать выход и рассчитать соотношение риска и потенциальной прибыли до входа в сделку.</li>
+        </ol>
+        <p><strong>Разобранный пример.</strong> Свинг-трейдер находит акцию в восходящем тренде, которая откатилась к предыдущему уровню поддержки на отметке 8 000 ₽. Он покупает по 8 050 ₽, ставит стоп на уровне 7 700 ₽ (риск — 350 ₽ на акцию) и устанавливает цель на уровне 9 100 ₽, ориентируясь на предыдущий локальный максимум. Плановое соотношение потенциальной прибыли к риску составляет примерно 3:1 ещё до открытия позиции (потенциальная прибыль 1 050 ₽ против риска 350 ₽). Если акция разворачивается и доходит до стопа, убыток ограничен заранее определёнными 350 ₽ на акцию; если цена достигает цели, прибыль примерно втрое больше суммы риска. Выражение этого результата как множителя от риска («R-мультипликатор») — стандартный способ оценить сделку постфактум; см. наше руководство <a href="/learn/r-multiplikator.html">«Что такое R-мультипликатор?»</a> о том, как это считается и почему это важнее, чем сырой процент прибыльных сделок.</p>
+
+        <h2>Распространённые подходы в свинг-трейдинге</h2>
+        <ul>
+          <li><strong>Вход по откату в тренде</strong> — покупка на просадках в рамках устоявшегося восходящего тренда (или продажа на отскоках в рамках нисходящего), исходя из того, что доминирующий тренд возобновится (<a href="https://www.ig.com/en/trading-opportunities/a-beginner_s-guide-to-swing-trading-39725-170830" target="_blank" rel="noopener nofollow">IG: Beginner's Guide to Swing Trading</a>).</li>
+          <li><strong>Вход по пробою</strong> — открытие позиции при решительном выходе цены за пределы определённого диапазона или уровня сопротивления/поддержки, в ожидании продолжения движения.</li>
+          <li><strong>Разворотные сетапы</strong> — вход против недавнего краткосрочного тренда на уровне, где техническая или фундаментальная картина указывает на исчерпание движения; как правило, самый высокорисковый из трёх подходов, поскольку он идёт против недавнего импульса.</li>
+          <li><strong>Чтение графических паттернов</strong> — использование ценовых и объёмных паттернов (диапазоны, каналы, скользящие средние) для тайминга входов и выходов в рамках более широкого тезиса — навык, который, как отмечает образовательный материал Charles Schwab, требует практики и не гарантирует результата даже когда паттерн выглядит «чисто» (<a href="https://www.schwab.com/learn/story/how-to-read-stock-charts-and-trading-patterns" target="_blank" rel="noopener nofollow">Charles Schwab: How to Read Stock Charts and Trading Patterns</a>).</li>
+        </ul>
+
+        <h2>Управление риском в свинг-трейдинге</h2>
+        <p>Поскольку свинг-позиция удерживается через несколько торговых сессий, она подвержена риску ночных и выходных гэпов, которого нет у дневной сделки — новости, отчётность компаний или макроэкономические события могут сдвинуть рынок, пока он закрыт, вызывая прохождение цены через уровень стопа гэпом, а не аккуратное исполнение прямо на нём. Это структурный риск самого стиля торговли, и одна из причин, по которой расчёт размера позиции важен не меньше, чем выбор самой сделки.</p>
+        <p>Две практики являются почти универсальными в дисциплинированном свинг-трейдинге:</p>
+        <ol>
+          <li><strong>Фиксированный процентный риск на сделку.</strong> Многие трейдеры рискуют небольшой, постоянной долей капитала счёта на любую отдельную идею (часто упоминаемый диапазон — около 1–2%), чтобы ни один отдельный убыток не был критичным для капитала, а серия убыточных сделок не превратилась в чрезмерную просадку (<a href="https://www.tradezella.com/blog/position-size-calculator" target="_blank" rel="noopener nofollow">TradeZella: Position Size Calculator</a>).</li>
+          <li><strong>Заранее определённый стоп до входа.</strong> Решение о точке выхода при провале тезиса, принятое до открытия позиции, убирает соблазн сдвинуть стоп дальше после того, как сделка уже пошла против вас.</li>
+        </ol>
+        <p>Ни одна из этих практик не устраняет риск полностью. Гэпы, проскальзывание цены (slippage) и периоды, когда стратегия просто перестаёт работать (смена рыночного режима, изменение волатильности) — реальны и могут затронуть даже хорошо спроектированный, исторически надёжный подход. Историческая статистика стратегии — включая процент прибыльных сделок, среднее соотношение риска и прибыли и даже реальный, опубликованный трек-рекорд в R — описывает то, что уже произошло, а не то, что гарантированно произойдёт впредь.</p>
+
+        <h2>Реалистичные ограничения свинг-трейдинга</h2>
+        <p>Свинг-трейдинг часто преподносится как менее требовательная по времени альтернатива дейтрейдингу, но у него есть ограничения, которые стоит назвать прямо:</p>
+        <ul>
+          <li><strong>Требует терпения во время открытой просадки.</strong> Свинг-трейдер регулярно будет наблюдать, как открытая позиция движется против точки входа, прежде чем (если тезис верен) восстановиться — или прежде чем сработает стоп и убыток будет зафиксирован. Психологически это сложнее для некоторых трейдеров, чем более быстрое разрешение дневной сделки.</li>
+          <li><strong>Это не пассивная стратегия.</strong> Позиции всё равно нужно отслеживать для управления стопом и целью, а рыночные условия (низкая волатильность, «пилообразный», не имеющий выраженного направления рынок) могут снижать частоту и качество чистых сетапов.</li>
+          <li><strong>Короткая прибыльная выборка мало о чём говорит.</strong> Несколько выигранных свинг-сделок почти ничего не говорят о долгосрочной жизнеспособности стратегии; значение имеет математическое ожидание на значимой выборке закрытых сделок, а не короткая серия побед (см. <a href="/learn/r-multiplikator.html">«Что такое R-мультипликатор?»</a> о том, почему один процент прибыльных сделок ненадёжен).</li>
+          <li><strong>Издержки накапливаются.</strong> Спреды, издержки на финансирование плечевых или overnight-позиций и биржевые/брокерские комиссии — всё это снижает реальную доходность относительно теоретического движения цены, и это нужно учитывать до того, как предполагать, что результаты бэктеста напрямую перенесутся в реальную торговлю.</li>
+        </ul>
+
+        <h2>Как Belfed подходит к свинг-трейдингу</h2>
+        <p>Опубликованные торговые идеи Belfed — это многодневные-многонедельные свинг-сетапы по акциям, крипте, валютам и сырью, публикуемые с определённым входом, стопом и целью и рассчитанные как фиксированная единица риска — та же структура, что описана в разобранном примере выше (<a href="https://belfed.ru/">Belfed</a>). Каждая закрытая идея, лонг или шорт, фиксируется с результатом в <a href="https://belfed.ru/ru/trades.html">публичной истории сделок</a>, а логика каждого сетапа — структура тренда и сама идея, а не только уровни — объясняется в момент публикации, а не подаётся как сигнал без объяснений.</p>
+
+        <h2>Часто задаваемые вопросы</h2>
+        <p class="faq-q">Свинг-трейдинг безопаснее дейтрейдинга?</p>
+        <p>Ни один из стилей не является заведомо «безопаснее» — у них разные профили риска. Дейтрейдинг избегает риска ночных гэпов, но требует быстрого принятия решений и, для американских маржинальных счетов, исторически подпадал под более строгие маржинальные правила для частых трейдеров; свинг-трейдинг избегает этой интенсивности, но подвержен риску гэпа из-за новостей или событий, произошедших, пока позиция удерживалась ночью или в выходные.</p>
+        <p class="faq-q">Сколько капитала нужно для начала свинг-трейдинга?</p>
+        <p>Строгого минимума, навязанного самой стратегией, нет, хотя минимальные требования брокера к счёту и ваш собственный расчёт риска на сделку (обычно — небольшой процент капитала счёта на идею) определят, какие размеры позиций практически доступны. Уточняйте конкретные требования к марже и минимальному депозиту у своего брокера — они различаются и не регулируются напрямую самой стратегией свинг-трейдинга.</p>
+        <p class="faq-q">Можно ли сочетать свинг-трейдинг с более долгосрочным инвестированием?</p>
+        <p>Да. Многие самостоятельные инвесторы держат основной долгосрочный портфель, выделяя отдельную, меньшую часть капитала на свинг-сетапы; эти два подхода не исключают друг друга, хотя обычно требуют раздельных риск-бюджетов и раздельной оценки результатов.</p>
+
+        <p class="article-end-note">Этот материал носит исключительно образовательный характер и не является инвестиционной консультацией или призывом купить или продать какой-либо актив, включая ценные бумаги и криптоактивы. Торговля связана с риском, включая возможную потерю всей вложенной суммы. Проконсультируйтесь с лицензированным финансовым специалистом перед принятием инвестиционных решений.</p>
+      </div>
+    </article>
+
+    <div class="learn-cta">
+      <h2>Как выглядит свинг-сетап на практике?</h2>
+      <p>Belfed публикует многодневные свинг-идеи с открытым тезисом, входом, стопом и целью — а каждая закрытая сделка, победа или убыток, есть в публичной истории.</p>
+      <div class="cta-row">
+        <a href="https://belfed.ru/ru/trades.html" class="btn btn-ghost">Смотреть публичную историю сделок</a>
+        <a href="/#pricing" class="btn btn-primary">Начать 14-дневный бесплатный доступ</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <span class="logo">BELFED<span class="cursor" aria-hidden="true">_</span></span>
+        <p>Независимые глобальные инвестиционные исследования. Рыночная аналитика и торговые идеи по акциям, крипто и сырью.</p>
+      </div>
+      <div class="foot-col">
+        <h3>Продукт</h3>
+        <ul><li><a href="/#tour">Что вы получаете</a></li><li><a href="/#pricing">Тарифы</a></li><li><a href="/ru/trades.html" target="_blank" rel="noopener">История сделок</a></li><li><a href="/learn/">Обучение</a></li></ul>
+      </div>
+      <div class="foot-col">
+        <h3>Сообщество</h3>
+        <ul><li><a href="https://t.me/BelFedFreeRU" target="_blank" rel="noopener">Telegram · RU</a></li><li><a href="https://tradingview.com/u/BelFed_Analytics" target="_blank" rel="noopener">TradingView</a></li><li><a href="https://x.com/art_the_trader" target="_blank" rel="noopener">X / Twitter</a></li></ul>
+      </div>
+      <div class="foot-col">
+        <h3>Юридическое</h3>
+        <ul><li><a href="/ru/oferta.html">Оферта</a></li><li><a href="/ru/privacy.html">Политика конфиденциальности</a></li><li><a href="/disclaimer.html">Раскрытие рисков</a></li></ul>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 Belfed Analytics. Все права защищены. · Платежи через Tribute.</span>
+      <span>Раскрытие рисков: трейдинг сопряжён со значительным риском убытков. Прошлые результаты не гарантируют будущих. Ничего на этом сайте не является финансовой рекомендацией.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var ham = document.getElementById('ham');
+    var drop = document.getElementById('menuDrop');
+    if (!ham || !drop) return;
+    ham.addEventListener('click', function () {
+      var open = drop.classList.toggle('open');
+      ham.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    drop.querySelectorAll('a').forEach(function (a) {
+      a.addEventListener('click', function () { drop.classList.remove('open'); ham.setAttribute('aria-expanded', 'false'); });
+    });
+  })();
+</script>
+</body>
+</html>
