@@ -311,19 +311,19 @@ tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
     var GID='0';
     var csvUrl='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:csv&gid='+GID+'&single=true';
     function parseCSV(text){
-        var lines=text.split(/\r?\n/);
-        var results=[];
-        for(var i=0;i<lines.length;i++){
-            var cols=[];var cur='';var inQ=false;
-            for(var c=0;c<lines[i].length;c++){
-                var ch=lines[i][c];
-                if(ch=='"'&&inQ&&lines[i][c+1]=='"'){cur+='"';c++;}
-                else if(ch=='"'){inQ=!inQ;}
-                else if(ch==','&&!inQ){cols.push(cur.trim());cur='';}
-                else{cur+=ch;}
+        var results=[];var cols=[];var cur='';var inQ=false;
+        for(var i=0;i<text.length;i++){
+            var ch=text[i];
+            if(ch=='"'&&inQ&&text[i+1]=='"'){cur+='"';i++;}
+            else if(ch=='"'){inQ=!inQ;}
+            else if(ch==','&&!inQ){cols.push(cur.trim());cur='';}
+            else if((ch=='\n'||ch=='\r')&&!inQ){
+                if(ch=='\r'&&text[i+1]=='\n')i++;
+                cols.push(cur.trim());results.push(cols);cols=[];cur='';
             }
-            cols.push(cur.trim());results.push(cols);
+            else{cur+=ch;}
         }
+        if(cur!==''||cols.length){cols.push(cur.trim());results.push(cols);}
         return results;
     }
     function makeRClass(val){var n=parseFloat(String(val).replace(',','.'));if(isNaN(n))return'';return n>0?'win':'loss';}
