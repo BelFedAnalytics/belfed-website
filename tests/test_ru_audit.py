@@ -304,3 +304,145 @@ def test_member_cell_read_is_defensive_on_short_row():
     full = short + [""] * (20 - len(short))
     full[19] = "yes"
     assert A.is_yes(A.cell(full, 19)) is True
+
+
+# ------------------------------------- LITE #237 post-close rebuild (Equties:167) --
+# Regression for the missing-history bug: position 237 (LITE) was OPEN during the
+# 2026-07-20 closed-only manifest build, closed 2026-07-21, and no rebuild ran --
+# so live RU showed the generic fallback instead of its published bot timeline.
+# Fixture mirrors trade_audit_2026-07-22/lite_source.json (SQL `partials` field
+# normalised to the snapshot's `partial_closes`). Verbatim RU is preserved,
+# including the author's own English parenthetical; EN payloads never leak.
+LITE_OPENED_RU = ("Цена продолжает формировать более низкие максимумы (lower highs) "
+                  "и сегодня резко реагирует на важной зоны сопротивления в районе "
+                  "ключевых средних, что указывает на продолжающуюся дистрибуцию.")
+LITE_OPENED_EN = "Price continues to print lower highs and is reacting sharply"
+LITE_STOP_RU = ("Смещаем уровень риска на вчерашние максимумы. Чтобы сохранить высокую "
+                "вероятность продолжения коррекции в ближайшие недели, цена должна "
+                "удержаться ниже этой отметки и продолжить закрываться под скользящими "
+                "средними.")
+LITE_STOP_EN = "Shifting the risk level to yesterday's highs."
+
+
+def _lite237():
+    return {
+        "ticker": "LITE", "direction": "short", "asset_class": "stock",
+        "opened_at": "2026-06-25T15:22:14.812229+00:00",
+        "closed_at": "2026-07-21T17:50:03.449+00:00",
+        "exit_price": 839, "result_rr": 1.6189,
+        "comment_ru": LITE_OPENED_RU, "comment_en": LITE_OPENED_EN,
+        "close_comment_ru": None, "close_comment_en": None,
+        "sheet_row_id": "Equties:167",
+        "events": [
+            {"event_type": "opened", "message_id_ru": 965, "message_id_en": 992,
+             "triggered_at": "2026-06-25T15:22:26+00:00",
+             "payload": {"event": "opened", "is_addon": False, "triggered_price": 838.76}},
+            {"event_type": "target_1_hit", "message_id_ru": 1035, "message_id_en": 1065,
+             "triggered_at": "2026-07-02T17:50:07+00:00",
+             "payload": {"triggered_price": 714.72}},
+            {"event_type": "stop_moved", "message_id_ru": 1148, "message_id_en": 1178,
+             "triggered_at": "2026-07-15T13:44:46+00:00",
+             "payload": {"new_stop": 839, "old_stop": 838.76,
+                         "comment_ru": LITE_STOP_RU, "comment_en": LITE_STOP_EN}},
+            {"event_type": "target_2_hit", "message_id_ru": 1200, "message_id_en": 1228,
+             "triggered_at": "2026-07-17T13:45:05+00:00",
+             "payload": {"triggered_price": 653.19}},
+            {"event_type": "stop_hit", "message_id_ru": 1238, "message_id_en": 1266,
+             "triggered_at": "2026-07-21T17:50:05+00:00",
+             "payload": {"triggered_price": 839}},
+        ],
+        "partial_closes": [
+            {"id": 48, "closed_at": "2026-07-02T17:50:06+00:00", "exit_price": 714.72,
+             "pct_closed": 35, "comment_ru": "Auto target_1_hit", "source": "bot"},
+            {"id": 59, "closed_at": "2026-07-17T13:45:04+00:00", "exit_price": 653.19,
+             "pct_closed": 35, "comment_ru": "Auto target_2_hit", "source": "bot"},
+            {"id": 63, "closed_at": "2026-07-21T17:50:03+00:00", "exit_price": 839,
+             "pct_closed": 30, "comment_ru": "Auto stop_hit", "source": "bot"},
+        ],
+    }
+
+
+def test_lite237_full_published_timeline():
+    """All five published RU events become linked steps, in message order, with
+    the correct t.me/c/<RU_CHANNEL>/<RU_TOPIC>/<id> links."""
+    p = _lite237()
+    assert B.is_eligible(p) is True
+    pc_by_id = {pc["id"]: pc for pc in p["partial_closes"]}
+    html = B.build_card(p, pc_by_id)
+
+    assert html.count('class="step"') == 5
+    assert html.count('class="steplink"') == 5
+    for mid in (965, 1035, 1148, 1200, 1238):
+        assert ("https://t.me/c/3773738299/4/%d" % mid) in html
+    # meta: short direction, +1.62R (rounded from 1.6189), exit 839
+    assert "badge-short" in html
+    assert "+1.62R" in html
+    assert "Выход: 839" in html
+
+
+def test_lite237_verbatim_ru_no_english_payload_leak():
+    """Stored RU text is byte-for-byte (incl. the author's '(lower highs)'
+    parenthetical); the parallel comment_en payloads must never render."""
+    p = _lite237()
+    html = B.build_card(p, {pc["id"]: pc for pc in p["partial_closes"]})
+    assert "более низкие максимумы (lower highs)" in html       # opened, verbatim
+    assert "Смещаем уровень риска на вчерашние максимумы." in html  # stop_moved, verbatim
+    assert LITE_OPENED_EN not in html
+    assert LITE_STOP_EN not in html
+    assert "3869302680" not in html                            # EN channel id never leaks
+
+
+def test_lite237_generated_fallbacks_for_unwritten_events():
+    """Events with no stored comment (targets, stop_hit) get de-anglicized RU
+    fallbacks from the payload price."""
+    p = _lite237()
+    html = B.build_card(p, {pc["id"]: pc for pc in p["partial_closes"]})
+    assert "Цель 1 достигнута по 714.72." in html
+    assert "Цель 2 достигнута по 653.19." in html
+    assert "Стоп сработал по 839." in html
+
+
+def _eq_sheet_with_lite(status, exit_, result):
+    """Equties sheet whose row 167 (index 166) is the LITE trade."""
+    header = [["", "", "", "", ""], ["", "", "", "", ""], ["", "Ticker", "", "", ""]]
+    filler = [[""] * 2 for _ in range(163)]        # rows 4..166 -> skipped (blank ticker)
+    lite = ["160", "LITE", "Short", status, "25.06.2026", exit_,
+            "838.76", "906", "839", result]
+    eq = header + filler + [lite]
+    assert len(eq) == 167                          # LITE lands on Equties:167
+    return eq
+
+
+def test_lite237_prebuilt_only_after_close():
+    """Closed-only policy preserved: LITE resolves to a bot card under both the
+    full and collision-safe keys once its sheet row is Closed with an exit and a
+    numeric result -- and is NOT prebuilt while that row is still Open."""
+    kf = "LITE|2026-06-25|2026-07-21"
+    ks = "eq#s#LITE|2026-06-25|2026-07-21"
+
+    # Open row (the pre-close state): nothing prebuilt.
+    eq_open = _eq_sheet_with_lite("Open", "", "")
+    assert B._row_fully_closed(eq_open[166]) is False
+    man = {}
+    B.build(eq_open, [], {"positions": [_lite237()]}, man)
+    assert kf not in man and ks not in man
+
+    # Closed row (post-close rebuild): bot card written under both keys.
+    eq_closed = _eq_sheet_with_lite("Closed", "21.07.2026", "1,62")
+    assert B._row_fully_closed(eq_closed[166]) is True
+    man = {}
+    B.build(eq_closed, [], {"positions": [_lite237()]}, man)
+    assert man.get(kf, {}).get("kind") == "bot"
+    assert man.get(ks, {}).get("kind") == "bot"
+    assert man[kf]["ru"] == man[ks]["ru"]
+    assert man[kf]["ru"].count('class="step"') == 5
+
+
+def test_lite237_present_in_committed_manifest():
+    """The production manifest carries the rebuilt LITE bot timeline under both
+    keys (guards against a future rebuild dropping it)."""
+    with open(A.MANIFEST) as f:
+        m = json.load(f)
+    for k in ("LITE|2026-06-25|2026-07-21", "eq#s#LITE|2026-06-25|2026-07-21"):
+        assert m.get(k, {}).get("kind") == "bot", "missing LITE key %s" % k
+        assert m[k]["ru"].count('class="step"') == 5
