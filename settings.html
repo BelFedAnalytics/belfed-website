@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co; img-src 'self'; frame-src 'none';">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, follow">
+  <title>Настройки аккаунта — Belfed Analytics</title>
+  <link rel="canonical" href="https://belfed.ru/settings.html" />
+  <meta name="description" content="Управление аккаунтом Belfed — пароль, e-mail, Telegram, язык и выход из системы." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet"></noscript>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --black: #0a0a0a;
+      --white: #f5f5f0;
+      --gray: #888;
+      --light-gray: #e8e8e3;
+      --border: #d0d0ca;
+      --green: #1a6b3a;
+      --red: #8b1a1a;
+      --gold: #b8860b;
+      --font: 'Courier Prime', 'Courier New', monospace;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font); background: var(--white);
+      color: var(--black); font-size: 15px; line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: var(--white); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 40px; height: 56px;
+    }
+    .nav-logo { font-size: 17px; font-weight: 700; letter-spacing: 0.05em; text-decoration: none; color: var(--black); }
+    .nav-links { display: flex; gap: 32px; list-style: none; }
+    .nav-links a {
+      font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+      text-decoration: none; color: var(--black); transition: opacity 0.2s;
+    }
+    .nav-links a:hover { opacity: 0.5; }
+    .nav-cta {
+      font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+      text-decoration: none; color: var(--black); background: transparent;
+      padding: 10px 20px; border: 1px solid var(--black); cursor: pointer;
+      font-family: var(--font); transition: background 0.2s, color 0.2s;
+    }
+    .nav-cta:hover { background: var(--black); color: var(--white); }
+
+    main { padding-top: 56px; padding-bottom: 60px; }
+    .settings-hero { padding: 60px 40px 24px; max-width: 900px; }
+    .settings-hero .tag {
+      font-size: 11px; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--gray); margin-bottom: 14px;
+    }
+    .settings-hero h1 {
+      font-size: clamp(26px, 4.5vw, 40px); font-weight: 700;
+      line-height: 1.1; letter-spacing: -0.01em; margin-bottom: 10px;
+    }
+    .settings-hero p { font-size: 14px; color: #555; max-width: 620px; }
+
+    .settings-wrap {
+      margin: 0 40px; max-width: 900px;
+      display: flex; flex-direction: column; gap: 24px;
+    }
+    .settings-card {
+      background: #fff; border: 1px solid var(--border);
+      padding: 28px 32px;
+    }
+    .settings-card h2 {
+      font-size: 13px; letter-spacing: 0.15em; text-transform: uppercase;
+      color: var(--gray); font-weight: 700; margin-bottom: 6px;
+    }
+    .settings-card h3 {
+      font-size: 20px; font-weight: 700; margin-bottom: 8px;
+      letter-spacing: -0.01em;
+    }
+    .settings-card p.card-lead {
+      font-size: 13px; color: var(--gray); margin-bottom: 18px;
+      line-height: 1.6;
+    }
+    .settings-card .field-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; padding: 10px 0; border-top: 1px dashed var(--border);
+      flex-wrap: wrap;
+    }
+    .settings-card .field-row:first-of-type { border-top: none; }
+    .settings-card .field-label { font-size: 13px; color: var(--gray); min-width: 160px; }
+    .settings-card .field-value {
+      font-size: 14px; font-weight: 600; word-break: break-all;
+      flex: 1; min-width: 200px;
+    }
+    .settings-card .field-value.dim { color: var(--gray); font-weight: 400; }
+
+    .btn {
+      display: inline-block; font-family: var(--font);
+      font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+      padding: 10px 18px; border: 1px solid var(--black);
+      background: transparent; color: var(--black); cursor: pointer;
+      text-decoration: none; transition: background .2s, color .2s;
+    }
+    .btn:hover { background: var(--black); color: var(--white); }
+    .btn.btn-primary { background: var(--black); color: var(--white); }
+    .btn.btn-primary:hover { background: #333; }
+    .btn.btn-danger { border-color: var(--red); color: var(--red); }
+    .btn.btn-danger:hover { background: var(--red); color: var(--white); }
+    .btn.btn-small { padding: 6px 12px; font-size: 11px; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .pw-form { display: flex; flex-direction: column; gap: 10px; max-width: 380px; margin-top: 10px; }
+    .pw-form input {
+      font-family: var(--font); padding: 10px 12px; font-size: 14px;
+      border: 1px solid var(--border); background: var(--white);
+      color: var(--black); outline: none; width: 100%;
+    }
+    .pw-form input:focus { border-color: var(--black); background: #fff; }
+    .pw-form .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .pw-status { font-size: 12px; margin-top: 4px; min-height: 18px; }
+    .pw-status.ok { color: var(--green); }
+    .pw-status.err { color: var(--red); }
+    .pw-status.dim { color: var(--gray); }
+
+    .lang-links { display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
+    .lang-links a.active { background: var(--black); color: var(--white); }
+
+    footer {
+      padding: 32px 40px; border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--gray);
+      max-width: 100%; margin-top: 40px;
+    }
+    .footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
+    .footer-links a { color: var(--gray); text-decoration: none; }
+    .footer-links a:hover { color: var(--black); text-decoration: underline; }
+
+    .guest-box {
+      max-width: 480px; margin: 80px auto 60px; padding: 40px 32px;
+      border: 2px solid var(--black); background: #fff; text-align: center;
+    }
+    .guest-box h2 { font-size: 18px; letter-spacing: 0.1em; margin-bottom: 10px; }
+    .guest-box p { font-size: 13px; color: var(--gray); margin-bottom: 20px; line-height: 1.6; }
+
+    @media(max-width: 700px) {
+      nav { padding: 0 16px; }
+      .nav-links { display: none; }
+      .nav-cta { padding: 8px 14px; font-size: 10px; }
+      .settings-hero { padding: 40px 20px 20px; }
+      .settings-wrap { margin: 0 20px; }
+      .settings-card { padding: 22px 20px; }
+      .settings-card .field-row { flex-direction: column; align-items: flex-start; gap: 6px; }
+      .settings-card .field-label { min-width: 0; }
+      footer { padding: 24px 20px; flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/" class="nav-logo">BELFED_</a>
+    <ul class="nav-links">
+      <li><a href="/members.html">Кабинет</a></li>
+      <li><a href="/dashboard.html">Дашборд</a></li>
+      <li><a href="/analytics.html">Аналитика</a></li>
+      <li><a href="/asset-analysis.html">Анализ активов</a></li>
+      <li><a href="https://belfed.com/settings.html" target="_blank">EN</a></li>
+    </ul>
+    <button class="nav-cta" id="navAuthBtn" onclick="handleNavAuth()">Выйти</button>
+  </nav>
+
+  <!-- Гостевое состояние: показывается когда пользователь не авторизован -->
+  <div id="guestScreen" style="display:none">
+    <div class="guest-box">
+      <h2>Требуется вход</h2>
+      <p>Пожалуйста, войдите в свой аккаунт Belfed, чтобы управлять настройками.</p>
+      <a href="/members.html" class="btn btn-primary">Перейти ко входу</a>
+    </div>
+  </div>
+
+  <!-- Авторизованный контент -->
+  <main id="settingsContent" style="display:none">
+    <div class="settings-hero">
+      <div class="tag">// Аккаунт</div>
+      <h1>Настройки</h1>
+      <p>Управляйте паролем, e-mail, привязкой Telegram и языком. Подписка и оплата — в <a href="/members.html#subscription" style="color:inherit;text-decoration:underline">кабинете</a> и через Tribute.</p>
+    </div>
+
+    <div class="settings-wrap">
+
+      <!-- Обзор аккаунта -->
+      <div class="settings-card">
+        <h2>// Аккаунт</h2>
+        <h3>Ваш аккаунт</h3>
+        <p class="card-lead">Основная информация об аккаунте Belfed.</p>
+        <div class="field-row">
+          <div class="field-label">E-mail</div>
+          <div class="field-value" id="acctEmail">&mdash;</div>
+        </div>
+        <div class="field-row">
+          <div class="field-label">Имя</div>
+          <div class="field-value" id="acctName">&mdash;</div>
+        </div>
+        <div class="field-row">
+          <div class="field-label">Статус</div>
+          <div class="field-value" id="acctStatus">&mdash;</div>
+        </div>
+        <div class="field-row" id="acctTrialRow" style="display:none">
+          <div class="field-label">Триал до</div>
+          <div class="field-value" id="acctTrialEnd">&mdash;</div>
+        </div>
+        <div class="field-row">
+          <div class="field-label">Дата регистрации</div>
+          <div class="field-value" id="acctSince">&mdash;</div>
+        </div>
+      </div>
+
+      <!-- Пароль -->
+      <div class="settings-card" id="password">
+        <h2>// Безопасность</h2>
+        <h3>Пароль</h3>
+        <p class="card-lead" id="pwLead">Загрузка&hellip;</p>
+
+        <div class="pw-form" id="pwForm">
+          <input type="password" id="pwNew" placeholder="Новый пароль (минимум 6 символов)" autocomplete="new-password">
+          <input type="password" id="pwNew2" placeholder="Повторите новый пароль" autocomplete="new-password">
+          <div class="actions">
+            <button class="btn btn-primary" id="pwSaveBtn" type="button" onclick="onSavePassword()">Сохранить пароль</button>
+            <a href="#" class="btn btn-small" id="pwResetLink" onclick="onSendResetLink(event)">Прислать ссылку на e-mail</a>
+          </div>
+          <div class="pw-status dim" id="pwStatus"></div>
+        </div>
+      </div>
+
+      <!-- Email preferences -->
+      <div class="settings-card" id="email">
+        <h2>// Уведомления</h2>
+        <h3>E-mail уведомления</h3>
+        <p class="card-lead">Выберите, какие события по позициям и какую аналитику присылать по e-mail. Настройки находятся в кабинете.</p>
+        <a href="/members.html#email" class="btn">Настроить e-mail уведомления &rarr;</a>
+      </div>
+
+      <!-- Telegram -->
+      <div class="settings-card" id="telegram">
+        <h2>// Telegram</h2>
+        <h3>Привязка Telegram</h3>
+        <p class="card-lead" id="tgLead">Привяжите Telegram, чтобы получать торговые сигналы в @BelfedBot и мгновенный доступ в приватный чат.</p>
+        <div class="field-row">
+          <div class="field-label">Telegram</div>
+          <div class="field-value" id="acctTelegram">Не привязан</div>
+        </div>
+        <div style="margin-top:14px">
+          <a id="tgConnectBtn" href="https://t.me/BelfedBot?start=settings_ru" target="_blank" rel="noopener" class="btn btn-primary">Подключить Telegram &rarr;</a>
+        </div>
+      </div>
+
+      <!-- Язык -->
+      <div class="settings-card" id="language">
+        <h2>// Язык</h2>
+        <h3>Язык интерфейса</h3>
+        <p class="card-lead">У Belfed есть две версии сайта — русская и английская. Выберите, где вам удобнее.</p>
+        <div class="lang-links">
+          <a href="https://belfed.ru/settings.html" class="btn active">Русский &mdash; belfed.ru</a>
+          <a href="https://belfed.com/settings.html" class="btn">Английский &mdash; belfed.com</a>
+        </div>
+      </div>
+
+      <!-- Выход -->
+      <div class="settings-card" id="signout">
+        <h2>// Сессия</h2>
+        <h3>Выход</h3>
+        <p class="card-lead">Выйти из аккаунта в этом браузере. Вы всегда сможете войти снова по e-mail и паролю или получить свежую ссылку в @BelfedBot.</p>
+        <button class="btn btn-danger" onclick="handleLogout()">Выйти</button>
+      </div>
+
+    </div>
+
+    <footer>
+      <span>&copy; 2025&ndash;2026 Belfed Analytics. Все права защищены.</span>
+      <div class="footer-links">
+        <a href="/disclaimer.html">Дисклеймер</a>
+        <a href="/privacy.html">Конфиденциальность</a>
+        <a href="/terms.html">Условия</a>
+        <span>Не является инвестиционной рекомендацией.</span>
+      </div>
+    </footer>
+  </main>
+
+  <script src="belfed-auth.js"></script>
+  <script>
+    function fmtDateRu(d) {
+      try { return d.toLocaleDateString('ru-RU', { year: 'numeric', month: 'short', day: 'numeric' }); }
+      catch (e) { return d.toISOString().slice(0,10); }
+    }
+    function setStatus(el, kind, text) {
+      if (!el) return;
+      el.textContent = text || '';
+      el.className = 'pw-status ' + (kind || 'dim');
+    }
+
+    function onAuthReady(profile, session, entitlement) {
+      try {
+        document.getElementById('guestScreen').style.display = 'none';
+        document.getElementById('settingsContent').style.display = 'block';
+        var navAuth = document.getElementById('navAuthBtn');
+        if (navAuth) { navAuth.style.display = 'block'; navAuth.textContent = 'Выйти'; navAuth.dataset.authed = '1'; }
+
+        if (session && session.user) {
+          document.getElementById('acctEmail').textContent = session.user.email || '\u2014';
+          if (session.user.created_at) {
+            document.getElementById('acctSince').textContent = fmtDateRu(new Date(session.user.created_at));
+          }
+        }
+        if (profile) {
+          document.getElementById('acctName').textContent = profile.display_name || (session && session.user && session.user.user_metadata && session.user.user_metadata.display_name) || '\u2014';
+          var st = (entitlement && entitlement.status) || (profile.subscription_status || 'none');
+          var stRu = ({active:'Активна', trial:'Триал', expired:'Истёк', none:'Нет', admin:'Админ'})[st] || String(st).toUpperCase();
+          document.getElementById('acctStatus').textContent = stRu;
+          if (st === 'trial' && profile.trial_end) {
+            var row = document.getElementById('acctTrialRow');
+            if (row) row.style.display = '';
+            document.getElementById('acctTrialEnd').textContent = fmtDateRu(new Date(profile.trial_end));
+          }
+          var tgEl = document.getElementById('acctTelegram');
+          var tgBtn = document.getElementById('tgConnectBtn');
+          if (profile.telegram_id || profile.telegram_username) {
+            var handle = profile.telegram_username ? ('@' + String(profile.telegram_username).replace(/^@/, '')) : ('id ' + profile.telegram_id);
+            tgEl.textContent = 'Подключён — ' + handle;
+            if (tgBtn) { tgBtn.textContent = 'Переподключить Telegram \u2192'; }
+          }
+        }
+        detectPasswordState();
+        upgradeTelegramConnectLink();
+      } catch (e) {
+        console.error('settings onAuthReady error:', e);
+      }
+    }
+
+    function onAuthSignedOut() {
+      document.getElementById('settingsContent').style.display = 'none';
+      document.getElementById('guestScreen').style.display = 'block';
+      var navAuth = document.getElementById('navAuthBtn');
+      if (navAuth) { navAuth.style.display = 'none'; }
+    }
+
+    var _hasPassword = null;
+    async function detectPasswordState() {
+      var lead = document.getElementById('pwLead');
+      try {
+        var r = await supaClient.rpc('current_user_has_password');
+        _hasPassword = (r && r.data === true);
+      } catch (e) { _hasPassword = null; }
+      if (_hasPassword === true) {
+        lead.textContent = 'Изменить пароль. После сохранения текущая сессия в этом браузере не разлогинится.';
+      } else if (_hasPassword === false) {
+        lead.textContent = 'Сейчас вы входите по одноразовой ссылке из @BelfedBot. Задайте пароль, чтобы входить в любой момент по e-mail.';
+      } else {
+        lead.textContent = 'Задайте или измените пароль. Минимум 6 символов.';
+      }
+    }
+
+    async function onSavePassword() {
+      var pw = document.getElementById('pwNew').value.trim();
+      var pw2 = document.getElementById('pwNew2').value.trim();
+      var status = document.getElementById('pwStatus');
+      var btn = document.getElementById('pwSaveBtn');
+      if (pw.length < 6) { setStatus(status, 'err', 'Пароль должен содержать минимум 6 символов.'); return; }
+      if (pw !== pw2) { setStatus(status, 'err', 'Пароли не совпадают.'); return; }
+      btn.disabled = true;
+      setStatus(status, 'dim', 'Сохранение\u2026');
+      try {
+        var res = await supaClient.auth.updateUser({ password: pw });
+        if (res.error) throw res.error;
+        setStatus(status, 'ok', _hasPassword ? 'Пароль изменён. Теперь можно входить по e-mail и новому паролю.' : 'Пароль задан. Теперь можно входить по e-mail и паролю.');
+        document.getElementById('pwNew').value = '';
+        document.getElementById('pwNew2').value = '';
+        _hasPassword = true;
+        var lead = document.getElementById('pwLead');
+        if (lead) lead.textContent = 'Изменить пароль. После сохранения текущая сессия в этом браузере не разлогинится.';
+      } catch (err) {
+        setStatus(status, 'err', 'Не удалось сохранить пароль: ' + (err && err.message ? err.message : 'ошибка'));
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function onSendResetLink(e) {
+      if (e) e.preventDefault();
+      var status = document.getElementById('pwStatus');
+      var email = document.getElementById('acctEmail').textContent;
+      if (!email || email === '\u2014') { setStatus(status, 'err', 'E-mail не указан.'); return; }
+      setStatus(status, 'dim', 'Отправляем ссылку\u2026');
+      try {
+        var res = await supaClient.auth.resetPasswordForEmail(email, { redirectTo: 'https://belfed.ru/reset-password.html' });
+        if (res.error) throw res.error;
+        setStatus(status, 'ok', 'Ссылка на сброс отправлена на ' + email + '. Проверьте почту.');
+      } catch (err) {
+        setStatus(status, 'err', 'Не удалось отправить ссылку: ' + (err && err.message ? err.message : 'ошибка'));
+      }
+    }
+
+    function handleNavAuth() { handleLogout(); }
+
+    function upgradeTelegramConnectLink() {
+      if (typeof fetchTelegramConnectLink !== 'function') return;
+      fetchTelegramConnectLink().then(function (link) {
+        if (!link) return;
+        var btn = document.getElementById('tgConnectBtn');
+        if (btn) btn.setAttribute('href', link);
+      });
+    }
+  </script>
+</body>
+</html>
