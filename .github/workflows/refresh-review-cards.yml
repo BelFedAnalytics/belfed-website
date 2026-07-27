@@ -1,0 +1,90 @@
+name: Refresh RU review cards
+
+# A trade closes on the Google Sheet the moment the bot archives it, but its
+# Review card keeps rendering the generic no-timeline fallback until the card
+# manifest is rebuilt. This job performs that rebuild so the gap closes without
+# anyone running a local script.
+#
+# No-op by design when nothing changed, and when the Supabase credentials are
+# absent the run reports the missing configuration and exits cleanly rather
+# than failing every night.
+
+on:
+  # Daily, shortly after the bot's overnight archive pass. Deliberately off the
+  # hour so it does not pile onto the top-of-hour scheduler peak.
+  schedule:
+    - cron: "23 4 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Report what would change without committing"
+        type: boolean
+        default: false
+
+concurrency:
+  group: refresh-review-cards
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        run: python -m pip install --upgrade pip pytest
+
+      - name: Rebuild manifest
+        id: build
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_CARD_EXPORT_KEY: ${{ secrets.SUPABASE_CARD_EXPORT_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          python scripts/refresh_review_cards.py \
+            ${{ inputs.dry_run && '--dry-run' || '' }} 2>&1 | tee /tmp/refresh.log
+
+      - name: Verify no credential leaked into the tree
+        run: |
+          if ! git diff --quiet; then
+            if git diff -- . | grep -Eiq 'eyJ[A-Za-z0-9_-]{20,}|service_role|SUPABASE_[A-Z_]*KEY'; then
+              echo "::error::refusing to commit: possible credential in diff"
+              exit 1
+            fi
+          fi
+
+      - name: Run tests
+        run: |
+          python -m pytest tests/test_ru_audit.py -q
+          node tests/csv_parse.test.js
+
+      - name: Write step summary
+        if: always()
+        run: |
+          {
+            echo "### RU review-card refresh"
+            echo ""
+            echo '```'
+            cat /tmp/refresh.log 2>/dev/null || echo "(no log)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit refreshed manifest
+        if: steps.build.outputs.changed == 'true'
+        run: |
+          git config user.name "Belfed Bot"
+          git config user.email "bot@belfed.com"
+          git add ru/trade_review_cards.json
+          git commit -m "chore: refresh RU review cards ($(date -u +%Y-%m-%d))"
+          git push origin main

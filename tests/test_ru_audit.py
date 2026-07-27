@@ -446,3 +446,243 @@ def test_lite237_present_in_committed_manifest():
     for k in ("LITE|2026-06-25|2026-07-21", "eq#s#LITE|2026-06-25|2026-07-21"):
         assert m.get(k, {}).get("kind") == "bot", "missing LITE key %s" % k
         assert m[k]["ru"].count('class="step"') == 5
+
+
+# --------------------------------- CL #331 / ETH #337 post-close rebuild -----
+# Regression for the same missing-history class of bug as LITE #237, for the two
+# crypto trades that closed after the 2026-07-20 snapshot: CL (Crypto:47, long,
+# closed 2026-07-27) and ETH (Crypto:49, short, closed 2026-07-26). Both showed
+# the generic fallback because no rebuild ran after they closed. Fixtures mirror
+# the verified production lifecycle; only RU message ids are ever linked.
+CL331_OPENED_RU = ("Цена, вероятно, формирует локальное дно в целевой зоне поддержки 71-70 "
+                   "перед следующим импульсом вверх к 78-80. Открываем длинную позицию по "
+                   "CL на криптобирже. Стоп-лосс размещаем под минимумом сегодняшней "
+                   "сессии. По возможной общей структуре тренда смотри наш недавний анализ "
+                   "по USO: https://t.me/c/3773738299/2/1091")
+
+CL331_PARTIAL_RU = ("Цена приближается к нижней границе целевого сопротивления, о которой "
+                    "мы писали в обзоре два дня назад. Фиксируем половину от оставшейся "
+                    "позиции, а стоп-лосс для остатка переносим на отметку 84. График: "
+                    "https://www.tradingview.com/x/NnIMs9eL/")
+
+ETH337_OPENED_RU = ("Открываем среднесрочную шорт-позицию по ETH с уровнем риска на "
+                    "максимумах сегодняшней сессии. Восстановление от июньских минимумов "
+                    "формируется как диагональная структура, которая в большинстве случаев "
+                    "завершается глубокой коррекцией.")
+
+CL_EN_MESSAGE_IDS = (1128, 1161, 1227, 1267, 1268, 1346)
+ETH_EN_MESSAGE_IDS = (1316, 1345)
+
+
+def _cl331():
+    return {
+        "ticker": "CL", "direction": "long", "asset_class": "crypto",
+        "opened_at": "2026-07-10T12:03:56.923Z",
+        "closed_at": "2026-07-27T06:15:05.353Z",
+        "exit_price": 84, "result_rr": 2.62,
+        "comment_ru": CL331_OPENED_RU, "close_comment_ru": None,
+        "sheet_row_id": "Crypto:47",
+        "events": [
+            {"event_type": "opened", "message_id_ru": 1098,
+             "triggered_at": "2026-07-10T12:03:56.923Z",
+             "payload": {"triggered_price": 72.77}},
+            {"event_type": "target_1_hit", "message_id_ru": 1131,
+             "triggered_at": "2026-07-14T11:10:05.194Z",
+             "payload": {"triggered_price": 80.16}},
+            {"event_type": "target_2_hit", "message_id_ru": 1199,
+             "triggered_at": "2026-07-17T13:25:05.068Z",
+             "payload": {"triggered_price": 81.03}},
+            {"event_type": "partial_closed", "message_id_ru": 1239,
+             "triggered_at": "2026-07-22T08:26:11.301Z",
+             "payload": {"partial_close_id": 3313}},
+            {"event_type": "stop_moved", "message_id_ru": 1240,
+             "triggered_at": "2026-07-22T08:29:31.189Z",
+             "payload": {"old_stop": 69.9, "new_stop": 84}},
+            {"event_type": "stop_hit", "message_id_ru": 1322,
+             "triggered_at": "2026-07-27T06:15:05.353Z",
+             "payload": {"triggered_price": 84}},
+        ],
+        "partial_closes": [
+            {"id": 3311, "closed_at": "2026-07-14T11:10:05.194Z",
+             "pct_closed": 25, "exit_price": 80.16, "comment_ru": None},
+            {"id": 3312, "closed_at": "2026-07-17T13:25:05.068Z",
+             "pct_closed": 25, "exit_price": 81.03, "comment_ru": None},
+            {"id": 3313, "closed_at": "2026-07-22T08:26:11.301Z",
+             "pct_closed": 25, "exit_price": 87.22, "comment_ru": CL331_PARTIAL_RU},
+            {"id": 3314, "closed_at": "2026-07-27T06:15:05.353Z",
+             "pct_closed": 25, "exit_price": 84, "comment_ru": None},
+        ],
+    }
+
+
+def _eth337():
+    return {
+        "ticker": "ETH", "direction": "short", "asset_class": "crypto",
+        "opened_at": "2026-07-23T16:28:29.917Z",
+        "closed_at": "2026-07-26T22:35:04.995Z",
+        "exit_price": 1941, "result_rr": -1,
+        "comment_ru": ETH337_OPENED_RU, "close_comment_ru": None,
+        "sheet_row_id": "Crypto:49",
+        "events": [
+            {"event_type": "opened", "message_id_ru": 1291,
+             "triggered_at": "2026-07-23T16:28:29.917Z",
+             "payload": {"triggered_price": 1887.38}},
+            {"event_type": "stop_hit", "message_id_ru": 1321,
+             "triggered_at": "2026-07-26T22:35:04.995Z",
+             "payload": {"triggered_price": 1941}},
+        ],
+        "partial_closes": [
+            {"id": 3371, "closed_at": "2026-07-26T22:35:04.995Z",
+             "pct_closed": 100, "exit_price": 1941, "comment_ru": None},
+        ],
+    }
+
+
+def _pc(pos):
+    return {pc["id"]: pc for pc in pos["partial_closes"]}
+
+
+def test_cl331_full_published_timeline():
+    """All six published RU events become linked steps with the correct
+    t.me/c/<RU_CHANNEL>/<RU_TOPIC>/<id> links, in lifecycle order."""
+    p = _cl331()
+    assert B.is_eligible(p) is True
+    html = B.build_card(p, _pc(p))
+    assert html.count('class="step"') == 6
+    assert html.count('class="steplink"') == 6
+    for mid in (1098, 1131, 1199, 1239, 1240, 1322):
+        assert ("https://t.me/c/3773738299/4/%d" % mid) in html
+    assert "badge-long" in html
+    assert "+2.62R" in html
+    assert "Выход: 84" in html
+    assert "10.07.2026 → 27.07.2026" in html
+
+
+def test_eth337_full_published_timeline():
+    """Two published RU events -> two linked steps; a -1R short renders the loss
+    styling and the stop price as the exit."""
+    p = _eth337()
+    assert B.is_eligible(p) is True
+    html = B.build_card(p, _pc(p))
+    assert html.count('class="step"') == 2
+    assert html.count('class="steplink"') == 2
+    for mid in (1291, 1321):
+        assert ("https://t.me/c/3773738299/4/%d" % mid) in html
+    assert "badge-short" in html
+    assert '<span class="loss">-1.00R</span>' in html
+    assert "Выход: 1941" in html
+    assert "23.07.2026 → 26.07.2026" in html
+
+
+def test_cl331_eth337_verbatim_ru_no_en_leak():
+    """Stored subscriber text is byte-for-byte; the EN channel and every EN
+    message id must never appear."""
+    for pos, en_ids in ((_cl331(), CL_EN_MESSAGE_IDS), (_eth337(), ETH_EN_MESSAGE_IDS)):
+        html = B.build_card(pos, _pc(pos))
+        assert "3869302680" not in html          # EN channel id never leaks
+        for mid in en_ids:
+            assert ("/%d" % mid) not in html     # EN message ids never linked
+        assert "–" not in html                   # en-dash is never used in RU copy
+    cl = B.build_card(_cl331(), _pc(_cl331()))
+    assert CL331_OPENED_RU in cl
+    assert CL331_PARTIAL_RU in cl
+    assert ETH337_OPENED_RU in B.build_card(_eth337(), _pc(_eth337()))
+
+
+def test_cl331_generated_fallbacks_for_unwritten_events():
+    """Events with no stored comment get RU fallbacks from the payload."""
+    html = B.build_card(_cl331(), _pc(_cl331()))
+    assert "Цель 1 достигнута по 80.16." in html
+    assert "Цель 2 достигнута по 81.03." in html
+    assert "Стоп перенесён с 69.9 на 84." in html
+    assert "Стоп сработал по 84." in html
+    assert "Стоп сработал по 1941." in B.build_card(_eth337(), _pc(_eth337()))
+
+
+def _crypto_sheet(cl_row, eth_row):
+    """Crypto sheet placing CL on Crypto:47 and ETH on Crypto:49."""
+    data = [[""] * 11 for _ in range(49)]
+    data[2] = ["", "Ticker", "", "", ""] + [""] * 6
+    data[46] = cl_row
+    data[48] = eth_row
+    return data
+
+
+def _row(ticker, direction, status, entry, exit_, result, tv):
+    return ["", ticker, direction, status, entry, exit_, "", "", "", result, tv]
+
+
+CL_TV = "https://www.tradingview.com/x/bg3ygJ4E/"
+ETH_TV = "https://www.tradingview.com/x/6s6GiXbP/"
+
+CL_KEYS = ("CL|2026-07-10|2026-07-27", "cr#l#CL|2026-07-10|2026-07-27")
+ETH_KEYS = ("ETH|2026-07-23|2026-07-26", "cr#s#ETH|2026-07-23|2026-07-26")
+
+
+def test_cl331_eth337_prebuilt_only_after_close():
+    """Closed-only policy preserved: neither trade is prebuilt while its sheet
+    row is Open; once Closed with an exit and numeric result, both resolve under
+    the full and collision-safe keys."""
+    sb = {"positions": [_cl331(), _eth337()]}
+
+    open_sheet = _crypto_sheet(
+        _row("CL", "Long", "Open", "10.07.2026", "", "", CL_TV),
+        _row("ETH", "Short", "Open", "23.07.2026", "", "", ETH_TV))
+    man = {}
+    B.build([], open_sheet, sb, man)
+    assert man == {}, "open rows must not be prebuilt"
+
+    closed_sheet = _crypto_sheet(
+        _row("CL", "Long", "Closed", "10.07.2026", "27.07.2026", "2,62", CL_TV),
+        _row("ETH", "Short", "Closed", "23.07.2026", "26.07.2026", "-1,00", ETH_TV))
+    man = {}
+    B.build([], closed_sheet, sb, man)
+    for kf, ks in (CL_KEYS, ETH_KEYS):
+        assert man.get(kf, {}).get("kind") == "bot"
+        assert man.get(ks, {}).get("kind") == "bot"
+        assert man[kf]["ru"] == man[ks]["ru"]
+    assert man[CL_KEYS[0]]["ru"].count('class="step"') == 6
+    assert man[ETH_KEYS[0]]["ru"].count('class="step"') == 2
+
+
+def test_cl331_eth337_present_in_committed_manifest():
+    """The production manifest carries both rebuilt timelines under the full,
+    collision-safe and pair keys, byte-identical to a fresh build."""
+    with open(A.MANIFEST) as f:
+        m = json.load(f)
+    expected = {"CL": B.build_card(_cl331(), _pc(_cl331())),
+                "ETH": B.build_card(_eth337(), _pc(_eth337()))}
+    for ticker, (kf, ks), kp in (("CL", CL_KEYS, "CL|2026-07-10"),
+                                 ("ETH", ETH_KEYS, "ETH|2026-07-23")):
+        for k in (kf, ks, kp):
+            assert m.get(k, {}).get("kind") == "bot", "missing key %s" % k
+            assert m[k]["ru"] == expected[ticker], "manifest drifted from build: %s" % k
+
+
+def test_july_eth_short_does_not_borrow_an_older_eth_long():
+    """Five older ETH longs are carded. The July short must resolve to its own
+    card under every key form -- collision safety across direction and dates."""
+    with open(A.MANIFEST) as f:
+        m = json.load(f)
+    july = m["cr#s#ETH|2026-07-23|2026-07-26"]["ru"]
+    assert "badge-short" in july
+    for older in ("ETH|2026-05-26|2026-05-26", "ETH|2026-05-09|2026-05-12",
+                  "ETH|2026-04-29|2026-04-29", "ETH|2026-04-10|2026-04-12",
+                  "ETH|2025-08-03|2025-08-14"):
+        assert m[older]["ru"] != july
+    # the pair alias for the July short is unique to it
+    assert m["ETH|2026-07-23"]["ru"] == july
+
+
+def test_degraded_fallback_carries_both_closed_trades():
+    """If the live sheet CSV fetch fails, the offline crypto dataset must still
+    render both trades with the TradingView links their snapshots derive from."""
+    with open(os.path.join(REPO, "ru", "trades-fallback-crypto.json")) as f:
+        rows = json.load(f)
+    by_key = {(r[1], r[4]): r for r in rows[1:]}
+    cl = by_key[("CL", "10.07.2026")]
+    assert cl[3] == "Closed" and cl[5] == "27.07.2026" and cl[9] == "2,62"
+    assert cl[10] == CL_TV
+    eth = by_key[("ETH", "23.07.2026")]
+    assert eth[2] == "Short" and eth[3] == "Closed" and eth[5] == "26.07.2026"
+    assert eth[9] == "-1,00" and eth[10] == ETH_TV
