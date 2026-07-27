@@ -240,6 +240,15 @@ def test_refresh_writes_both_cards_then_is_idempotent():
     assert json.dumps(man, ensure_ascii=False, sort_keys=True) == snapshot
 
 
+def test_refresh_rejects_a_total_sheet_match_failure():
+    """Zero matches means the join broke, not that the manifest is current."""
+    orphan = _cl331()
+    orphan["ticker"] = "NOPE"
+    with pytest.raises(RuntimeError, match="broken match"):
+        R.refresh([orphan], _sheets(), {})
+    assert R.refresh([], _sheets(), {}) == (0, [])   # empty export stays a no-op
+
+
 def test_refresh_respects_closed_only_gate():
     """An Open sheet row yields no card even though the position is eligible."""
     open_csv = (

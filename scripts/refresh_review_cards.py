@@ -289,6 +289,14 @@ def refresh(positions, sheets, manifest):
     """Apply the builder. Returns (n_written, added_keys)."""
     eq = build_sheet_arrays(positions, sheets["equities"], TAB["equities"])
     cr = build_sheet_arrays(positions, sheets["crypto"], TAB["crypto"])
+    matched = sum(1 for d in (eq, cr) for r in d if len(r) > 1 and r[1])
+    log("  positions matched to a live sheet row: %d of %d"
+        % (matched, len(positions)))
+    if positions and not matched:
+        # Distinguishes a broken match from "everything already current": both
+        # otherwise leave the manifest untouched and look like a clean no-op.
+        raise RuntimeError("no position matched a live sheet row -- refusing to "
+                           "treat a broken match as a no-op")
     before = dict(manifest)
     written = ru_card_build.build(eq, cr, {"positions": positions}, manifest)
     for k, v in before.items():
