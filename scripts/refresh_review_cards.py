@@ -9,12 +9,17 @@ unattended so the gap closes on its own.
 Two inputs, neither of which is ever written to the repo:
 
   * the same public Google Sheet CSV the pages already fetch (no credentials);
-  * a sanitized read of the Supabase lifecycle tables (credentials required).
+  * the token-gated `export_review_card_data` RPC, which returns only closed,
+    archived positions and is already field-whitelisted server side.
 
-Only whitelisted, RU-facing fields are kept from Supabase. English payloads,
-Telegram EN message ids and every column not consumed by the card builder are
-dropped at the boundary, so a raw production dump can never reach the manifest
-or the runner log.
+The RPC is the only supported Supabase mode. It is reached with the publishable
+key plus a separate export token, so this job never holds a service-role
+credential and never needs to know the lifecycle table names.
+
+The response is re-whitelisted here as well: English payloads, Telegram EN
+message ids and every field not consumed by the card builder are dropped at the
+boundary, so a raw production dump can never reach the manifest or the runner
+log even if the server-side projection widens.
 
 Row identity does NOT rely on CSV row alignment. The gviz export drops leading
 header rows, so absolute spreadsheet row numbers are not recoverable from it.
@@ -23,7 +28,9 @@ date, and the matched row is placed at the index its own `sheet_row_id` names.
 The builder's closed-only gate then runs against genuine sheet data. A position
 with no unambiguous live match is skipped rather than guessed at.
 
-Exit status: 0 on success (whether or not anything changed), 1 on error.
+Exit status: 0 on success (whether or not anything changed), 1 on any error --
+including RPC auth rejection or a malformed payload. A failed run commits
+nothing.
 Writes `changed=true|false` to $GITHUB_OUTPUT when running under Actions.
 """
 import argparse
@@ -52,11 +59,9 @@ TAB = {"crypto": "Crypto", "equities": "Equties"}
 
 TIMEOUT = 30
 
-# Supabase objects. Overridable because the lifecycle tables live in the
-# trading bot's schema, which this repository does not own.
-POSITIONS_TABLE = os.environ.get("SUPABASE_POSITIONS_TABLE", "active_positions")
-EVENTS_REL = os.environ.get("SUPABASE_EVENTS_RELATION", "position_events")
-PARTIALS_REL = os.environ.get("SUPABASE_PARTIALS_RELATION", "partial_closes")
+# The single Supabase entry point. The RPC owns the join and the projection, so
+# no table or relation name is referenced from here.
+RPC = "export_review_card_data"
 
 # Whitelists: the only fields allowed to cross the boundary from Supabase.
 POSITION_FIELDS = ("id", "ticker", "direction", "asset_class", "status",
@@ -84,6 +89,16 @@ def _http_get(url, headers):
     if not url.startswith("https://"):
         raise ValueError("refusing non-HTTPS request")
     req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+        return resp.read().decode("utf-8")
+
+
+def _http_post_json(url, headers, body):
+    if not url.startswith("https://"):
+        raise ValueError("refusing non-HTTPS request")
+    payload = json.dumps(body).encode("utf-8")
+    req = urllib.request.Request(url, data=payload, headers=headers,
+                                 method="POST")
     with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
         return resp.read().decode("utf-8")
 
@@ -167,50 +182,106 @@ def build_sheet_arrays(positions, sheet_index, tab):
 
 # --------------------------------------------------------------- supabase ---
 def supabase_config():
+    """(url, publishable_key, export_token). Empty strings when unset.
+
+    All three are required: the publishable key authenticates the request to
+    PostgREST, the export token authorizes the RPC itself. There is no
+    service-role path -- a key broad enough to read the raw tables must never
+    be handed to this job.
+    """
     url = (os.environ.get("SUPABASE_URL") or "").strip().rstrip("/")
-    # A dedicated read-only key is preferred; the service-role key is accepted
-    # so the workflow also runs on an existing standard secret set.
-    key = (os.environ.get("SUPABASE_CARD_EXPORT_KEY")
-           or os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or "").strip()
-    return url, key
+    pub = (os.environ.get("SUPABASE_PUBLISHABLE_KEY") or "").strip()
+    token = (os.environ.get("SUPABASE_CARD_EXPORT_KEY") or "").strip()
+    return url, pub, token
 
 
-def fetch_positions(url, key, opener=None):
-    """Closed positions with their RU lifecycle, sanitized at the boundary."""
-    select = ("%s,%s(%s),%s(%s)"
-              % (",".join(POSITION_FIELDS),
-                 PARTIALS_REL, ",".join(PARTIAL_FIELDS),
-                 EVENTS_REL, ",".join(EVENT_FIELDS + ("payload",))))
-    endpoint = ("%s/rest/v1/%s?select=%s&status=eq.closed"
-                % (url, POSITIONS_TABLE, urllib.parse.quote(select, safe="(),*")))
-    get = opener or _http_get
-    raw = get(endpoint, headers={"apikey": key,
-                                 "Authorization": "Bearer " + key,
-                                 "Accept": "application/json"})
-    return [sanitize_position(p) for p in json.loads(raw)]
+def fetch_positions(url, pub_key, token, poster=None):
+    """Closed positions with their RU lifecycle, via the token-gated RPC.
+
+    Raises on auth rejection or on a payload that does not match the documented
+    envelope, so a bad run fails loudly instead of quietly writing nothing.
+    """
+    endpoint = "%s/rest/v1/rpc/%s" % (url, RPC)
+    post = poster or _http_post_json
+    try:
+        raw = post(endpoint,
+                   {"apikey": pub_key,
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"},
+                   {"p_token": token})
+    except urllib.error.HTTPError as exc:
+        # Never surface the body: it can carry production text. The status alone
+        # distinguishes a rejected token from an outage.
+        if exc.code in (401, 403):
+            raise RuntimeError(
+                "RPC %s rejected the export token (HTTP %d) -- check "
+                "SUPABASE_PUBLISHABLE_KEY and SUPABASE_CARD_EXPORT_KEY"
+                % (RPC, exc.code))
+        raise RuntimeError("RPC %s failed with HTTP %d" % (RPC, exc.code))
+    return validate_envelope(raw)
 
 
-def _pick(src, fields):
-    return {f: src.get(f) for f in fields if f in src}
+def validate_envelope(raw):
+    """Parse and re-whitelist `{generated_at, positions, events, partial_closes}`.
 
+    The RPC already projects server side; this repeats the projection so a
+    widened view cannot leak English copy or EN message ids into a committed
+    file. Structural problems raise rather than silently yielding zero cards,
+    which would look identical to a legitimate no-op.
+    """
+    try:
+        env = json.loads(raw)
+    except ValueError:
+        raise RuntimeError("RPC %s returned a non-JSON body" % RPC)
+    # PostgREST returns a single-row set for a scalar-returning function.
+    if isinstance(env, list):
+        if len(env) != 1 or not isinstance(env[0], dict):
+            raise RuntimeError("RPC %s returned %d rows, expected 1"
+                               % (RPC, len(env)))
+        env = env[0]
+    if not isinstance(env, dict):
+        raise RuntimeError("RPC %s returned %s, expected an object"
+                           % (RPC, type(env).__name__))
+    if not env.get("generated_at"):
+        raise RuntimeError("RPC %s payload has no generated_at" % RPC)
+    for field in ("positions", "events", "partial_closes"):
+        if not isinstance(env.get(field), list):
+            raise RuntimeError("RPC %s payload field %r is not a list"
+                               % (RPC, field))
+    log("  export generated_at=%s" % env["generated_at"])
 
-def sanitize_position(raw):
-    """Whitelist-only projection. Anything not named here is discarded."""
-    pos = _pick(raw, POSITION_FIELDS)
-    events = []
-    for ev in (raw.get(EVENTS_REL) or []):
+    events, partials = {}, {}
+    for ev in env["events"]:
         if not ev.get("message_id_ru"):
             # Unpublished internal note: the builder would skip it anyway, and
             # dropping it here keeps unreviewed text out of the process.
             continue
         clean = _pick(ev, EVENT_FIELDS)
         clean["payload"] = _pick(ev.get("payload") or {}, PAYLOAD_FIELDS)
-        events.append(clean)
-    events.sort(key=lambda e: str(e.get("triggered_at") or ""))
-    pos["events"] = events
-    pos["partial_closes"] = [_pick(pc, PARTIAL_FIELDS)
-                             for pc in (raw.get(PARTIALS_REL) or [])]
-    return pos
+        events.setdefault(ev.get("position_id"), []).append(clean)
+    for pc in env["partial_closes"]:
+        partials.setdefault(pc.get("position_id"), []).append(
+            _pick(pc, PARTIAL_FIELDS))
+
+    out = []
+    for raw_pos in env["positions"]:
+        if not isinstance(raw_pos, dict):
+            raise RuntimeError("RPC %s returned a non-object position" % RPC)
+        for req in ("id", "ticker", "opened_at", "closed_at"):
+            if not raw_pos.get(req):
+                raise RuntimeError("position %r is missing %s"
+                                   % (raw_pos.get("id"), req))
+        pos = _pick(raw_pos, POSITION_FIELDS)
+        pid = raw_pos["id"]
+        pos["events"] = sorted(events.get(pid, []),
+                               key=lambda e: str(e.get("triggered_at") or ""))
+        pos["partial_closes"] = partials.get(pid, [])
+        out.append(pos)
+    return out
+
+
+def _pick(src, fields):
+    return {f: src.get(f) for f in fields if f in src}
 
 
 # ------------------------------------------------------------------- main ---
@@ -232,11 +303,13 @@ def main(argv=None):
                     help="report what would change without writing")
     args = ap.parse_args(argv)
 
-    url, key = supabase_config()
-    if not url or not key:
-        log("Supabase credentials absent -- nothing to refresh.")
-        log("Set SUPABASE_URL and SUPABASE_CARD_EXPORT_KEY (or "
-            "SUPABASE_SERVICE_ROLE_KEY) to enable the rebuild.")
+    url, pub_key, token = supabase_config()
+    missing = [name for name, val in
+               (("SUPABASE_URL", url), ("SUPABASE_PUBLISHABLE_KEY", pub_key),
+                ("SUPABASE_CARD_EXPORT_KEY", token)) if not val]
+    if missing:
+        log("Supabase configuration absent -- nothing to refresh.")
+        log("Missing: %s" % ", ".join(missing))
         _emit_changed(False)
         return 0
 
@@ -247,8 +320,8 @@ def main(argv=None):
         sheets[name] = index_sheet(rows)
         log("  %s: %d usable rows" % (name, len(sheets[name])))
 
-    log("fetching closed positions from Supabase")
-    positions = fetch_positions(url, key)
+    log("fetching closed positions via %s" % RPC)
+    positions = fetch_positions(url, pub_key, token)
     log("  %d closed positions" % len(positions))
 
     with open(MANIFEST, encoding="utf-8") as f:
