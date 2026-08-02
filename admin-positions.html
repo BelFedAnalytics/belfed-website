@@ -512,6 +512,29 @@ async function adminAction(payload) {
   }
 }
 
+// ========== Full close (positions-close edge function) ==========
+// Separate endpoint from positions-admin-action: it owns the whole close
+// transaction (partial_closes tranche -> remaining_pct=0 -> blended R ->
+// optional publish -> ALWAYS archive to the Google Sheet).
+async function closeAction(payload) {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return { ok: false, error: 'no_session' };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/positions-close`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, data };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
 async function translateComment() {
   const ru = document.getElementById('f-comment_ru').value.trim();
   if (!ru) { return showMsg('form-msg', 'Сначала напиши RU комментарий', 'err'); }
@@ -1029,46 +1052,43 @@ function openClose(id, ticker, entry) {
   showModal('modal-close');
 }
 
+// Полное закрытие теперь идёт через edge-функцию positions-close.
+// Старый прямой UPDATE из браузера не обнулял remaining_pct, не писал
+// строку в partial_closes, делил на *текущий* стоп (Infinity после переноса
+// стопа в безубыток -> result_rr сохранялся как NULL) и попадал в Google
+// Sheet только побочным эффектом публикации. На HOOD #335 совпали все
+// четыре дефекта, и сделка четыре дня висела на дашборде как открытая.
 async function confirmClose() {
   const exit = parseFloat(document.getElementById('close-exit_price').value);
   if (!exit || exit <= 0) return showMsg('close-msg', 'Введи корректную цену выхода', 'err');
 
-  const { data: pos } = await sb.from('active_positions')
-    .select('entry_price,stop_price,direction,publish_to_ru,publish_to_en')
-    .eq('id', modalCtx.id).maybeSingle();
-  if (!pos) return showMsg('close-msg', 'Позиция не найдена', 'err');
-  const risk = Math.abs(parseFloat(pos.entry_price) - parseFloat(pos.stop_price));
-  const dir = pos.direction;
-  const rr = dir === 'long'
-    ? (exit - parseFloat(pos.entry_price)) / risk
-    : (parseFloat(pos.entry_price) - exit) / risk;
-
-  // Опциональный комментарий при закрытии (отдельный от открывающего).
-  // Пустое поле = комментария в сигнале не будет (без fallback на comment_ru/en).
   const closeCommentRu = document.getElementById('close-comment_ru').value.trim() || null;
   const closeCommentEn = document.getElementById('close-comment_en').value.trim() || null;
-  const updates = {
-    status: 'closed',
-    closed_at: new Date().toISOString(),
-    exit_price: exit,
-    result_rr: Math.round(rr * 100) / 100,
-    close_comment_ru: closeCommentRu,
-    close_comment_en: closeCommentEn,
-    publish_to_ru: document.getElementById('close-publish-ru').checked,
-    publish_to_en: document.getElementById('close-publish-en').checked,
-  };
-  const { error } = await sb.from('active_positions').update(updates).eq('id', modalCtx.id);
-  if (error) return showMsg('close-msg', error.message, 'err');
+  const pubRu = document.getElementById('close-publish-ru').checked;
+  const pubEn = document.getElementById('close-publish-en').checked;
 
-  if (updates.publish_to_ru || updates.publish_to_en) {
-    const r = await callPublisher('closed', modalCtx.id, { triggered_price: exit });
-    if (!r.ok) {
-      showMsg('close-msg', `Закрыто в БД. Публикация не прошла (${r.status}). Используй бота или проверь логи.`, 'info');
-      setTimeout(() => { hideModal('modal-close'); loadList(); loadClosed(); }, 1800);
-      return;
-    }
+  showMsg('close-msg', 'Закрываем...', 'info');
+
+  const r = await closeAction({
+    position_id: modalCtx.id,
+    exit_price: exit,
+    comment_ru: closeCommentRu,
+    comment_en: closeCommentEn,
+    publish_to_ru: pubRu,
+    publish_to_en: pubEn,
+  });
+
+  if (!r.ok) {
+    return showMsg('close-msg', r.data?.error || r.error || `Ошибка закрытия (${r.status})`, 'err');
   }
-  showMsg('close-msg', `✓ Закрыто @ ${fmt(exit)} · ${rr.toFixed(2)}R`, 'ok');
+
+  const rTxt = (r.data?.blended_r != null) ? ` · ${Number(r.data.blended_r).toFixed(2)}R` : '';
+  if (r.data?.archived === false) {
+    showMsg('close-msg', `✓ Закрыто @ ${fmt(exit)}${rTxt}. Запись в таблицу НЕ прошла — проверь логи positions-archive.`, 'info');
+    setTimeout(() => { hideModal('modal-close'); loadList(); loadClosed(); }, 2400);
+    return;
+  }
+  showMsg('close-msg', `✓ Закрыто @ ${fmt(exit)}${rTxt} · таблица обновлена`, 'ok');
   setTimeout(() => { hideModal('modal-close'); loadList(); loadClosed(); }, 900);
 }
 

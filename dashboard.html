@@ -338,7 +338,7 @@ var GID='0';
 var CRYPTO_GID='1219794768';
 var currentTab='equities';
 var CSVURL='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:csv&gid='+GID+'&single=true';
-var YAHOO_PROXY='https://script.google.com/macros/s/AKfycbyXYFW0kFYR4aa9mCvX_wew6he08YtaLMjUjEyBUoGi-SSHqhddhVwl1RXDmpKQIZnv/exec';
+var YAHOO_PROXY='https://obujqvqqmyfcfflhqvud.supabase.co/functions/v1/market-quotes';
 // CoinGecko fallback for crypto tickers Yahoo doesn't resolve.
 // Key = ticker as it appears in the Sheet (uppercase). Value = CoinGecko coin id.
 // NOTE: This map is used only to *decide* whether to attempt CoinGecko fallback
@@ -414,7 +414,8 @@ var finalUrl=res.url||url;
 if(text.startsWith('<!DOCTYPE')||text.startsWith('<html')){var redir=await fetch(finalUrl);text=await redir.text();}
 var data=JSON.parse(text);
 var fetched=0;
-Object.keys(data).forEach(function(sym){if(data[sym]&&data[sym].price>0){livePrices[sym]=data[sym].price;fetched++;}});
+var staleSyms=[];
+Object.keys(data).forEach(function(sym){if(data[sym]&&data[sym].price>0){livePrices[sym]=data[sym].price;fetched++;if(data[sym].stale)staleSyms.push(sym);}});
 openTrades.forEach(function(t){if(livePrices[t.ticker])t.livePrice=livePrices[t.ticker];});
 // === CoinGecko fallback for tickers Yahoo didn't resolve ===
 var missing=uniqueTickers.filter(function(t){return !livePrices[t] && COINGECKO_MAP[t.toUpperCase()];});
@@ -438,6 +439,7 @@ if(missing.length){
   }catch(cgErr){console.error('[BFD prices] CoinGecko fallback error:',cgErr);cgError=cgErr.message||String(cgErr);}
 }
 var srcNote=cgFetched>0?'Цены: Yahoo Finance + биржи (OKX/Bybit)':'Цены: Yahoo Finance';
+if(staleSyms.length){srcNote+=' — по '+staleSyms.join(', ')+' взята последняя цена закрытия';}
 if(missing.length && cgFetched<missing.length){srcNote+=' — цены недоступны для: '+missing.filter(function(t){return !livePrices[t];}).join(', ')+(cgError?' ('+cgError+')':'');}
 note.textContent=fetched>0?srcNote+' ('+fetched+'/'+uniqueTickers.length+' тикеров)':'Не удалось получить лайв-цены';
 }catch(err){console.error('Yahoo proxy error:',err);note.textContent='Ошибка получения цен: '+err.message;}
