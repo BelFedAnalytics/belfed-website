@@ -14,8 +14,19 @@
 (function () {
   'use strict';
 
-  var LANG = (document.documentElement.getAttribute('lang') || 'ru').slice(0, 2).toLowerCase();
-  if (LANG !== 'en') LANG = 'ru';
+  // Язык определяем лениво, а не один раз при загрузке скрипта: страница
+  // может переопределить его позже — belfed.com выставляет lang по хосту
+  // и по ?lang= на DOMContentLoaded, то есть уже после этого файла.
+  // Порядок источников: state.lang страницы -> <html lang> -> ru.
+  function curLang() {
+    var l;
+    try {
+      l = (window.state && window.state.lang)
+        || document.documentElement.getAttribute('lang') || 'ru';
+    } catch (e) { l = 'ru'; }
+    l = String(l).slice(0, 2).toLowerCase();
+    return l === 'en' ? 'en' : 'ru';
+  }
 
   var T = {
     ru: {
@@ -62,11 +73,13 @@
     '.acct-langrow button.active{background:#000;color:#f5f2eb}',
     // мобильные: шапка становится колонкой, кнопка встаёт в общий флекс-ряд
     '@media(max-width:900px){',
-    '#acctMenuMount{flex:1 1 auto;display:flex;min-width:104px;max-width:170px}',
+    '#acctMenuMount{flex:1 1 auto;display:flex;min-width:104px;max-width:160px}',
     // position:relative (а не static) — чтобы список висел под кнопкой, а не поверх неё
     '.acct-menu{position:relative;top:auto;transform:none;width:100%;display:flex}',
     '.acct-btn{min-height:40px;justify-content:center;width:100%;font-size:10px;letter-spacing:.8px;padding:7px 12px}',
-    '.acct-dd{left:50%;right:auto;transform:translateX(-50%);top:calc(100% + 6px);min-width:min(262px,88vw)}',
+    // на мобильных список центрируем по экрану и ограничиваем его шириной,
+    // иначе длинные подписи (EMAIL PREFERENCES) выносят список за правый край
+    '.acct-dd{position:fixed;left:50%;right:auto;transform:translateX(-50%);width:calc(100vw - 28px);max-width:340px;min-width:0}',
     '}'
   ].join('');
 
@@ -79,6 +92,7 @@
   }
 
   var root = null, btn = null, dd = null, whoEl = null;
+  var builtLang = null;
 
   function close() {
     if (!root || !root.classList.contains('open')) return;
@@ -87,10 +101,19 @@
     btn.setAttribute('aria-expanded', 'false');
   }
 
+  var MOBILE = 900;
+
   function open() {
     if (!root) return;
     root.classList.add('open');
     dd.hidden = false;
+    // fixed-позиционирование на мобильных требует явного top:
+    // считаем его от нижней границы кнопки при каждом открытии
+    if (window.innerWidth <= MOBILE) {
+      dd.style.top = Math.round(btn.getBoundingClientRect().bottom + 6) + 'px';
+    } else {
+      dd.style.top = '';
+    }
     btn.setAttribute('aria-expanded', 'true');
   }
 
@@ -102,8 +125,9 @@
     var mount = document.getElementById('acctMenuMount');
     if (!mount || mount.dataset.built === '1') return;
     mount.dataset.built = '1';
+    builtLang = curLang();
 
-    var t = T[LANG];
+    var t = T[curLang()];
     var hasLang = (typeof window.setLang === 'function');
 
     root = document.createElement('div');
@@ -199,27 +223,38 @@
   }
 
   function syncLangButtons() {
+    ensureLang();
     if (!dd) return;
-    // источник истины — state.lang страницы, затем <html lang>
-    var cur = LANG;
-    try {
-      if (window.state && window.state.lang) cur = window.state.lang;
-      else cur = (document.documentElement.getAttribute('lang') || LANG).slice(0, 2).toLowerCase();
-    } catch (e) { cur = LANG; }
+    var cur = curLang();
     dd.querySelectorAll('button[data-lang]').forEach(function (b) {
       if (b.dataset.lang === cur) b.classList.add('active'); else b.classList.remove('active');
     });
   }
 
   function fmtDate(d) {
-    try { return d.toLocaleDateString(LANG === 'en' ? 'en-GB' : 'ru-RU', { year: 'numeric', month: 'short', day: 'numeric' }); }
+    try { return d.toLocaleDateString(curLang() === 'en' ? 'en-GB' : 'ru-RU', { year: 'numeric', month: 'short', day: 'numeric' }); }
     catch (e) { return d.toISOString().slice(0, 10); }
+  }
+
+  // Меню собирается раньше, чем страница успевает переопределить язык
+  // (наш DOMContentLoaded-слушатель регистрируется выше по документу, чем
+  // страничный). Если язык с момента сборки поменялся — пересобираем.
+  function ensureLang() {
+    var mount = document.getElementById('acctMenuMount');
+    if (!mount || mount.dataset.built !== '1' || builtLang === curLang()) return;
+    var wasOpen = !!(root && root.classList.contains('open'));
+    mount.innerHTML = '';
+    mount.dataset.built = '';
+    root = btn = dd = whoEl = null;
+    build();
+    if (wasOpen) open();
   }
 
   function update(profile, session, entitlement) {
     build();
+    ensureLang();
     if (!whoEl) return;
-    var t = T[LANG];
+    var t = T[curLang()];
 
     var email = (session && session.user && session.user.email) || '\u2014';
     var st = (entitlement && entitlement.status) || (profile && profile.subscription_status) || 'none';
@@ -252,6 +287,8 @@
   } else {
     build();
   }
+
+  window.addEventListener('resize', function () { if (root && root.classList.contains('open')) close(); });
 
   window.BelfedAccountMenu = { update: update, build: build, close: close, syncLang: syncLangButtons };
 })();
