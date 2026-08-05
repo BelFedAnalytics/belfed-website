@@ -8,6 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="belfed-analytics.js"></script>
 <script src="belfed-auth.js"></script>
+<script src="belfed-account-menu.js"></script>
 <script src="belfed-payments.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -20,7 +21,7 @@ header h1{font-size:18px;letter-spacing:3px;font-weight:bold}
 .header-actions{display:contents}
 .members-link{position:absolute;left:0;top:50%;transform:translateY(-50%);font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;color:#000;text-decoration:none;border:1px solid #000;padding:5px 12px}
 .members-link:hover{background:#000;color:#f5f2eb}
-.header-right{position:absolute;right:0;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:10px}
+.header-right{display:flex;align-items:center;gap:10px}
 .logout-btn{font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;padding:6px 16px;background:none;border:1px solid #000;cursor:pointer;color:#000}
 .logout-btn:hover{background:#000;color:#f5f2eb}
 .lang-switch{display:flex;gap:0;border:1px solid #000}
@@ -189,14 +190,7 @@ a.card{text-decoration:none;color:#000}
 <h1 data-i18n="title">— BELFED ANALYTICS —</h1>
 <div class="header-actions">
   <a href="/members.html" class="members-link" data-i18n="navCabinet">&larr; КАБИНЕТ</a>
-  <a href="/settings.html" class="members-link" data-i18n="navSettings" title="Настройки аккаунта">НАСТРОЙКИ</a>
-  <div class="header-right">
-    <div class="lang-switch">
-      <button id="langRu" class="active" onclick="setLang('ru')">RU</button>
-      <button id="langEn" onclick="setLang('en')">EN</button>
-    </div>
-    <button class="logout-btn" onclick="handleLogout()" data-i18n="navLogout">ВЫЙТИ</button>
-  </div>
+  <div id="acctMenuMount"></div>
 </div>
 </header>
 
@@ -413,8 +407,11 @@ function setLang(lang) {
   }
   state.lang = lang;
   document.documentElement.lang = lang;
-  document.getElementById('langRu').classList.toggle('active', lang === 'ru');
-  document.getElementById('langEn').classList.toggle('active', lang === 'en');
+  // старый переключатель в шапке больше не рендерится — язык живёт в меню аккаунта
+  var _lr = document.getElementById('langRu'), _le = document.getElementById('langEn');
+  if (_lr) _lr.classList.toggle('active', lang === 'ru');
+  if (_le) _le.classList.toggle('active', lang === 'en');
+  if (window.BelfedAccountMenu) BelfedAccountMenu.syncLang();
   applyI18n();
   // Re-render the active view in the new language
   if (activeSeg === 'tl') { tlState.offset = 0; fetchTimeline(false); }
@@ -755,9 +752,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // restore lang from URL
   const urlLang = new URLSearchParams(location.search).get('lang');
   if (urlLang === 'en') state.lang = 'en';
-  document.getElementById('langRu').classList.toggle('active', state.lang === 'ru');
-  document.getElementById('langEn').classList.toggle('active', state.lang === 'en');
   document.documentElement.lang = state.lang;
+  if (window.BelfedAccountMenu) BelfedAccountMenu.syncLang();
 
   applyI18n();
   buildTagRow();
@@ -836,6 +832,7 @@ function showMemberContent() {
 function onAuthReady(profile, session, entitlement) {
   authReady = true;
   authedSession = session;
+  if (window.BelfedAccountMenu) BelfedAccountMenu.update(profile, session, entitlement);
   hasAccess = !!(entitlement && entitlement.access);
   if (!hasAccess) { showMemberLock('expired'); return; }
   showMemberContent();

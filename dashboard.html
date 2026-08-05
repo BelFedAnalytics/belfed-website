@@ -154,7 +154,7 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 <header>
 <h1>&mdash; BELFED ANALYTICS / ОТКРЫТЫЕ ПОЗИЦИИ &mdash;</h1>
 <div class="updated">Обновлено: <span id="currentTime"></span></div>
-<div class="header-actions"><a href="/members.html" class="members-link">&larr; КАБИНЕТ</a><a href="/settings.html" class="members-link" title="Настройки аккаунта">НАСТРОЙКИ</a><button class="logout-btn" onclick="handleLogout()">ВЫЙТИ</button></div>
+<div class="header-actions"><a href="/members.html" class="members-link">&larr; КАБИНЕТ</a><div id="acctMenuMount"></div></div>
 </header>
 <nav class="sub-nav">
 <a href="/dashboard.html" class="active">[ ПОЗИЦИИ ]</a>
@@ -279,6 +279,7 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="belfed-analytics.js"></script>
 <script src="belfed-auth.js"></script>
+<script src="belfed-account-menu.js"></script>
 <script src="belfed-payments.js"></script>
 <script>
   // --- Shared access token (for Telegram group pinned link) ---
@@ -296,6 +297,7 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 
   // --- Dashboard page callbacks ---
 function onAuthReady(profile, session, entitlement) {
+  if (window.BelfedAccountMenu) BelfedAccountMenu.update(profile, session, entitlement);
   if (entitlement.access) { showDashboard(); }
   else { showExpired(); }
 }

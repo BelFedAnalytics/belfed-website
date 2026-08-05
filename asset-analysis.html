@@ -268,8 +268,7 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
     <h1>— АНАЛИЗ АКТИВОВ И ЗАПРОСЫ —</h1>
     <div class="header-actions">
       <a href="/members.html" class="members-link">&larr; КАБИНЕТ</a>
-      <a href="/settings.html" class="members-link" title="Настройки аккаунта">НАСТРОЙКИ</a>
-      <button class="logout-btn" onclick="handleLogout()">ВЫЙТИ</button>
+      <div id="acctMenuMount"></div>
     </div>
   </header>
 
@@ -343,6 +342,7 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="belfed-analytics.js"></script>
 <script src="belfed-auth.js"></script>
+<script src="belfed-account-menu.js"></script>
 <script src="belfed-payments.js"></script>
 <script>
 // Failsafe: never leave the page blank if the auth callback is delayed/missing.
@@ -358,6 +358,7 @@ setTimeout(function () {
 // Page callbacks expected by belfed-auth.js
 function onAuthReady(profile, session, entitlement) {
   __authResolved = true;
+  if (window.BelfedAccountMenu) BelfedAccountMenu.update(profile, session, entitlement);
   if (entitlement && entitlement.access) showMain();
   else showExpired();
 }
