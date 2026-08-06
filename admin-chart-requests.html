@@ -83,6 +83,18 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 .modal textarea{width:100%;font-family:'Courier New',monospace;padding:8px;border:1px solid #000;background:#f5f2eb;font-size:12px;min-height:80px;resize:vertical;margin-bottom:10px}
 .modal label{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:1px;margin-bottom:12px;cursor:pointer}
 .modal-actions{display:flex;gap:8px;justify-content:flex-end}
+.modal.wide{width:560px}
+.modal-note{background:#fffbe5;border:1px solid #000;padding:8px 10px;font-size:10px;letter-spacing:1px;line-height:1.5;margin-bottom:12px}
+.post-list{max-height:44vh;overflow-y:auto;border:1px solid #000;background:#f5f2eb;margin-bottom:12px}
+.post-option{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-bottom:1px dashed #bbb;cursor:pointer;margin-bottom:0}
+.post-option:last-child{border-bottom:0}
+.post-option:hover{background:#fff}
+.post-option input{margin-top:3px;flex-shrink:0}
+.post-option.disabled{opacity:0.45;cursor:not-allowed}
+.post-option.disabled:hover{background:transparent}
+.po-body{display:flex;flex-direction:column;gap:3px;min-width:0}
+.po-head{font-size:11px;letter-spacing:1px;font-weight:bold}
+.po-prev{font-size:10px;letter-spacing:0.5px;opacity:0.7;line-height:1.5}
 
 @media(max-width:700px){
   body{padding:16px 12px}
@@ -154,6 +166,21 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 </div>
 </div>
 
+<!-- Link-to-existing-post modal -->
+<div class="modal-bg" id="linkModal">
+  <div class="modal wide">
+    <h3 id="linkTitle">— ПРИВЯЗАТЬ К ПОСТУ —</h3>
+    <div class="modal-note" id="linkNote">
+      // Закроет все ожидающие запросы по тикеру и отправит каждому DM со ссылкой на выбранный разбор. Новый пост не создаётся, в Telegram-каналы и в ленту кабинета ничего не публикуется.
+    </div>
+    <div class="post-list" id="linkList"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeLinkPost()">[ ОТМЕНА ]</button>
+      <button class="btn primary" id="linkBtn" disabled onclick="confirmLinkPost()">[ ПРИВЯЗАТЬ ]</button>
+    </div>
+  </div>
+</div>
+
 <!-- Reject modal -->
 <div class="modal-bg" id="rejectModal">
   <div class="modal">
@@ -176,6 +203,12 @@ const $ = (q) => document.querySelector(q);
 
 let rejectTargetId = null;
 let rejectTicker = null;
+
+let linkTargetId = null;
+let linkTicker = null;
+let linkPosts = [];
+let linkSelectedPostId = null;
+const _groupsMap = {};
 
 async function init(){ await checkAdminAndShow(); }
 document.addEventListener('DOMContentLoaded', init);
@@ -228,6 +261,11 @@ function showErr(msg){
   setTimeout(()=>{ $('#errorBox').innerHTML=''; }, 6000);
 }
 
+function showSuccess(msg){
+  $('#errorBox').innerHTML = '<div class="msg ok">'+escapeHtml(msg)+'</div>';
+  setTimeout(()=>{ $('#errorBox').innerHTML=''; }, 8000);
+}
+
 async function callFn(action, extra){
   const { data: { session } } = await sb.auth.getSession();
   if (!session) { showErr('Сессия истекла'); return null; }
@@ -271,6 +309,7 @@ function renderGroups(groups){
         '</div>';
     }).join('');
     const oldestId = (g.requests && g.requests.length) ? g.requests[0].id : '';
+    _groupsMap[oldestId] = g;
     return '<div class="group-card">' +
       '<div class="group-head">' +
         '<div class="left">' +
@@ -280,6 +319,7 @@ function renderGroups(groups){
         '</div>' +
         '<div class="group-actions">' +
           '<a class="btn primary small" href="/admin-analysis-posts.html?fulfill_req='+encodeURIComponent(oldestId)+'&ticker='+encodeURIComponent(g.ticker)+(g.asset_class?'&asset_class='+encodeURIComponent(g.asset_class):'')+'">[ ВЫПОЛНИТЬ → РЕДАКТОР ]</a>' +
+          '<button class="btn small" onclick="openLinkPost(\''+oldestId+'\', \''+escapeHtml(g.ticker)+'\')">[ ПРИВЯЗАТЬ К ПОСТУ ]</button>' +
           '<button class="btn small danger" onclick="openReject(\''+oldestId+'\', \''+escapeHtml(g.ticker)+'\')">[ ОТКЛОНИТЬ ]</button>' +
         '</div>' +
       '</div>' +
@@ -304,6 +344,94 @@ function renderRecent(recent){
       '<div style="opacity:0.65">'+escapeHtml(timeAgo(r.fulfilled_at||r.created_at))+reason+link+'</div>' +
     '</div>';
   }).join('');
+}
+
+// =================== LINK TO EXISTING PUBLISHED POST ===================
+// Closes pending requests for a ticker by pointing them at an analysis post
+// that is already published. Calls chart-request/admin_fulfill directly, so
+// nothing new is published to Telegram topics or to the member-area feed.
+async function openLinkPost(id, ticker){
+  linkTargetId = id;
+  linkTicker = ticker;
+  linkSelectedPostId = null;
+  const g = _groupsMap[id];
+  const cnt = (g && g.count) ? g.count : 1;
+  $('#linkTitle').textContent = '— ПРИВЯЗАТЬ $' + ticker + ' К ПОСТУ —';
+  $('#linkNote').textContent = '// Закроет все ожидающие запросы по $' + ticker + ' (' + cnt + ' шт.) и отправит каждому DM со ссылкой на выбранный разбор. Новый пост не создаётся, в Telegram-каналы и в ленту кабинета ничего не публикуется.';
+  $('#linkList').innerHTML = '<div class="empty">// ЗАГРУЗКА…</div>';
+  $('#linkBtn').disabled = true;
+  $('#linkBtn').textContent = '[ ПРИВЯЗАТЬ ]';
+  $('#linkModal').classList.add('open');
+
+  const { data, error } = await sb.from('analysis_posts')
+    .select('id, ticker, slug, status, published_at, created_at, headline_ru, headline_en, body_ru, body_en')
+    .eq('ticker', ticker)
+    .eq('status', 'published')
+    .order('published_at', { ascending: false, nullsFirst: false })
+    .limit(20);
+
+  if (error) {
+    $('#linkList').innerHTML = '<div class="msg err">Ошибка загрузки постов: '+escapeHtml(error.message)+'</div>';
+    return;
+  }
+  linkPosts = data || [];
+  renderLinkList();
+}
+
+function renderLinkList(){
+  if (!linkPosts.length) {
+    $('#linkList').innerHTML = '<div class="empty">— НЕТ ОПУБЛИКОВАННЫХ ПОСТОВ ПО ЭТОМУ ТИКЕРУ —</div>';
+    return;
+  }
+  $('#linkList').innerHTML = linkPosts.map(p => {
+    const raw = p.published_at || p.created_at;
+    const when = raw
+      ? new Date(raw).toLocaleDateString('ru-RU', { day:'2-digit', month:'2-digit', year:'numeric' })
+      : '—';
+    const text = String(p.body_ru || p.body_en || p.headline_ru || p.headline_en || '').replace(/\s+/g, ' ').trim();
+    const preview = text ? (text.length > 120 ? text.slice(0, 120) + '…' : text) : '— без текста —';
+    // A post without a slug would produce a DM link the member area cannot resolve.
+    const noSlug = !p.slug;
+    return '<label class="post-option'+(noSlug ? ' disabled' : '')+'">' +
+      '<input type="radio" name="linkPost" value="'+escapeHtml(p.id)+'"'+(noSlug ? ' disabled' : '')+' onchange="selectLinkPost(this.value)">' +
+      '<span class="po-body">' +
+        '<span class="po-head">'+escapeHtml(p.slug || '(без slug — привязка недоступна)')+' · '+escapeHtml(when)+'</span>' +
+        '<span class="po-prev">'+escapeHtml(preview)+'</span>' +
+      '</span>' +
+    '</label>';
+  }).join('');
+}
+
+function selectLinkPost(postId){
+  linkSelectedPostId = postId;
+  $('#linkBtn').disabled = false;
+}
+
+function closeLinkPost(){
+  $('#linkModal').classList.remove('open');
+  linkTargetId = null;
+  linkPosts = [];
+  linkSelectedPostId = null;
+}
+
+async function confirmLinkPost(){
+  if (!linkTargetId || !linkSelectedPostId) return;
+  $('#linkBtn').disabled = true;
+  $('#linkBtn').textContent = '[ ПРИВЯЗЫВАЕМ… ]';
+  const d = await callFn('admin_fulfill', { request_id: linkTargetId, post_id: linkSelectedPostId });
+  if (d && d.ok) {
+    const notified = d.notified || [];
+    const okCount = notified.filter(n => n.ok).length;
+    const failCount = notified.length - okCount;
+    closeLinkPost();
+    showSuccess('Закрыто запросов: ' + (d.fulfilled_count || 0) +
+      ' · уведомлений доставлено: ' + okCount +
+      (failCount ? ' · не доставлено: ' + failCount : ''));
+    await loadQueue();
+  } else {
+    $('#linkBtn').disabled = false;
+    $('#linkBtn').textContent = '[ ПРИВЯЗАТЬ ]';
+  }
 }
 
 function openReject(id, ticker){
