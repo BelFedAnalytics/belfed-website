@@ -102,6 +102,10 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 .link-fields textarea{min-height:60px;margin-bottom:4px}
 .link-fields input[type=url],.link-fields input[type=text]{width:100%;font-family:'Courier New',monospace;padding:8px;border:1px solid #000;background:#f5f2eb;font-size:12px;margin-bottom:4px}
 .dm-preview{background:#000;color:#f5f2eb;padding:12px 14px;font-size:11px;line-height:1.65;white-space:pre-wrap;word-break:break-word;max-height:26vh;overflow-y:auto;border:1px solid #000;margin-bottom:12px}
+.dm-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.lang-tabs{display:flex;gap:4px}
+.lang-tabs button{font:inherit;font-size:10px;letter-spacing:.08em;padding:2px 9px;border:1px solid #000;background:#f5f2eb;cursor:pointer}
+.lang-tabs button.on{background:#000;color:#f5f2eb}
 .dm-preview .cta{text-decoration:underline}
 
 
@@ -195,7 +199,11 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
       <input type="url" id="linkChartUrl" placeholder="https://www.tradingview.com/x/…/" oninput="renderDmPreview()">
       <label style="margin-top:8px"><input type="checkbox" id="linkUpdatePostChart"> Также обновить график в самом посте</label>
     </div>
-    <label class="field-label">// ПРЕДПРОСМОТР DM</label>
+    <div class="dm-head">
+      <label class="field-label" style="margin:0">// ПРЕДПРОСМОТР DM</label>
+      <span class="lang-tabs"><button type="button" data-lang="ru" class="on" onclick="setDmLang('ru')">RU</button><button type="button" data-lang="en" onclick="setDmLang('en')">EN</button></span>
+    </div>
+    <div class="field-hint">Язык получателя, а не язык админки. Каждому уйдёт версия по его профилю.</div>
     <div class="dm-preview" id="dmPreview">— ВЫБЕРИТЕ ПОСТ —</div>
     <div class="modal-actions">
       <button class="btn" onclick="closeLinkPost()">[ ОТМЕНА ]</button>
@@ -392,7 +400,7 @@ async function openLinkPost(id, ticker){
   renderDmPreview();
 
   const { data, error } = await sb.from('analysis_posts')
-    .select('id, ticker, slug, status, published_at, created_at, headline_ru, headline_en, body_ru, body_en, tradingview_url')
+    .select('id, ticker, slug, status, published_at, created_at, headline_ru, headline_en, body_ru, body_en, tradingview_url, message_id_ru, message_id_en, destination')
     .eq('ticker', ticker)
     .eq('status', 'published')
     .order('published_at', { ascending: false, nullsFirst: false })
@@ -404,6 +412,8 @@ async function openLinkPost(id, ticker){
   }
   linkPosts = data || [];
   renderLinkList();
+  await loadLinkTopics(linkPosts.length ? topicKeyFor(linkPosts[0]) : 'analysis');
+  renderDmPreview();
 }
 
 function renderLinkList(){
@@ -440,22 +450,84 @@ function selectLinkPost(postId){
 }
 
 // Rebuilds exactly what chart-request/admin_fulfill (v14) will send over Telegram.
+let dmPreviewLang = 'ru';
+let linkTopics = {};   // { ru: {chat_id, thread_id}, en: {...} } for topic_key 'analysis'
+
+function setDmLang(lang){
+  dmPreviewLang = (lang === 'en') ? 'en' : 'ru';
+  document.querySelectorAll('.lang-tabs button').forEach(b => {
+    b.classList.toggle('on', b.dataset.lang === dmPreviewLang);
+  });
+  renderDmPreview();
+}
+
+// Same rule as analysis-publish: a post with no ticker that is not an asset
+// post lives in the "analytics" topic; everything else in "analysis".
+function topicKeyFor(p){
+  return ((p.destination || 'timeline') === 'timeline' && !p.ticker) ? 'analytics' : 'analysis';
+}
+
+async function loadLinkTopics(key){
+  const { data } = await sb.from('telegram_topics')
+    .select('lang, chat_id, thread_id')
+    .eq('topic_key', key);
+  linkTopics = {};
+  (data || []).forEach(t => { linkTopics[t.lang] = t; });
+}
+
+// Private supergroups are addressable as t.me/c/<id without the -100 prefix>/...
+function tgPostUrl(p, lang){
+  const mid = (lang === 'en') ? p.message_id_en : p.message_id_ru;
+  const topic = linkTopics[lang];
+  if (!mid || !topic) return null;
+  const raw = String(topic.chat_id);
+  if (raw.indexOf('-100') !== 0) return null;
+  const internal = raw.slice(4);
+  return (topic.thread_id !== null && topic.thread_id !== undefined)
+    ? 'https://t.me/c/' + internal + '/' + topic.thread_id + '/' + mid
+    : 'https://t.me/c/' + internal + '/' + mid;
+}
+
+// Rebuilds exactly what chart-request/admin_fulfill (v15) sends over Telegram.
+// The language follows the recipient's profile, never the admin's UI locale.
 function renderDmPreview(){
   const box = $('#dmPreview');
   if (!box) return;
   if (!linkSelectedPostId) { box.textContent = '— ВЫБЕРИТЕ ПОСТ —'; return; }
   const p = linkPosts.find(x => x.id === linkSelectedPostId);
   if (!p) { box.textContent = '— ВЫБЕРИТЕ ПОСТ —'; return; }
-  const note  = $('#linkNoteRu').value.trim();
-  const chart = $('#linkChartUrl').value.trim();
-  const url = 'https://belfed.ru/asset-analysis.html?slug=' + encodeURIComponent(p.slug || p.id) +
-              '&ticker=' + encodeURIComponent(p.ticker || linkTicker);
-  const parts = ['✅ Ваш запрос по ' + linkTicker + ' готов.', ''];
+
+  const en = (dmPreviewLang === 'en');
+  const noteRu = $('#linkNoteRu').value.trim();
+  const note   = en ? ($('#linkNoteEn').value.trim() || noteRu) : noteRu;
+  const chart  = $('#linkChartUrl').value.trim();
+  const webUrl = (en ? 'https://belfed.com' : 'https://belfed.ru') +
+                 '/asset-analysis.html?slug=' + encodeURIComponent(p.slug || p.id) +
+                 '&ticker=' + encodeURIComponent(p.ticker || linkTicker);
+  const tgUrl  = tgPostUrl(p, dmPreviewLang);
+
+  const parts = [(en ? '✅ Your chart request ' : '✅ Ваш запрос по ') + linkTicker +
+                 (en ? ' is ready.' : ' готов.'), ''];
   if (note)  { parts.push(note, ''); }
-  if (chart) { parts.push('График: ' + chart, ''); }
-  box.innerHTML = escapeHtml(parts.join('\n')) +
-    '<span class="cta">Открыть анализ →</span>\n' +
-    '<span style="opacity:0.55">' + escapeHtml(url) + '</span>';
+  if (chart) { parts.push((en ? 'Chart: ' : 'График: ') + chart, ''); }
+
+  // parts always ends with '' so join() leaves one newline; the server pushes
+  // an extra blank line before the links, so add it here too.
+  let html = escapeHtml(parts.join('\n')) + '\n';
+  html += escapeHtml(en ? 'Member area: ' : 'Веб-версия в личном кабинете: ') +
+          '<span class="cta">' + escapeHtml(en ? 'open the analysis →' : 'открыть разбор →') + '</span>\n' +
+          '<span style="opacity:0.55">' + escapeHtml(webUrl) + '</span>\n';
+  if (tgUrl) {
+    html += escapeHtml(en ? 'Telegram: ' : 'Телеграм: ') +
+            '<span class="cta">' + escapeHtml(en ? 'open the post →' : 'открыть пост →') + '</span>\n' +
+            '<span style="opacity:0.55">' + escapeHtml(tgUrl) + '</span>';
+  } else {
+    html += '<span style="opacity:0.55">' +
+            escapeHtml(en ? '(no Telegram link — this post was never published to the EN channel)'
+                          : '(без ссылки на Telegram — пост не публиковался в этот канал)') +
+            '</span>';
+  }
+  box.innerHTML = html;
 }
 
 function closeLinkPost(){
@@ -463,6 +535,8 @@ function closeLinkPost(){
   linkTargetId = null;
   linkPosts = [];
   linkSelectedPostId = null;
+  linkTopics = {};
+  setDmLang('ru');
 }
 
 async function confirmLinkPost(){
