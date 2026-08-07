@@ -39,6 +39,8 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 .btn:hover{background:#f0ede4}
 .btn.primary{background:#000;color:#f5f2eb}
 .btn.primary:hover{background:#222}
+.btn.warn{background:#8a6a00;color:#fff;border-color:#8a6a00}
+.btn.warn:hover{background:#6b5200}
 .btn.danger{background:#c50000;color:#fff;border-color:#c50000}
 .btn.danger:hover{background:#a30000}
 .btn.small{padding:5px 10px;font-size:10px;letter-spacing:1px}
@@ -65,6 +67,13 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 .requester-row .src.web{background:#fff}
 .requester-row .src.telegram{background:#e8f1f3}
 .requester-row .when{opacity:0.65}
+.lang-pill{font-size:9px;letter-spacing:1px;padding:2px 5px;border:1px solid #000;font-weight:bold}
+.lang-pill.ru{background:#000;color:#f5f2eb}
+.lang-pill.en{background:#fff;color:#000}
+.lang-pill.unknown{background:#e8e8e8;color:#666;border-style:dashed}
+.lang-notice{border:1px solid #000;background:#fffbe5;padding:10px 12px;margin-bottom:10px;font-size:11px;line-height:1.6;letter-spacing:0.5px}
+.lang-notice strong{letter-spacing:1px}
+.lang-notice .warn-line{display:block;margin-top:6px;color:#8a2b00}
 
 .recent-row{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border:1px solid #ddd;background:#fff;margin-bottom:6px;font-size:11px;letter-spacing:1px}
 .recent-row .left{display:flex;gap:10px;align-items:baseline}
@@ -72,6 +81,7 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 .recent-row .s{font-size:10px;padding:2px 6px;border:1px solid #000;letter-spacing:1px}
 .recent-row .s.fulfilled{background:#000;color:#f5f2eb}
 .recent-row .s.rejected{background:#ffe5e5}
+.recent-row .s.clarified{background:#fffbe5;border-color:#8a6a00;color:#8a6a00}
 .recent-row .s.expired{background:#e8e8e8;opacity:0.7}
 
 .empty{background:#fff;border:1px dashed #999;padding:30px;text-align:center;font-size:12px;letter-spacing:2px;opacity:0.6}
@@ -212,6 +222,19 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
   </div>
 </div>
 
+<!-- Clarify modal -->
+<div class="modal-bg" id="clarifyModal">
+  <div class="modal">
+    <h3 id="clarifyTitle">— УТОЧНИТЬ ТИКЕР —</h3>
+    <div class="lang-notice" id="clarifyNotice"></div>
+    <textarea id="clarifyMessage" style="min-height:100px"></textarea>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeClarify()">[ ОТМЕНА ]</button>
+      <button class="btn warn" id="clarifyBtn" onclick="confirmClarify()">[ ОТПРАВИТЬ УТОЧНЕНИЕ ]</button>
+    </div>
+  </div>
+</div>
+
 <!-- Reject modal -->
 <div class="modal-bg" id="rejectModal">
   <div class="modal">
@@ -334,8 +357,11 @@ function renderGroups(groups){
     const cls = g.asset_class ? '<span class="class-pill">'+escapeHtml(g.asset_class.toUpperCase())+'</span>' : '';
     const requesters = (g.requests || []).map(r => {
       const id = r.email || ('@' + (r.telegram_id||'tg')) || r.user_id.slice(0,8);
+      const clarifiedBadge = r.clarification_sent_at
+        ? '<span style="font-size:9px;letter-spacing:1px;padding:1px 5px;border:1px solid #8a6a00;color:#8a6a00;background:#fffbe5;margin-left:6px">УТОЧНЁН</span>'
+        : '';
       return '<div class="requester-row">' +
-        '<div class="who"><span class="src '+escapeHtml(r.source)+'">'+escapeHtml(r.source)+'</span><span>'+escapeHtml(id)+'</span></div>' +
+        '<div class="who">'+langPill(r.lang)+'<span class="src '+escapeHtml(r.source)+'">'+escapeHtml(r.source)+'</span><span>'+escapeHtml(id)+clarifiedBadge+'</span></div>' +
         '<div class="when">'+escapeHtml(timeAgo(r.created_at))+'</div>' +
         '</div>';
     }).join('');
@@ -351,6 +377,7 @@ function renderGroups(groups){
         '<div class="group-actions">' +
           '<a class="btn primary small" href="/admin-analysis-posts.html?fulfill_req='+encodeURIComponent(oldestId)+'&ticker='+encodeURIComponent(g.ticker)+(g.asset_class?'&asset_class='+encodeURIComponent(g.asset_class):'')+'">[ ВЫПОЛНИТЬ → РЕДАКТОР ]</a>' +
           '<button class="btn small" onclick="openLinkPost(\''+oldestId+'\', \''+escapeHtml(g.ticker)+'\')">[ ПРИВЯЗАТЬ К ПОСТУ ]</button>' +
+          '<button class="btn small warn" onclick="openClarify(\''+oldestId+'\', \''+escapeHtml(g.ticker)+'\')">[ УТОЧНИТЬ? ]</button>' +
           '<button class="btn small danger" onclick="openReject(\''+oldestId+'\', \''+escapeHtml(g.ticker)+'\')">[ ОТКЛОНИТЬ ]</button>' +
         '</div>' +
       '</div>' +
@@ -375,6 +402,82 @@ function renderRecent(recent){
       '<div style="opacity:0.65">'+escapeHtml(timeAgo(r.fulfilled_at||r.created_at))+reason+link+'</div>' +
     '</div>';
   }).join('');
+}
+
+let clarifyTargetId = null;
+let clarifyRequests = [];
+
+// Recipient language drives every outgoing string; it is never the admin locale.
+function langPill(lang){
+  const l = (lang === 'ru' || lang === 'en') ? lang : 'unknown';
+  const label = l === 'unknown' ? '??' : l.toUpperCase();
+  return '<span class="lang-pill ' + l + '">' + label + '</span>';
+}
+
+// The edge function notifies only the request_id it is given, so a clarification
+// reaches the oldest requester alone -- unlike fulfil, which closes the whole group.
+function clarifyNotice(requests, targetId){
+  const target = (requests || []).find(r => r.id === targetId) || (requests || [])[0] || {};
+  const lang = (target.lang === 'ru' || target.lang === 'en') ? target.lang : null;
+  const others = (requests || []).filter(r => r.id !== (target.id || targetId));
+  return { lang: lang, otherCount: others.length };
+}
+
+function renderClarifyNotice(){
+  const box = $('#clarifyNotice');
+  if (!box) return;
+  const info = clarifyNotice(clarifyRequests, clarifyTargetId);
+  const ta = $('#clarifyMessage');
+  let html;
+  if (info.lang === 'en') {
+    html = 'Получатель англоязычный ' + langPill('en') + ' — <strong>пишите по-английски</strong>. Шапка, подпись и кнопки в его сообщении будут на английском.';
+    if (ta) ta.placeholder = 'E.g.: Ticker DA not found. Did you mean DATA (Arenadata) or something else? Please re-submit with the correct ticker.';
+  } else if (info.lang === 'ru') {
+    html = 'Получатель русскоязычный ' + langPill('ru') + ' — <strong>пишите по-русски</strong>. Шапка, подпись и кнопки в его сообщении будут на русском.';
+    if (ta) ta.placeholder = 'Например: тикер DA не найден. Вы имели в виду DATA (Аренадата) или что-то другое? Пришлите, пожалуйста, запрос с точным тикером.';
+  } else {
+    html = 'Язык получателя ' + langPill(null) + ' не указан в профиле — уйдёт русская версия оформления.';
+    if (ta) ta.placeholder = 'Например: тикер DA не найден. Уточните, пожалуйста, что вы имели в виду.';
+  }
+  html += '<br><span style="opacity:0.7">Уйдёт в Telegram-бот и на email запросившего.</span>';
+  if (info.otherCount > 0) {
+    html += '<span class="warn-line">Внимание: по этому тикеру ещё ' + info.otherCount +
+            ' запрос(а). Уточнение получит только самый ранний — остальные останутся в очереди молча.</span>';
+  }
+  box.innerHTML = html;
+}
+
+function openClarify(id, ticker){
+  clarifyTargetId = id;
+  clarifyRequests = (_groupsMap[id] && _groupsMap[id].requests) || [];
+  $('#clarifyTitle').textContent = '— УТОЧНИТЬ $' + ticker + ' —';
+  $('#clarifyMessage').value = '';
+  renderClarifyNotice();
+  $('#clarifyBtn').disabled = false;
+  $('#clarifyBtn').textContent = '[ ОТПРАВИТЬ УТОЧНЕНИЕ ]';
+  $('#clarifyModal').classList.add('open');
+}
+function closeClarify(){
+  $('#clarifyModal').classList.remove('open');
+  clarifyTargetId = null;
+  clarifyRequests = [];
+}
+async function confirmClarify(){
+  if (!clarifyTargetId) return;
+  const message = $('#clarifyMessage').value.trim();
+  if (!message) { alert('Введите текст уточнения.'); return; }
+  $('#clarifyBtn').disabled = true;
+  $('#clarifyBtn').textContent = '[ ОТПРАВКА… ]';
+  const d = await callFn('admin_clarify', { request_id: clarifyTargetId, message });
+  if (d && d.ok) {
+    closeClarify();
+    const info = (d.sent_tg ? 'Telegram DM' : '') + (d.sent_tg && d.sent_email ? ' + ' : '') + (d.sent_email ? 'email' : '');
+    showSuccess('Уточнение отправлено: ' + (info||'уведомление') + '.');
+    await loadQueue();
+  } else {
+    $('#clarifyBtn').disabled = false;
+    $('#clarifyBtn').textContent = '[ ОТПРАВИТЬ УТОЧНЕНИЕ ]';
+  }
 }
 
 // =================== LINK TO EXISTING PUBLISHED POST ===================
