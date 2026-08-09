@@ -344,10 +344,16 @@
       var entry = (k.safe && m[k.safe]) || m[k.full] || m[k.pair];
       var chart = chartHTML(data);
       var card;
-      if (entry && entry[LANG]) {
-        card = postProcessCard(entry[LANG], data, !!chart);
-      } else {
-        card = fallbackCard(data);
+    if (entry && entry[LANG]) {
+      card = postProcessCard(entry[LANG], data, !!chart);
+    } else {
+      card = fallbackCard(data);
+    }
+      // Structured manual enrichment is keyed with the same collision-safe
+      // identity as the manifest. It is separate from the generated manifest,
+      // so scheduled refreshes preserve approved trade-specific copy.
+      if (window.BelfedReviewEnrichment) {
+        card = window.BelfedReviewEnrichment.inject(card, data);
       }
       // Prepend the embedded chart snapshot to every card (manifest or fallback).
       var html = chart + card;

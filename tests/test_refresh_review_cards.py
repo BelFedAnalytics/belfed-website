@@ -275,6 +275,15 @@ def test_refresh_preserves_unrelated_entries():
         assert man[k] == v
 
 
+def test_refresh_leaves_structured_manual_enrichment_untouched():
+    """The scheduled manifest rebuild must not replace reviewed manual blocks."""
+    enrichment = os.path.join(REPO, "ru", "trade-review-enrichment.js")
+    before = open(enrichment, encoding="utf-8").read()
+    man = {}
+    R.refresh([_cl331(), _eth337()], _sheets(), man)
+    assert open(enrichment, encoding="utf-8").read() == before
+
+
 # ------------------------------------------------------------ credentials ---
 ALL_VARS = ("SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY",
             "SUPABASE_CARD_EXPORT_KEY")
