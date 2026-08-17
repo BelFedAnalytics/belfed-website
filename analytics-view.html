@@ -20,7 +20,9 @@ header.topbar h1{font-size:18px;letter-spacing:3px;font-weight:bold}
 
 .report-meta{font-size:11px;letter-spacing:2px;opacity:0.7;margin-bottom:8px;text-transform:uppercase}
 .report-title{font-size:24px;letter-spacing:2px;font-weight:bold;line-height:1.3;margin-bottom:14px;text-transform:uppercase}
-.report-subtitle{font-size:15px;line-height:1.6;margin-bottom:18px;opacity:0.85}
+.report-subtitle{font-size:15px;line-height:1.7;margin-bottom:24px;opacity:0.9}
+.report-subtitle p{margin-bottom:14px}
+.report-subtitle p:last-child{margin-bottom:0}
 .report-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:24px}
 .report-tag{font-size:10px;letter-spacing:1px;padding:3px 9px;background:#fff;border:1px solid #000;text-transform:uppercase}
 
@@ -35,7 +37,12 @@ header.topbar h1{font-size:18px;letter-spacing:3px;font-weight:bold}
 .section-chart img{width:100%;display:block}
 .section-chart-caption{font-size:11px;padding:10px 14px;border-top:1px dashed #999;opacity:0.7;letter-spacing:1px;font-style:italic}
 .section-charts{display:flex;flex-direction:column;gap:14px;margin:18px 0}
-.section-body{font-size:14px;line-height:1.75;white-space:pre-wrap}
+.section-body{font-size:14px;line-height:1.75}
+.section-body p{margin-bottom:12px}
+.section-body p:last-child{margin-bottom:0}
+.section-feed-link{margin-top:16px;font-size:11px;letter-spacing:2px;text-transform:uppercase;opacity:0.55}
+.section-feed-link a{color:#000;text-decoration:none;border-bottom:1px dashed #000;padding-bottom:1px}
+.section-feed-link a:hover{opacity:1;border-bottom-style:solid}
 .section.conclusion{background:#fff;border:1px solid #000;padding:22px 24px}
 .section.conclusion .section-label{color:#000}
 
@@ -188,6 +195,17 @@ function renderReport() {
   const sections = state.sections;
   const title = (state.lang === 'ru' ? r.title_ru : (r.title_en || r.title_ru)) || '';
   const subtitle = (state.lang === 'ru' ? r.subtitle_ru : (r.subtitle_en || r.subtitle_ru)) || '';
+  // Render subtitle as paragraph list — split on blank lines to preserve author
+  // paragraph breaks (DB stores them as \n\n). Single \n inside a paragraph is
+  // preserved as a line break.
+  const subtitleHtml = subtitle
+    ? '<div class="report-subtitle">' + subtitle
+        .split(/\n\s*\n/)
+        .map(p => p.trim())
+        .filter(p => p.length > 0)
+        .map(p => `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`)
+        .join('') + '</div>'
+    : '';
   const dateStr = fmtDate(r.report_date);
   const typeStr = (r.report_type || '').toUpperCase();
   const tags = (r.tags || []).map(tg => `<span class="report-tag">${escapeHtml(tg)}</span>`).join('');
@@ -200,28 +218,48 @@ function renderReport() {
     // v30: linked sections render as a clickable card to the referenced timeline/asset post.
     // Skip silently in this lang if the linked post has no headline/version in the requested lang
     // (matches the TG cover's EN degradation behaviour). Also skip drafts.
+    // v31+: linked sections render inline as a full-content block — the referenced
+    // analysis post's body and charts are inlined so the reader can read the report
+    // without jumping to Telegram/timeline. Visually identical to a normal section.
+    // Storage images are referenced by URL (no duplication) — the browser and CDN
+    // cache the same object shared with the timeline page.
     if (s.linked_post_id && s.linked_post) {
       const lp = s.linked_post;
       if (lp.status !== 'published') return '';
       const lpHeadline = (state.lang === 'ru' ? lp.headline_ru : lp.headline_en) || lp.headline_ru || '';
       const langPublished = state.lang === 'ru' ? lp.publish_to_ru !== false : lp.publish_to_en === true;
       if (!lpHeadline || !langPublished) return '';
-      // Unified URL for both timeline and asset destinations: /analysis/<TICKER>/<slug>
-      // — asset-analysis.html accepts this canonical form.
       const linkedLabel = (state.lang === 'ru' ? s.section_label_ru : s.section_label_en) || '';
-      const linkedLabelText = linkedLabel || (state.lang === 'ru' ? '// СМ. АНАЛИЗ' : '// SEE ANALYSIS');
+      const labelText = linkedLabel || `// ${String(s.position).padStart(2,'0')}`;
+      const lpBody = (state.lang === 'ru' ? lp.body_ru : lp.body_en) || '';
+      const bodyHtml = lpBody
+        ? '<div class="section-body">' + lpBody
+            .split(/\n\s*\n/)
+            .map(p => p.trim())
+            .filter(p => p.length > 0)
+            .map(p => `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`)
+            .join('') + '</div>'
+        : '';
+      // image_paths is a jsonb array of storage keys under the analysis-images bucket.
+      const imagePaths = Array.isArray(lp.image_paths) ? lp.image_paths.filter(p => typeof p === 'string' && p.length > 0) : [];
+      const chartsHtml = imagePaths.length > 0
+        ? `<div class="section-charts">${imagePaths.map(p => `
+            <div class="section-chart">
+              <img src="${escapeHtml(SUPABASE_URL)}/storage/v1/object/public/analysis-images/${escapeHtml(p)}" alt="" loading="lazy">
+            </div>`).join('')}</div>`
+        : '';
+      // Small "see in feed" link at the bottom, canonical URL /analysis/<TICKER>/<slug>.
       const tickerPart = lp.ticker ? String(lp.ticker).toUpperCase() : 'POST';
-      const url = `/analysis/${encodeURIComponent(tickerPart)}/${encodeURIComponent(lp.slug || '')}`;
-      const metaBits = [];
-      if (lp.ticker) metaBits.push(String(lp.ticker).toUpperCase());
-      if (lp.destination) metaBits.push(state.lang === 'ru' ? (lp.destination === 'asset' ? 'РАЗБОР АКТИВА' : 'ЛЕНТА') : (lp.destination === 'asset' ? 'ASSET ANALYSIS' : 'TIMELINE'));
+      const feedUrl = `/analysis/${encodeURIComponent(tickerPart)}/${encodeURIComponent(lp.slug || '')}`;
+      const feedLinkText = state.lang === 'ru' ? '→ в ленте' : '→ in feed';
+      const feedLinkHtml = `<div class="section-feed-link"><a href="${escapeHtml(feedUrl)}">${escapeHtml(feedLinkText)}</a></div>`;
       return `
-      <div class="section linked-card">
-        <a class="linked-card-inner" href="${escapeHtml(url)}">
-          <div class="linked-badge">${escapeHtml(linkedLabelText)}</div>
-          <div class="linked-headline">${escapeHtml(lpHeadline)}</div>
-          ${metaBits.length ? `<div class="linked-meta">${escapeHtml(metaBits.join(' · '))}</div>` : ''}
-        </a>
+      <div class="section">
+        <div class="section-label">${escapeHtml(labelText)}</div>
+        <div class="section-headline">${escapeHtml(lpHeadline)}</div>
+        ${chartsHtml}
+        ${bodyHtml}
+        ${feedLinkHtml}
       </div>
     `;
     }
@@ -244,12 +282,22 @@ function renderReport() {
           </div>`;
         }).join('')}</div>`
       : '';
+    // v31+: render body as paragraphs (split on blank lines) for consistent typography
+    // with linked sections and the report subtitle.
+    const bodyHtml = body
+      ? '<div class="section-body">' + body
+          .split(/\n\s*\n/)
+          .map(p => p.trim())
+          .filter(p => p.length > 0)
+          .map(p => `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`)
+          .join('') + '</div>'
+      : '';
     return `
       <div class="section${isConc ? ' conclusion' : ''}">
         ${labelText ? `<div class="section-label">${escapeHtml(labelText)}</div>` : ''}
         ${headline ? `<div class="section-headline">${escapeHtml(headline)}</div>` : ''}
         ${chartsHtml}
-        ${body ? `<div class="section-body">${escapeHtml(body)}</div>` : ''}
+        ${bodyHtml}
       </div>
     `;
   }).join('');
@@ -257,7 +305,7 @@ function renderReport() {
   document.getElementById('content').innerHTML = `
     <div class="report-meta">${escapeHtml(dateStr)} · ${escapeHtml(typeStr)}</div>
     <div class="report-title">${escapeHtml(title)}</div>
-    ${subtitle ? `<div class="report-subtitle">${escapeHtml(subtitle)}</div>` : ''}
+    ${subtitleHtml}
     ${tags ? `<div class="report-tags">${tags}</div>` : ''}
     ${coverHtml}
     ${sectionHtml}
