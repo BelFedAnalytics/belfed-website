@@ -278,7 +278,7 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
           <div class="body-col-head"><span class="lang">RU</span></div>
           <div class="field">
             <label>// ОБРАЩЕНИЕ <span class="hint">опционально</span></label>
-            <input type="text" id="greet-ru" value="Анализ по запросу пользователя" placeholder="Например: Привет, Алекс!">
+            <input type="text" id="greet-ru" placeholder="Например: Привет, Алекс! (автоматически заполняется при ответе на запрос пользователя)">
           </div>
           <div class="field">
             <label>// ТЕЛО</label>
@@ -313,7 +313,7 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 
       <div class="field">
         <label>// HASHTAGS <span class="hint">через пробел</span></label>
-        <input type="text" id="tags" value="#AnalysisUpdate #equities">
+        <input type="text" id="tags" value="#equities">
       </div>
 
       <div class="field">
@@ -571,16 +571,19 @@ function initEditor(){
 }
 
 // =================== HASHTAG AUTOMATION ===================
+// v16: #AnalysisUpdate removed from all automation. Hashtags are now built as
+// #(TICKER) followed by the asset-class tag (#equities/#crypto/...), for both
+// regular asset reviews and replies to user requests.
 function syncAssetClassTag(){
   const cls = els.assetClass.value || 'stocks';
   const wantTag = ASSET_CLASS_TAG[cls] || '#equities';
   const cur = (els.tags.value || '').trim();
-  // Tokenize, drop any existing class tag, prepend wantTag (after #AnalysisUpdate if present)
+  // Tokenize, drop any existing class tag and any legacy #AnalysisUpdate token.
   let tokens = cur.split(/\s+/).filter(Boolean);
-  tokens = tokens.filter(t => !ALL_CLASS_TAGS.has(t.toLowerCase()));
-  // Insert wantTag right after #AnalysisUpdate if it exists, else at start
-  const auIdx = tokens.findIndex(t => t.toLowerCase()==='#analysisupdate');
-  if (auIdx >= 0) tokens.splice(auIdx+1, 0, wantTag);
+  tokens = tokens.filter(t => !ALL_CLASS_TAGS.has(t.toLowerCase()) && t.toLowerCase() !== '#analysisupdate');
+  // Ticker tag (if present) stays first; class tag goes right after it, else at start.
+  const tickerIdx = tokens.findIndex(t => /^#[A-Z0-9]{1,8}$/.test(t));
+  if (tickerIdx >= 0) tokens.splice(tickerIdx+1, 0, wantTag);
   else tokens.unshift(wantTag);
   els.tags.value = tokens.join(' ');
 }
@@ -588,15 +591,17 @@ function syncAssetClassTag(){
 function syncTickerTag(){
   const ticker = (els.ticker.value||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
   let tokens = (els.tags.value||'').trim().split(/\s+/).filter(Boolean);
-  // Remove any old #XYZ tickers (heuristic: all-uppercase alnum, not in known class/system tags)
-  const systemTags = new Set(['#analysisupdate','#equities','#crypto','#commodities','#fx']);
+  // Remove legacy #AnalysisUpdate and any old #XYZ ticker tags (heuristic: all-uppercase
+  // alnum, not a known system/class tag). Class tags are preserved as-is.
+  const systemTags = new Set(['#equities','#crypto','#commodities','#fx']);
   tokens = tokens.filter(t => {
     const low = t.toLowerCase();
+    if (low === '#analysisupdate') return false;
     if (systemTags.has(low)) return true;
     // keep all non-ticker-looking tags as-is
     return !/^#[A-Z0-9]{1,8}$/.test(t);
   });
-  if (ticker) tokens.push('#'+ticker);
+  if (ticker) tokens.unshift('#'+ticker);
   els.tags.value = tokens.join(' ');
   render();
 }
@@ -610,8 +615,12 @@ async function handleFulfillReqParam(){
   const assetClass = params.get('asset_class') || 'stocks';
   if (ticker) els.ticker.value = ticker;
   if (assetClass) els.assetClass.value = assetClass;
-  els.tags.value = '#AnalysisUpdate #' + (assetClass==='crypto' ? 'crypto' : 'equities');
+  els.tags.value = '#' + (assetClass==='crypto' ? 'crypto' : 'equities');
   syncAssetClassTag();
+  syncTickerTag();
+  // Auto-fill the greeting for a reply to a user request (editable afterwards).
+  if (!els.greetRu.value.trim()) els.greetRu.value = 'Анализ по запросу пользователя';
+  if (!els.greetEn.value.trim()) els.greetEn.value = 'Update on user request';
   // Show a banner indicating fulfillment mode
   const existing = document.getElementById('fulfill-banner');
   if (!existing) {
@@ -649,12 +658,13 @@ async function handleReplyToParam(){
   els.company.value = data.company_name || '';
   els.assetClass.value = data.asset_class || 'stocks';
   els.tv.value = data.tradingview_url || '';
-  els.tags.value = data.hashtags || '#AnalysisUpdate #equities';
+  els.tags.value = data.hashtags || '#equities';
   // Force update mode and lock
   els.type.value = 'update';
   els.type.disabled = true;
   // Re-sync hashtags based on class & ticker
   syncAssetClassTag();
+  syncTickerTag();
   // Set parent
   parentPostId = data.id;
   showParentBanner(data);
@@ -838,8 +848,7 @@ function clearForm(){
   window.__editingSlug = null;
   parentPostId = null;
   document.querySelectorAll('input[type=text],input[type=url],textarea').forEach(i => i.value='');
-  els.greetRu.value = 'Анализ по запросу пользователя';
-  els.tags.value = '#AnalysisUpdate #equities';
+  els.tags.value = '#equities';
   els.type.value = 'update';
   els.type.disabled = false;
   els.assetClass.value = 'stocks';
@@ -1007,8 +1016,7 @@ async function publish(){
       window.__editingSlug = null;
       parentPostId = null;
       document.querySelectorAll('input[type=text],input[type=url],textarea').forEach(i => i.value='');
-      els.greetRu.value = 'Анализ по запросу пользователя';
-      els.tags.value = '#AnalysisUpdate #equities'; els.type.value='update'; els.type.disabled=false; els.assetClass.value='stocks';
+      els.tags.value = '#equities'; els.type.value='update'; els.type.disabled=false; els.assetClass.value='stocks';
       const banner = document.getElementById('parent-banner');
       if (banner) banner.style.display='none';
       // strip ?reply_to + ?fulfill_req from URL
@@ -1261,8 +1269,7 @@ function clearFormSilent(){
   window.__editingSlug = null;
   parentPostId = null;
   document.querySelectorAll('input[type=text],input[type=url],textarea').forEach(i => i.value='');
-  els.greetRu.value = 'Анализ по запросу пользователя';
-  els.tags.value='#AnalysisUpdate #equities'; els.type.value='update'; els.type.disabled=false; els.assetClass.value='stocks';
+  els.tags.value='#equities'; els.type.value='update'; els.type.disabled=false; els.assetClass.value='stocks';
   const banner = document.getElementById('parent-banner'); if (banner) banner.style.display='none';
   state.images=[]; renderThumbs(); updateCounters(); updateReplyVisibility(); render();
 }
