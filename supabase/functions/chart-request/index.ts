@@ -1,4 +1,12 @@
-// chart-request edge function — v15 (auto-expire removed)
+// chart-request edge function — v16 (silent admin_reject)
+// v16 (2026-08-24): admin_reject now accepts an optional silent=true flag for
+//                  dismissing a single noise/typo/already-covered ticker
+//                  request. Silent rejection sets status='expired' (not
+//                  'rejected'), stores no reason, and sends NO Telegram DM to
+//                  the requester. Scoped to exactly one request_id regardless
+//                  of reject_all_ticker. Normal (non-silent) admin_reject is
+//                  unchanged: still sets 'rejected', stores rejected_reason,
+//                  and DMs the requester(s), optionally in bulk per ticker.
 // v15 (2026-08-24): removed the 48h auto-expire behaviour entirely. Requests
 //                  now stay 'pending' indefinitely until an admin fulfils,
 //                  rejects, or clarifies them — the expireOld() calls and the
@@ -29,7 +37,9 @@
 //   - my_quota:        returns remaining quota + user's recent requests
 //   - admin_list:      admin pulls full queue (grouped by ticker)
 //   - admin_fulfill:   admin marks request fulfilled, links to analysis post, triggers DM
-//   - admin_reject:    admin rejects with reason, sends DM with support button
+//   - admin_reject:    admin rejects with reason, sends DM with support button;
+//                      with silent=true, silently marks a single request
+//                      'expired' with no reason and no DM
 //   - admin_clarify:   admin sends clarification request via TG DM + email
 // Auth: JWT required. Admin actions additionally require subscription_status='admin'.
 
@@ -538,7 +548,12 @@ Deno.serve(async (req: Request) => {
     if (!isAdmin) return json({ error: "forbidden", reason: "not_admin" }, 403);
     const requestId = String(body.request_id ?? "").trim();
     const reason    = String(body.reason ?? "").trim().slice(0, 200);
-    const rejectAllTicker = body.reject_all_ticker === true;
+    // silent=true: admin dismisses a single noise/typo/already-covered ticker
+    // request. No DM is sent and no reason is stored — the row is marked
+    // 'expired' (not 'rejected') and simply drops out of the pending queue.
+    // Always scoped to the one target request; reject_all_ticker is ignored.
+    const silent = body.silent === true;
+    const rejectAllTicker = !silent && body.reject_all_ticker === true;
     if (!requestId) return json({ error: "request_id_required" }, 400);
 
     const { data: r, error: lErr } = await admin
@@ -549,6 +564,15 @@ Deno.serve(async (req: Request) => {
     if (lErr) return json({ error: "load_failed", details: String(lErr.message ?? "") }, 500);
     if (!r)   return json({ error: "not_found" }, 404);
     if (r.status !== "pending") return json({ error: "not_pending", current_status: r.status }, 409);
+
+    if (silent) {
+      const { error: upSilentErr } = await admin
+        .from("chart_requests")
+        .update({ status: "expired" })
+        .eq("id", requestId);
+      if (upSilentErr) return json({ error: "update_failed", details: String(upSilentErr.message ?? "") }, 500);
+      return json({ ok: true, rejected_count: 1, ticker: r.ticker, silent: true, notified: [] });
+    }
 
     let idsToReject: string[] = [requestId];
     let siblingsForDm: any[] = [];

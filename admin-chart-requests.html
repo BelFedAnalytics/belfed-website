@@ -241,6 +241,7 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
     <h3 id="rejectTitle">— ОТКЛОНИТЬ ЗАПРОС —</h3>
     <textarea id="rejectReason" placeholder="Причина (отправится в DM, до 200 симв.)"></textarea>
     <label><input type="checkbox" id="rejectAll"> Отклонить все запросы по этому тикеру</label>
+    <label><input type="checkbox" id="rejectSilent" onchange="toggleRejectSilent()"> Не уведомлять подписчика (тикер уже разобран / опечатка, шум)</label>
     <div class="modal-actions">
       <button class="btn" onclick="closeReject()">[ ОТМЕНА ]</button>
       <button class="btn danger" onclick="confirmReject()">[ ОТКЛОНИТЬ ]</button>
@@ -683,17 +684,27 @@ function openReject(id, ticker){
   $('#rejectTitle').textContent = '— ОТКЛОНИТЬ ' + ticker + ' —';
   $('#rejectReason').value = '';
   $('#rejectAll').checked = false;
+  $('#rejectSilent').checked = false;
+  toggleRejectSilent();
   $('#rejectModal').classList.add('open');
 }
 function closeReject(){
   $('#rejectModal').classList.remove('open');
   rejectTargetId = null;
 }
+function toggleRejectSilent(){
+  const silent = $('#rejectSilent').checked;
+  // Тихое закрытие — только по одному конкретному запросу, без причины в DM.
+  $('#rejectReason').disabled = silent;
+  $('#rejectAll').disabled = silent;
+  if (silent) $('#rejectAll').checked = false;
+}
 async function confirmReject(){
   if (!rejectTargetId) return;
-  const reason = $('#rejectReason').value.trim();
-  const all = $('#rejectAll').checked;
-  const d = await callFn('admin_reject', { request_id: rejectTargetId, reason, reject_all_ticker: all });
+  const silent = $('#rejectSilent').checked;
+  const reason = silent ? '' : $('#rejectReason').value.trim();
+  const all = silent ? false : $('#rejectAll').checked;
+  const d = await callFn('admin_reject', { request_id: rejectTargetId, reason, reject_all_ticker: all, silent });
   if (d && d.ok) {
     closeReject();
     await loadQueue();
