@@ -488,6 +488,13 @@
       line-height: 1.55; letter-spacing: 0.005em;
     }
     .consent-text b { color: var(--ink); font-weight: 700; }
+    .consent + .consent { margin-top: -8px; }
+    .consent.error { border-color: #b42318; background: #fdf5f4; }
+    .consent-err {
+      font-family: var(--font-mono); font-size: 11px; color: #b42318;
+      line-height: 1.5; margin: -8px 0 12px; padding-left: 2px;
+    }
+    .consent-err[hidden] { display: none; }
 
     .form-card .btn { width: 100%; justify-content: center; padding: 14px; margin-top: 8px; }
     .form-note { margin-top: 14px; font-family: var(--font-mono); font-size: 11px; color: var(--gray-soft); line-height: 1.6; text-align: center; }
@@ -1327,10 +1334,16 @@
               <label for="note">Почему этот актив? <span style="text-transform:none;color:var(--gray-faint);">(опционально)</span></label>
               <textarea id="note" name="note" placeholder="Помогает подобрать угол — долгосрочный тезис, пробой, отчётность и т.д."></textarea>
             </div>
-            <label class="consent" for="consent">
-              <input type="checkbox" id="consent" name="consent" checked />
+            <label class="consent" for="consentData">
+              <input type="checkbox" id="consentData" name="data_consent" aria-describedby="consentDataErr" />
               <span class="consent-box" aria-hidden="true"><svg viewBox="0 0 16 16" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 8 7 12 13 4"/></svg></span>
-              <span class="consent-text">Держите меня в курсе. Я согласен получать рыночную аналитику Belfed, бесплатные отчёты и продуктовые обновления по email. <b>Не более пары раз в месяц — отписаться в один клик.</b></span>
+              <span class="consent-text">Я соглашаюсь на обработку моего email и запроса для подготовки и отправки бесплатного анализа в соответствии с <a href="/ru/privacy.html" target="_blank" rel="noopener" style="color:var(--green-strong);font-weight:700;">Политикой конфиденциальности</a>.</span>
+            </label>
+            <p class="consent-err" id="consentDataErr" role="alert" hidden>Чтобы отправить запрос, необходимо согласиться на обработку данных.</p>
+            <label class="consent" for="consentMarketing">
+              <input type="checkbox" id="consentMarketing" name="marketing_consent" />
+              <span class="consent-box" aria-hidden="true"><svg viewBox="0 0 16 16" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 8 7 12 13 4"/></svg></span>
+              <span class="consent-text">Держите меня в курсе. Я согласен получать рыночную аналитику Belfed, бесплатные отчёты и продуктовые обновления по email. <b>Не более пары раз в месяц — отписаться в один клик. Необязательно для получения анализа.</b></span>
             </label>
             <button type="submit" class="btn btn-primary">Запросить бесплатный анализ →</button>
             <p class="form-note">Мы пришлём отчёт на email в течение 3 рабочих дней. Никакого спама — только ваш отчёт и одно короткое follow-up. Хотите больше? Начните <a href="#pricing" style="color:var(--green-strong);font-weight:700;">14-дневный бесплатный доступ</a> — подписчики могут запрашивать новый актив каждые 24 часа.</p>
@@ -1438,7 +1451,7 @@
     <div class="about-stack">
       <span class="label">О Belfed</span>
       <h2 style="margin-bottom:24px;">Независимая инвестиционная аналитика финансовых рынков.</h2>
-      <p class="about-lede">Belfed — независимая инвестиционно-аналитическая компания. Мы анализируем ключевые тренды глобальной экономики и финансовых рынков, публикуем рыночную аналитику и обзоры, а также наши торговые решения по аллокации активов и позиционированию на рынке.</p>
+      <p class="about-lede">Belfed — независимая аналитическая компания. Мы анализируем ключевые тренды глобальной экономики и финансовых рынков, публикуем рыночную аналитику и обзоры, а также освещаем собственные торговые идеи и рыночное позиционирование. Все материалы адресованы неограниченному кругу лиц, носят общий информационно-аналитический и образовательный характер и не являются индивидуальной инвестиционной рекомендацией.</p>
 
       <div class="about-pillars">
         <div class="about-pillar">
@@ -1449,10 +1462,10 @@
           <p class="about-pillar-p"><a href="/learn/sving-treyding.html" style="color:var(--green-strong);font-weight:700;">Что такое свинг-трейдинг и как читать такой сетап →</a></p>
         </div>
         <div class="about-pillar">
-          <div class="about-pillar-kicker">// Макро-аналитика и аллокация капитала</div>
-          <h3 class="about-pillar-h">Где должен находиться капитал.</h3>
-          <p class="about-pillar-p">Мы постоянно следим за самыми перспективными секторами экономики и за тем, куда движется капитал на мировых рынках.</p>
-          <p class="about-pillar-p">На основе этой картины принимаем конкретные решения по распределению активов и рыночному позиционированию, которые применяем сами и которыми делимся с нашими подписчиками.</p>
+          <div class="about-pillar-kicker">// Макро-аналитика и рыночное позиционирование</div>
+          <h3 class="about-pillar-h">Куда смотрит рынок.</h3>
+          <p class="about-pillar-p">Мы постоянно следим за ключевыми секторами экономики и за тем, куда движется капитал на мировых рынках.</p>
+          <p class="about-pillar-p">На основе этой картины формируем собственный взгляд на рыночное позиционирование, который применяем сами и публикуем как общую аналитику для наших подписчиков. Это не инвестиционная рекомендация и не учитывает индивидуальные цели, финансовое положение или риск-профиль конкретного пользователя.</p>
         </div>
       </div>
 
@@ -1547,7 +1560,7 @@
       </div>
       <div class="foot-col">
         <h3>Юридическое</h3>
-        <ul><li><a href="/ru/oferta.html">Оферта</a></li><li><a href="/ru/privacy.html">Политика конфиденциальности</a></li><li><a href="/disclaimer.html">Раскрытие рисков</a></li><li><a href="mailto:hello@belfed.com">Контакты</a></li></ul>
+        <ul><li><a href="/ru/oferta.html">Оферта</a></li><li><a href="/ru/privacy.html">Политика конфиденциальности</a></li><li><a href="/ru/disclaimer.html">Раскрытие рисков</a></li><li><a href="mailto:hello@belfed.com">Контакты</a></li></ul>
       </div>
     </div>
     <div class="foot-bottom">
@@ -1607,17 +1620,40 @@
   var form = document.getElementById('leadForm');
   var dupMsg = document.getElementById('dupMsg');
   var errMsg = document.getElementById('errMsg');
+  var consentDataEl = document.getElementById('consentData');
+  if (consentDataEl) {
+    consentDataEl.addEventListener('change', function () {
+      if (consentDataEl.checked) {
+        var errEl = document.getElementById('consentDataErr');
+        var wrapEl = document.querySelector('label.consent[for="consentData"]');
+        if (errEl) errEl.hidden = true;
+        if (wrapEl) wrapEl.classList.remove('error');
+        consentDataEl.removeAttribute('aria-invalid');
+      }
+    });
+  }
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     var submitBtn = form.querySelector('button[type="submit"]');
     var ticker = (document.getElementById('ticker').value || '').trim().toUpperCase();
     var email = (document.getElementById('email').value || '').trim().toLowerCase();
-    var consent = document.getElementById('consent').checked;
+    var dataConsentEl = document.getElementById('consentData');
+    var dataConsent = dataConsentEl.checked;
+    var marketingConsent = document.getElementById('consentMarketing').checked;
+    var consentErr = document.getElementById('consentDataErr');
+    var consentWrap = document.querySelector('label.consent[for="consentData"]');
     var note = (document.getElementById('note').value || '').trim();
     var assetClass = (document.querySelector('input[name="class"]:checked') || {}).value || null;
     var timeframe  = (document.querySelector('input[name="tf"]:checked')    || {}).value || null;
     var honeypot = (document.getElementById('website') || {}).value || '';
     if (!ticker || !email) return;
+    if (!dataConsent) {
+      consentErr.hidden = false;
+      consentWrap.classList.add('error');
+      dataConsentEl.setAttribute('aria-invalid', 'true');
+      consentWrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
     dupMsg.classList.remove('show');
     if (errMsg) errMsg.classList.remove('show');
     var origLabel = submitBtn.innerHTML;
@@ -1632,7 +1668,8 @@
       },
       body: JSON.stringify(Object.assign({
         email: email, ticker: ticker, asset_class: assetClass, timeframe: timeframe,
-        note: note || null, consent: consent, lang: 'ru', source: 'landing', website: honeypot
+        note: note || null, consent: marketingConsent, marketing_consent: marketingConsent,
+        data_consent: dataConsent, consent_locale: 'ru', lang: 'ru', source: 'landing', website: honeypot
       }, (window.belfedAnalytics ? window.belfedAnalytics.utmPayload() : {})))
     }).then(function (r) { return r.json().then(function (d) { return { status: r.status, body: d }; }); })
       .then(function (res) {
