@@ -227,10 +227,10 @@ a.card{text-decoration:none;color:#000}
 </nav>
 
 <!-- Timeline / Reports segment -->
-<div class="seg">
-  <button id="segTl" class="active" onclick="setSeg('tl')"><span class="dot"></span><span data-i18n="segTimeline">ЛЕНТА</span></button>
-  <button id="segRep" onclick="setSeg('rep')"><span data-i18n="segReports">ОБЗОРЫ</span></button>
-  <button id="segVideo" onclick="setSeg('video')"><span data-i18n="segVideos">ВИДЕООБЗОРЫ</span></button>
+<div class="seg" role="tablist" aria-label="Разделы аналитики">
+  <button id="segTl" class="active" role="tab" aria-selected="true" aria-controls="viewTl" onclick="setSeg('tl')"><span class="dot"></span><span data-i18n="segTimeline">ЛЕНТА</span></button>
+  <button id="segRep" role="tab" aria-selected="false" aria-controls="viewRep" onclick="setSeg('rep')"><span data-i18n="segReports">ОБЗОРЫ</span></button>
+  <button id="segVideo" role="tab" aria-selected="false" aria-controls="viewVideo" onclick="setSeg('video')"><span data-i18n="segVideos">ВИДЕООБЗОРЫ</span></button>
 </div>
 
 <!-- ===== TIMELINE VIEW ===== -->
@@ -577,6 +577,7 @@ function setSeg(seg) {
   document.getElementById('segTl').classList.toggle('active', seg === 'tl');
   document.getElementById('segRep').classList.toggle('active', seg === 'rep');
   document.getElementById('segVideo').classList.toggle('active', seg === 'video');
+  [['tl','segTl'],['rep','segRep'],['video','segVideo']].forEach(([name,id]) => document.getElementById(id).setAttribute('aria-selected', String(seg === name)));
   if (seg === 'tl' && hasAccess && !tlState.loaded) { tlState.offset = 0; fetchTimeline(false); }
   if (seg === 'rep' && hasAccess && !window.__repLoaded) { window.__repLoaded = true; fetchList(); }
   if (seg === 'video' && hasAccess && !window.__videoLoaded) { window.__videoLoaded = true; fetchVideoReviews(); }
@@ -585,36 +586,37 @@ function setSeg(seg) {
   else url.searchParams.delete('tab');
   history.replaceState(null, '', url.pathname + url.search + url.hash);
 }
+document.querySelector('.seg').addEventListener('keydown', event => {
+  if (!['ArrowLeft','ArrowRight'].includes(event.key)) return;
+  const tabs = ['tl','rep','video'];
+  const next = (tabs.indexOf(activeSeg) + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+  event.preventDefault(); setSeg(tabs[next]); document.getElementById({tl:'segTl',rep:'segRep',video:'segVideo'}[tabs[next]]).focus();
+});
 
 function videoLocale(item) {
-  const preferred = state.lang;
-  const fallback = preferred === 'ru' ? 'en' : 'ru';
-  const complete = lang => !!item[`title_${lang}`] && !!item[`video_url_${lang}`];
-  return complete(preferred) ? preferred : complete(fallback) ? fallback : preferred;
+  return 'ru';
 }
 
 function localVideoValue(item, key, lang = videoLocale(item)) {
-  return item[`${key}_${lang}`] || '';
+  return item[key] || '';
 }
 
 function videoThumbnail(item, lang = videoLocale(item)) {
   const custom = BelfedVideoReviews.safeHttpUrl(localVideoValue(item, 'thumbnail_url', lang));
   if (custom) return custom;
-  const source = localVideoValue(item, 'video_url', lang);
-  try {
-    const url = new URL(source);
-    let id = url.hostname.includes('youtu.be') ? url.pathname.split('/').filter(Boolean)[0] : url.searchParams.get('v');
-    if (!id && /\/(?:embed|shorts|live)\//.test(url.pathname)) id = url.pathname.split('/').filter(Boolean)[1];
-    return id ? `https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg` : '';
-  } catch (_) { return ''; }
+  const parsed = BelfedVideoReviews.parseVideoUrl(localVideoValue(item, 'video_url', lang), localVideoValue(item, 'embed_url', lang));
+  if (!parsed || parsed.provider !== 'youtube') return '';
+  const id = parsed.embedUrl.match(/\/embed\/([^?/#]+)/)?.[1];
+  return id ? `https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg` : '';
 }
 
 function videoLinksHtml(item) {
   const t = I18N[state.lang];
+  const lang = videoLocale(item);
   const links = Array.isArray(item.related_content) ? item.related_content : [];
   const rows = links.map(link => {
-    const url = BelfedVideoReviews.safeHttpUrl(link[`url_${state.lang}`] || link.url || link.url_ru || link.url_en);
-    const label = link[`label_${state.lang}`] || link.label || link.label_ru || link.label_en;
+    const url = BelfedVideoReviews.safeHttpUrl(link.url);
+    const label = link.label;
     return url && label ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(label)} →</a>` : '';
   }).filter(Boolean);
   return rows.length ? `<div class="video-links"><div class="video-links-label">${t.videoRelated}</div>${rows.join('')}</div>` : '';
@@ -669,10 +671,7 @@ function renderVideoReviews(items) {
 async function fetchVideoReviews() {
   const host = document.getElementById('videoList');
   host.innerHTML = `<div class="loading">// ${I18N[state.lang].loading}</div>`;
-  const { data, error } = await sb.from('video_reviews')
-    .select('id,slug,review_date,sector,duration_minutes,title_ru,title_en,summary_ru,summary_en,video_url_ru,video_url_en,embed_url_ru,embed_url_en,thumbnail_url_ru,thumbnail_url_en,related_content,published_at')
-    .eq('status', 'published')
-    .order('published_at', { ascending: false });
+  const { data, error } = await sb.rpc('video_reviews_list', { p_lang: 'ru' });
   if (error) {
     host.innerHTML = `<div class="empty">// ${escapeHtml(error.message)}</div>`;
     return;

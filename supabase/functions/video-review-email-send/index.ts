@@ -66,12 +66,8 @@ function unsubscribeApi(token: string): string {
 
 function renderEmail(review: any, lang: "ru" | "en", token: string) {
   const isEn = lang === "en";
-  const fallback = lang === "en" ? "ru" : "en";
-  const complete = (candidate: "ru" | "en") =>
-    !!review[`title_${candidate}`] && !!review[`video_url_${candidate}`];
-  const contentLang = complete(lang) ? lang : fallback;
-  const title = review[`title_${contentLang}`];
-  const summary = review[`summary_${contentLang}`] || "";
+  const title = review[`title_${lang}`];
+  const summary = review[`summary_${lang}`] || "";
   const site = isEn ? "https://belfed.com" : "https://belfed.ru";
   const reviewUrl = `${site}/analytics.html?tab=videos&video=${encodeURIComponent(review.slug)}`;
   const preferencesUrl = `${site}/members.html#email`;
@@ -152,10 +148,15 @@ async function sendBrevo(
         return { ok: true, messageId: result.messageId || result.message_id || "" };
       }
       const text = (await response.text().catch(() => "")).slice(0, 500);
+      if (/duplicate|idempotenc/i.test(text)) {
+        return { ok: false, error: `brevo ${response.status}: ${text}`, uncertain: true };
+      }
       if (response.status !== 429 && response.status < 500) {
         return { ok: false, error: `brevo ${response.status}: ${text}` };
       }
-      if (attempt === 2) return { ok: false, error: `brevo ${response.status}: ${text}` };
+      if (attempt === 2) {
+        return { ok: false, error: `brevo ${response.status}: ${text}`, uncertain: true };
+      }
       const retryAfter = Number(response.headers.get("retry-after"));
       await new Promise((resolve) =>
         setTimeout(resolve, Number.isFinite(retryAfter) ? retryAfter * 1000 : 500 * 2 ** attempt)
@@ -172,6 +173,8 @@ async function sendBrevo(
 
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin");
+  let activeClaimReviewId = "";
+  let activeClaimLangs: Array<"ru" | "en"> = [];
   if (req.method === "OPTIONS") return new Response(null, { headers: cors(origin) });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405, origin);
 
@@ -197,25 +200,44 @@ Deno.serve(async (req: Request) => {
 
     const { data: review, error: reviewError } = await db
       .from("video_reviews")
-      .select("id, slug, status, title_ru, title_en, summary_ru, summary_en, video_url_ru, video_url_en, email_sent_at")
+      .select("id, slug, status, title_ru, title_en, summary_ru, summary_en, video_url_ru, video_url_en, publish_to_site_ru, publish_to_site_en, email_sent_at, email_sent_at_ru, email_sent_at_en")
       .eq("id", reviewId)
       .single();
     if (reviewError || !review) return json({ error: "video review not found" }, 404, origin);
     if (review.status !== "published") return json({ error: "video review is not published" }, 409, origin);
-    if (review.email_sent_at) {
-      return json({ ok: true, sent: 0, skipped: 0, failed: 0, note: "already sent" }, 200, origin);
+    const eligibleLangs = (["ru", "en"] as const).filter((lang) =>
+      review[`publish_to_site_${lang}`] === true && !review[`email_sent_at_${lang}`]
+    );
+    if (!eligibleLangs.length) {
+      return json({ ok: true, sent: 0, skipped: 0, failed: 0, languages: [], note: "already sent or no website locale is published" }, 200, origin);
     }
-    const { data: claimed, error: claimError } = await db
-      .rpc("claim_video_review_email_send", { p_review_id: reviewId });
-    if (claimError) return json({ error: claimError.message }, 500, origin);
-    if (claimed !== true) {
-      return json({ error: "email campaign is already running or completed" }, 409, origin);
+    const claimedLangs: Array<"ru" | "en"> = [];
+    for (const lang of eligibleLangs) {
+      const { data: claimed, error: claimError } = await db
+        .rpc("claim_video_review_email_send", { p_review_id: reviewId, p_lang: lang });
+      if (claimError) {
+        const patch: Record<string, null> = {};
+        for (const claimedLang of claimedLangs) patch[`email_send_started_at_${claimedLang}`] = null;
+        if (claimedLangs.length) await db.from("video_reviews").update(patch).eq("id", reviewId);
+        return json({ error: claimError.message }, 500, origin);
+      }
+      if (claimed === true) claimedLangs.push(lang);
     }
+    if (!claimedLangs.length) {
+      return json({ error: "localized email campaigns are already running or completed" }, 409, origin);
+    }
+    activeClaimReviewId = reviewId;
+    activeClaimLangs = claimedLangs;
+    const releaseClaims = async () => {
+      const patch: Record<string, null> = {};
+      for (const lang of claimedLangs) patch[`email_send_started_at_${lang}`] = null;
+      return await db.from("video_reviews").update(patch).eq("id", reviewId);
+    };
 
     const { data: subscribers, error: recipientsError } = await db
       .rpc("video_review_email_recipients");
     if (recipientsError) {
-      await db.from("video_reviews").update({ email_send_started_at: null }).eq("id", reviewId);
+      await releaseClaims();
       return json({ error: recipientsError.message }, 500, origin);
     }
 
@@ -224,18 +246,21 @@ Deno.serve(async (req: Request) => {
       .select("id, subscriber_id, status")
       .eq("video_review_id", reviewId);
     if (alreadyError) {
-      await db.from("video_reviews").update({ email_send_started_at: null }).eq("id", reviewId);
+      await releaseClaims();
       return json({ error: alreadyError.message }, 500, origin);
     }
     const existingBySubscriber = new Map(
       (already || []).map((row: any) => [row.subscriber_id, row]),
     );
-    const targets = (subscribers || []).filter((sub: any) => isSendableEmail(sub.email));
+    const targets = (subscribers || []).filter((sub: any) => {
+      const lang = sub.language === "en" ? "en" : "ru";
+      return claimedLangs.includes(lang) && isSendableEmail(sub.email);
+    });
     const uncertain = targets.filter((sub: any) =>
       existingBySubscriber.get(sub.subscriber_id)?.status === "queued"
     ).length;
     if (uncertain > 0) {
-      await db.from("video_reviews").update({ email_send_started_at: null }).eq("id", reviewId);
+      await releaseClaims();
       return json({
         error: "queued deliveries require manual reconciliation before retry",
         queued: uncertain,
@@ -263,7 +288,13 @@ Deno.serve(async (req: Request) => {
         : db.from("email_sends").insert(baseLog).select("id").single();
       const { data: claimedLog, error: logClaimError } = await query;
       if (logClaimError || !claimedLog) {
-        await db.from("video_reviews").update({ email_send_started_at: null }).eq("id", reviewId);
+        for (const job of jobs) {
+          await db.from("email_sends").update({
+            status: "failed",
+            error: "campaign claim batch aborted before delivery",
+          }).eq("id", job.logId);
+        }
+        await releaseClaims();
         return json({ error: `recipient claim failed: ${logClaimError?.message || "missing row"}` }, 500, origin);
       }
       jobs.push({ subscriber, logId: claimedLog.id });
@@ -271,6 +302,7 @@ Deno.serve(async (req: Request) => {
 
     let sent = 0;
     let failed = 0;
+    const failedLangs = new Set<"ru" | "en">();
     const errors: Array<{ email: string; error: string }> = [];
     let cursor = 0;
     const worker = async () => {
@@ -292,15 +324,18 @@ Deno.serve(async (req: Request) => {
             .eq("id", logId);
           if (logError) {
             failed++;
+            failedLangs.add(subscriber.language === "en" ? "en" : "ru");
             errors.push({ email: subscriber.email, error: `audit: ${logError.message}` });
           } else if (result.ok) {
             sent++;
           } else {
             failed++;
+            failedLangs.add(subscriber.language === "en" ? "en" : "ru");
             errors.push({ email: subscriber.email, error: result.error });
           }
         } catch (error) {
           failed++;
+          failedLangs.add(subscriber.language === "en" ? "en" : "ru");
           errors.push({ email: subscriber.email, error: String(error) });
           await db.from("email_sends").update({
             status: "queued",
@@ -313,33 +348,56 @@ Deno.serve(async (req: Request) => {
       Array.from({ length: Math.min(5, jobs.length) }, () => worker()),
     );
 
-    if (failed === 0) {
-      const { error: finalizeError } = await db
-        .from("video_reviews")
-        .update({ email_sent_at: new Date().toISOString(), email_send_started_at: null })
-        .eq("id", reviewId);
-      if (finalizeError) {
-        return json({ error: `campaign finalize failed: ${finalizeError.message}` }, 500, origin);
+    const now = new Date().toISOString();
+    const completedLangs: Array<"ru" | "en"> = [];
+    for (const lang of claimedLangs) {
+      const patch: Record<string, string | null> = {
+        [`email_send_started_at_${lang}`]: null,
+      };
+      if (!failedLangs.has(lang)) {
+        patch[`email_sent_at_${lang}`] = now;
       }
-    } else {
-      const { error: releaseError } = await db
-        .from("video_reviews")
-        .update({ email_send_started_at: null })
-        .eq("id", reviewId);
-      if (releaseError) errors.push({ email: "", error: `claim release: ${releaseError.message}` });
+      const { error: finalizeError } = await db.from("video_reviews").update(patch).eq("id", reviewId);
+      if (finalizeError) {
+        failed++;
+        errors.push({ email: "", error: `${lang} campaign finalize: ${finalizeError.message}` });
+      } else if (!failedLangs.has(lang)) {
+        completedLangs.push(lang);
+      }
     }
+    const ruComplete = !review.publish_to_site_ru || !!review.email_sent_at_ru || completedLangs.includes("ru");
+    const enComplete = !review.publish_to_site_en || !!review.email_sent_at_en || completedLangs.includes("en");
+    if (ruComplete && enComplete) {
+      const { error: legacyFinalizeError } = await db
+        .from("video_reviews")
+        .update({ email_sent_at: now, email_send_started_at: null })
+        .eq("id", reviewId);
+      if (legacyFinalizeError) {
+        failed++;
+        errors.push({ email: "", error: `campaign finalize: ${legacyFinalizeError.message}` });
+      }
+    }
+    activeClaimReviewId = "";
+    activeClaimLangs = [];
 
     return json({
       ok: failed === 0,
-      total: subscribers?.length || 0,
+      total: targets.length,
       targets: jobs.length,
       sent,
       failed,
       skipped,
+      languages: claimedLangs,
+      completed_languages: completedLangs,
       error: failed > 0 ? "some deliveries failed or require reconciliation" : undefined,
       errors: errors.slice(0, 10),
     }, failed === 0 ? 200 : 502, origin);
   } catch (error) {
+    if (activeClaimReviewId && activeClaimLangs.length) {
+      const patch: Record<string, null> = {};
+      for (const lang of activeClaimLangs) patch[`email_send_started_at_${lang}`] = null;
+      await db.from("video_reviews").update(patch).eq("id", activeClaimReviewId);
+    }
     return json({ error: String(error) }, 500, origin);
   }
 });

@@ -11,7 +11,9 @@ on:
       - "tests/video-review*.test.js"
       - "supabase/functions/email-preferences/**"
       - "supabase/functions/video-review-email-send/**"
+      - "supabase/functions/video-review-publish/**"
       - "supabase/migrations/20260904_029_video_reviews.sql"
+      - "supabase/migrations/20260904_030_video_review_publish_targets.sql"
   pull_request:
   workflow_dispatch:
 
@@ -29,3 +31,5 @@ jobs:
         run: node --test tests/video-reviews.test.js
       - name: Run backend contract tests
         run: node --test tests/video-review-backend.test.js
+      - name: Run localized publishing tests
+        run: node --test tests/video-review-publishing.test.js
