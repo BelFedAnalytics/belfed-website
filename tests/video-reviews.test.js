@@ -1,5 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const { parseVideoUrl, safeHttpUrl } = require('../belfed-video-reviews.js');
 
@@ -38,4 +40,14 @@ test('accepts only allowlisted explicit embeds and rejects unsafe schemes', () =
   assert.equal(parseVideoUrl('https://evilrutube.ru/video/abc123/'), null);
   assert.equal(parseVideoUrl('https://evilvk.com/video-12345_67890'), null);
   assert.equal(parseVideoUrl('', 'https://youtube.com/watch?v=dQw4w9WgXcQ'), null);
+});
+
+test('admin page uses a valid Supabase anon JWT payload', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'admin-video-reviews.html'), 'utf8');
+  const match = html.match(/const SUPABASE_ANON='([^']+)'/);
+  assert.ok(match, 'SUPABASE_ANON must be present');
+  const payload = JSON.parse(Buffer.from(match[1].split('.')[1], 'base64url').toString('utf8'));
+  assert.equal(payload.iss, 'supabase');
+  assert.equal(payload.ref, 'obujqvqqmyfcfflhqvud');
+  assert.equal(payload.role, 'anon');
 });
