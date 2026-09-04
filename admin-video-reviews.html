@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BELFED — АДМИН: ВИДЕООБЗОРЫ</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="belfed-video-reviews.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f2eb;color:#000;font:14px/1.55 'Courier New',monospace;visibility:hidden}.ready{visibility:visible}
+.admin-nav{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;background:#000;padding:10px 14px}.admin-nav a{font-size:11px;letter-spacing:2px;padding:6px 14px;color:#f5f2eb;text-decoration:none;border:1px solid transparent}.admin-nav a:hover,.admin-nav a.active{border-color:#f5f2eb}.admin-nav a.active{background:#f5f2eb;color:#000}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 20px 60px}header{text-align:center;border-bottom:1px solid #000;padding-bottom:16px;margin-bottom:22px}h1{font-size:17px;letter-spacing:3px}.badge{background:#c50000;color:#fff;padding:3px 9px;font-size:10px}
+.layout{display:grid;grid-template-columns:340px minmax(0,1fr);gap:20px}.panel{background:#fff;border:1px solid #000;padding:18px}.panel h2{font-size:12px;letter-spacing:2px;margin:0 0 14px}.toolbar{display:flex;gap:8px;justify-content:space-between;margin-bottom:12px}.btn{font:11px 'Courier New',monospace;letter-spacing:1.5px;padding:9px 13px;border:1px solid #000;background:#fff;color:#000;cursor:pointer}.btn:hover{background:#eeeae0}.btn.primary{background:#000;color:#fff}.btn.danger{border-color:#a40000;color:#a40000}.btn:disabled{opacity:.45;cursor:not-allowed}
+.list{display:flex;flex-direction:column;gap:7px}.list button{font:12px/1.45 'Courier New',monospace;text-align:left;background:#fff;border:1px solid #cfc8b8;padding:11px;cursor:pointer}.list button.active{border-color:#000;box-shadow:3px 3px 0 #000}.list small{display:block;color:#746e60;margin-top:4px}.status{display:inline-block;margin-right:7px;text-transform:uppercase;font-size:9px;letter-spacing:1px}.status.published{color:#167234}.empty{padding:35px 15px;text-align:center;color:#746e60}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.full{grid-column:1/-1}label{display:flex;flex-direction:column;gap:5px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase}input,textarea,select{width:100%;font:13px/1.5 'Courier New',monospace;padding:9px 10px;border:1px solid #000;background:#fff}textarea{min-height:92px;resize:vertical}.lang{border:1px dashed #a9a292;padding:14px}.lang h3{margin:0 0 12px;font-size:12px;letter-spacing:2px}.hint{color:#746e60;font-size:11px;line-height:1.5;text-transform:none;letter-spacing:0}
+.link-row{border-top:1px dashed #cfc8b8;padding-top:12px;margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}.link-row .remove{grid-column:1/-1;justify-self:end}.actions{display:flex;flex-wrap:wrap;gap:8px;border-top:1px solid #000;margin-top:18px;padding-top:16px}.msg{margin:12px 0;padding:10px;border:1px solid #000;background:#fff}.msg.ok{background:#e6f4e8}.msg.err{background:#ffe8e8}
+#login{position:fixed;inset:0;background:#f5f2eb;display:grid;place-items:center;z-index:10}.login-box{width:min(340px,calc(100vw - 32px));background:#fff;border:1px solid #000;padding:26px}.login-box input{margin:5px 0}.login-box .btn{width:100%;margin-top:7px}
+@media(max-width:800px){.layout{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.full{grid-column:auto}.link-row{grid-template-columns:1fr}.link-row .remove{grid-column:auto}.wrap{padding:18px 12px}.admin-nav{justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap}.admin-nav a{white-space:nowrap}}
+</style>
+</head>
+<body>
+<div id="login"><div class="login-box"><h2>// ADMIN LOGIN</h2><input id="email" type="email" placeholder="admin@belfed.com"><input id="password" type="password" placeholder="password"><button class="btn primary" onclick="signIn()">ВОЙТИ</button><div id="loginMsg"></div></div></div>
+<div id="app" hidden>
+  <nav class="admin-nav"><a href="/admin.html">[ HUB ]</a><a href="/admin-positions.html">[ POSITIONS ]</a><a href="/admin-analytics-list.html">[ ANALYTICS ]</a><a class="active" href="/admin-video-reviews.html">[ VIDEO ]</a><a href="/admin-analysis-posts.html">[ ASSET ANALYSIS ]</a></nav>
+  <main class="wrap">
+    <header><h1>— ВИДЕООБЗОРЫ <span class="badge">ADMIN</span> —</h1></header>
+    <div class="layout">
+      <aside class="panel">
+        <div class="toolbar"><h2>// ПУБЛИКАЦИИ</h2><button class="btn primary" onclick="newReview()">+ НОВАЯ</button></div>
+        <div id="list" class="list"><div class="empty">Загрузка…</div></div>
+      </aside>
+      <section class="panel">
+        <h2 id="formTitle">// НОВЫЙ ВИДЕООБЗОР</h2>
+        <div id="msg"></div>
+        <form id="form" onsubmit="saveReview(event)">
+          <div class="form-grid">
+            <label>Slug<input id="slug" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="semiconductors-2026"></label>
+            <label>Дата обзора<input id="review_date" type="date" required></label>
+            <label>Сектор<input id="sector" placeholder="Semiconductors"></label>
+            <label>Длительность, минут<input id="duration_minutes" type="number" min="1" placeholder="18"></label>
+            <div class="lang">
+              <h3>RU</h3>
+              <label>Заголовок<input id="title_ru"></label>
+              <label>Краткое описание<textarea id="summary_ru"></textarea></label>
+              <label>Ссылка на видео<input id="video_url_ru" type="url" placeholder="https://youtu.be/..."></label>
+              <label>Embed URL, только при необходимости<input id="embed_url_ru" type="url"><span class="hint">Оставьте пустым для YouTube, VK Video и Rutube.</span></label>
+              <label>Обложка, необязательно<input id="thumbnail_url_ru" type="url"></label>
+            </div>
+            <div class="lang">
+              <h3>EN</h3>
+              <label>Title<input id="title_en"></label>
+              <label>Short description<textarea id="summary_en"></textarea></label>
+              <label>Video URL<input id="video_url_en" type="url" placeholder="https://youtu.be/..."></label>
+              <label>Embed URL, if needed<input id="embed_url_en" type="url"><span class="hint">Leave empty for YouTube, VK Video and Rutube.</span></label>
+              <label>Thumbnail, optional<input id="thumbnail_url_en" type="url"></label>
+            </div>
+            <div class="full">
+              <div class="toolbar"><label style="display:block">// СВЯЗАННЫЕ МАТЕРИАЛЫ</label><button type="button" class="btn" onclick="addLink()">+ ССЫЛКА</button></div>
+              <div id="links"></div>
+              <p class="hint">Можно добавить ссылки на Timeline, обзоры или анализ активов отдельно для RU и EN.</p>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn primary" type="submit">СОХРАНИТЬ</button>
+            <button class="btn" type="button" onclick="setStatus('published')">ОПУБЛИКОВАТЬ</button>
+            <button class="btn" type="button" onclick="setStatus('archived')">В АРХИВ</button>
+            <button class="btn" type="button" id="emailBtn" onclick="sendAnnouncement()" disabled>ОТПРАВИТЬ ПИСЬМО OPT-IN</button>
+            <button class="btn danger" type="button" onclick="deleteReview()">УДАЛИТЬ</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  </main>
+</div>
+<script>
+const SUPABASE_URL='https://obujqvqqmyfcfflhqvud.supabase.co';
+const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJvYnVqcXZxcW15ZmNmZmxocXZ1ZCIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzc0MzQ4MTY2LCJleHAiOjIwODk5MjQxNjZ9.syl4YBLbf8aBitxyK3gCL51pPYxWjEW99mMTXJaQQ8w';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON);
+let current=null, rows=[];
+const fields=['slug','review_date','sector','duration_minutes','title_ru','summary_ru','video_url_ru','embed_url_ru','thumbnail_url_ru','title_en','summary_en','video_url_en','embed_url_en','thumbnail_url_en'];
+function esc(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function note(text,kind='ok'){document.getElementById('msg').innerHTML=`<div class="msg ${kind}">${esc(text)}</div>`}
+async function signIn(){const {error}=await sb.auth.signInWithPassword({email:email.value.trim(),password:password.value});if(error)noteLogin(error.message);else checkAdmin()}
+function noteLogin(s){loginMsg.innerHTML=`<div class="msg err">${esc(s)}</div>`}
+async function checkAdmin(){const {data:{session}}=await sb.auth.getSession();if(!session){document.body.classList.add('ready');return}const {data:p}=await sb.from('profiles').select('subscription_status').eq('id',session.user.id).maybeSingle();if(!p||p.subscription_status!=='admin'){noteLogin('Access denied');document.body.classList.add('ready');return}login.style.display='none';app.hidden=false;document.body.classList.add('ready');loadList()}
+async function loadList(){list.innerHTML='<div class="empty">Загрузка…</div>';const {data,error}=await sb.from('video_reviews').select('*').order('created_at',{ascending:false});if(error){list.innerHTML=`<div class="empty">${esc(error.message)}</div>`;return}rows=data||[];list.innerHTML=rows.length?rows.map(r=>`<button class="${current&&current.id===r.id?'active':''}" onclick="editReview('${r.id}')"><span class="status ${r.status}">${r.status}</span>${esc(r.title_ru||r.title_en||r.slug)}<small>${esc(r.review_date)} · ${esc(r.sector||'')}</small></button>`).join(''):'<div class="empty">Пока нет видеообзоров.</div>'}
+function newReview(){current=null;form.reset();review_date.value=new Date().toISOString().slice(0,10);links.innerHTML='';formTitle.textContent='// НОВЫЙ ВИДЕООБЗОР';emailBtn.disabled=true;msg.innerHTML='';loadList()}
+function editReview(id){current=rows.find(r=>r.id===id)||null;if(!current)return;fields.forEach(k=>document.getElementById(k).value=current[k]??'');links.innerHTML='';(current.related_content||[]).forEach(addLink);formTitle.textContent='// РЕДАКТИРОВАНИЕ';emailBtn.disabled=current.status!=='published';loadList()}
+function addLink(value={}){const el=document.createElement('div');el.className='link-row';el.innerHTML=`<label>Label RU<input data-k="label_ru" value="${esc(value.label_ru)}"></label><label>Label EN<input data-k="label_en" value="${esc(value.label_en)}"></label><label>URL RU<input data-k="url_ru" type="url" value="${esc(value.url_ru)}"></label><label>URL EN<input data-k="url_en" type="url" value="${esc(value.url_en)}"></label><button class="btn danger remove" type="button" onclick="this.parentElement.remove()">УДАЛИТЬ ССЫЛКУ</button>`;links.appendChild(el)}
+function readLinks(){return [...links.querySelectorAll('.link-row')].map(row=>{const o={};row.querySelectorAll('[data-k]').forEach(i=>o[i.dataset.k]=i.value.trim());return o}).filter(o=>o.label_ru||o.label_en||o.url_ru||o.url_en)}
+function payload(){const p={};fields.forEach(k=>p[k]=document.getElementById(k).value.trim()||null);p.duration_minutes=p.duration_minutes?Number(p.duration_minutes):null;p.related_content=readLinks();p.updated_at=new Date().toISOString();return p}
+function validate(p,requireContent=false){if(!p.slug||!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(p.slug))return'Slug нужен в формате lower-case-with-dashes.';if(!p.review_date)return'Укажите дату обзора.';let complete=0;for(const lang of['ru','en']){const hasTitle=!!p['title_'+lang],hasVideo=!!p['video_url_'+lang];if(requireContent&&hasTitle!==hasVideo)return`Для публикации версия ${lang.toUpperCase()} должна содержать и заголовок, и видео.`;if(hasTitle&&hasVideo)complete++;if(hasVideo&&!BelfedVideoReviews.parseVideoUrl(p['video_url_'+lang],p['embed_url_'+lang]))return`Не удалось безопасно распознать ${lang.toUpperCase()} video URL.`}if(requireContent&&complete!==2)return'Для публикации нужны полные RU и EN версии.';for(const l of p.related_content){for(const k of['url_ru','url_en'])if(l[k]&&!BelfedVideoReviews.safeHttpUrl(l[k]))return'Связанные ссылки должны использовать HTTPS.'}return''}
+async function saveReview(e,requireContent=false){e&&e.preventDefault();const p=payload(),bad=validate(p,requireContent);if(bad){note(bad,'err');return null}let q;if(current)q=sb.from('video_reviews').update(p).eq('id',current.id).select().single();else{const {data:{user}}=await sb.auth.getUser();p.created_by=user.id;q=sb.from('video_reviews').insert(p).select().single()}const {data,error}=await q;if(error){note(error.message,'err');return null}current=data;note('Сохранено.');await loadList();return data}
+async function setStatus(status){const row=await saveReview(null,status==='published');if(!row)return;const patch={status,updated_at:new Date().toISOString()};if(status==='published'&&!row.published_at)patch.published_at=new Date().toISOString();const {data,error}=await sb.from('video_reviews').update(patch).eq('id',row.id).select().single();if(error){note(error.message,'err');return}current=data;emailBtn.disabled=status!=='published';note(status==='published'?'Опубликовано. Рассылка не отправлялась.':'Перемещено в архив.');loadList()}
+async function deleteReview(){if(!current||!confirm('Удалить видеообзор без возможности восстановления?'))return;const {error}=await sb.from('video_reviews').delete().eq('id',current.id);if(error){note(error.message,'err');return}newReview();note('Удалено.')}
+async function sendAnnouncement(){if(!current||current.status!=='published')return;if(!confirm('Отправить письмо всем пользователям, которые отдельно включили уведомления о видеообзорах?'))return;emailBtn.disabled=true;const {data:{session}}=await sb.auth.getSession();const r=await fetch(`${SUPABASE_URL}/functions/v1/video-review-email-send`,{method:'POST',headers:{Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json'},body:JSON.stringify({video_review_id:current.id})});const j=await r.json().catch(()=>({}));note(r.ok?`Отправлено: ${j.sent||0}; пропущено: ${j.skipped||0}`:(j.error||`HTTP ${r.status}`),r.ok?'ok':'err');emailBtn.disabled=false;if(r.ok)loadList()}
+sb.auth.onAuthStateChange(()=>setTimeout(checkAdmin,0));checkAdmin();
+</script>
+</body>
+</html>

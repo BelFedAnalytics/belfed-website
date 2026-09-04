@@ -10,6 +10,7 @@
 <script src="belfed-auth.js"></script>
 <script src="belfed-account-menu.js"></script>
 <script src="belfed-payments.js"></script>
+<script src="belfed-video-reviews.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html{overflow-x:hidden}
@@ -80,6 +81,28 @@ a.card{text-decoration:none;color:#000}
 @keyframes blink{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(30,125,52,.5)}50%{opacity:.35;box-shadow:0 0 0 3px rgba(30,125,52,0)}}
 .view{display:none}.view.show{display:block}
 
+/* ===== Video reviews ===== */
+.video-list{display:grid;gap:24px;max-width:920px}
+.video-card{background:#fff;border:1px solid #000;display:grid;grid-template-columns:minmax(280px,1.15fr) minmax(260px,.85fr);min-width:0}
+.video-frame{aspect-ratio:16/9;background:#111;position:relative;overflow:hidden}
+.video-frame img{width:100%;height:100%;object-fit:cover;opacity:.78}
+.video-play{position:absolute;inset:0;width:100%;border:0;background:transparent;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;font:700 11px/1.2 'Courier New',monospace;letter-spacing:2px}
+.video-play img{position:absolute;inset:0;z-index:0}
+.video-play::before{content:'▶';display:grid;place-items:center;width:58px;height:58px;border:1px solid rgba(255,255,255,.9);border-radius:50%;padding-left:4px;background:rgba(0,0,0,.4);backdrop-filter:blur(8px);transition:transform .15s,background .15s}
+.video-play::before,.video-play span{position:relative;z-index:1}
+.video-play:hover::before,.video-play:focus-visible::before{transform:scale(1.06);background:#000}
+.video-frame iframe{width:100%;height:100%;border:0}
+.video-copy{padding:22px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.video-meta{display:flex;flex-wrap:wrap;gap:8px 14px;color:#817a6a;font-size:10px;letter-spacing:1.5px;text-transform:uppercase}
+.video-title{font-size:17px;line-height:1.35;letter-spacing:.3px;text-transform:uppercase}
+.video-summary{font-size:13px;line-height:1.7;white-space:pre-wrap}
+.video-links{display:flex;flex-direction:column;gap:6px;margin-top:auto;padding-top:8px;border-top:1px dashed #cfc8b8}
+.video-links-label{font-size:9px;letter-spacing:1.7px;color:#817a6a;text-transform:uppercase}
+.video-links a{color:#000;font-size:11px;line-height:1.5;text-underline-offset:3px}
+.video-empty{padding:54px 24px;border:1px solid #000;background:#fff;text-align:center}
+.video-empty b{display:block;margin-bottom:9px;letter-spacing:2px}
+.video-empty span{font-size:12px;color:#6f695c}
+
 /* ===== Timeline filter bar + minimal search ===== */
 .tl-bar{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:26px;flex-wrap:wrap}
 .tl-filter{display:flex;flex-wrap:wrap;gap:20px;padding-bottom:2px}
@@ -147,6 +170,9 @@ a.card{text-decoration:none;color:#000}
   .sub-nav a{font-size:11px;letter-spacing:1px;padding:9px 10px}
   .cards-grid{grid-template-columns:1fr}
   .seg{gap:26px;justify-content:flex-start}
+  .seg{overflow-x:auto;white-space:nowrap}
+  .video-card{grid-template-columns:1fr}
+  .video-copy{padding:18px 16px}
   .tl-bar{flex-direction:column;align-items:stretch;gap:14px;margin-bottom:20px;width:100%;min-width:0}
   .tl-filter{display:flex;flex-wrap:nowrap;gap:0;width:100%;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;padding-bottom:8px;scrollbar-width:none;-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 22px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 22px),transparent)}
   .tl-filter::-webkit-scrollbar{display:none}
@@ -204,6 +230,7 @@ a.card{text-decoration:none;color:#000}
 <div class="seg">
   <button id="segTl" class="active" onclick="setSeg('tl')"><span class="dot"></span><span data-i18n="segTimeline">ЛЕНТА</span></button>
   <button id="segRep" onclick="setSeg('rep')"><span data-i18n="segReports">ОБЗОРЫ</span></button>
+  <button id="segVideo" onclick="setSeg('video')"><span data-i18n="segVideos">ВИДЕООБЗОРЫ</span></button>
 </div>
 
 <!-- ===== TIMELINE VIEW ===== -->
@@ -280,6 +307,12 @@ a.card{text-decoration:none;color:#000}
 </div>
 </div><!-- /viewRep -->
 
+<!-- ===== VIDEO REVIEWS VIEW ===== -->
+<section class="view" id="viewVideo" aria-labelledby="segVideo">
+  <div class="results-count" id="videoCount"></div>
+  <div class="video-list" id="videoList"></div>
+</section>
+
 <div class="disclaimer">
 <b data-i18n="disclaimerTitle">// DISCLAIMER</b><br>
 <span data-i18n="disclaimerText">Материалы носят информационно-аналитический характер и не являются индивидуальной инвестиционной рекомендацией. BelFed не несёт ответственности за решения, принятые на основании этих данных. Прошлые результаты не гарантируют будущих.</span>
@@ -324,6 +357,12 @@ const I18N = {
     navLogout: 'ВЫЙТИ',
     segTimeline: 'ЛЕНТА',
     segReports: 'ОБЗОРЫ',
+    segVideos: 'ВИДЕООБЗОРЫ',
+    videoFound: 'ВИДЕООБЗОРОВ',
+    videoEmptyTitle: 'СКОРО ЗДЕСЬ ПОЯВЯТСЯ ВИДЕООБЗОРЫ',
+    videoEmptyBody: 'Новые разборы секторов рынка будут собраны в одном месте.',
+    videoPlay: 'СМОТРЕТЬ',
+    videoRelated: '// СВЯЗАННЫЕ МАТЕРИАЛЫ',
     catAll: 'ВСЁ',
     tlSearchPh: 'Поиск по постам…',
     tlSource: 'Источник',
@@ -362,6 +401,12 @@ const I18N = {
     navLogout: 'LOGOUT',
     segTimeline: 'TIMELINE',
     segReports: 'REPORTS',
+    segVideos: 'VIDEO REVIEWS',
+    videoFound: 'VIDEO REVIEWS',
+    videoEmptyTitle: 'VIDEO REVIEWS ARE COMING',
+    videoEmptyBody: 'New market-sector briefings will be collected here.',
+    videoPlay: 'WATCH',
+    videoRelated: '// RELATED RESEARCH',
     catAll: 'ALL',
     tlSearchPh: 'Search posts…',
     tlSource: 'Source',
@@ -528,10 +573,111 @@ function setSeg(seg) {
   activeSeg = seg;
   document.getElementById('viewTl').classList.toggle('show', seg === 'tl');
   document.getElementById('viewRep').classList.toggle('show', seg === 'rep');
+  document.getElementById('viewVideo').classList.toggle('show', seg === 'video');
   document.getElementById('segTl').classList.toggle('active', seg === 'tl');
   document.getElementById('segRep').classList.toggle('active', seg === 'rep');
+  document.getElementById('segVideo').classList.toggle('active', seg === 'video');
   if (seg === 'tl' && hasAccess && !tlState.loaded) { tlState.offset = 0; fetchTimeline(false); }
   if (seg === 'rep' && hasAccess && !window.__repLoaded) { window.__repLoaded = true; fetchList(); }
+  if (seg === 'video' && hasAccess && !window.__videoLoaded) { window.__videoLoaded = true; fetchVideoReviews(); }
+  const url = new URL(location.href);
+  if (seg === 'video') url.searchParams.set('tab', 'videos');
+  else url.searchParams.delete('tab');
+  history.replaceState(null, '', url.pathname + url.search + url.hash);
+}
+
+function videoLocale(item) {
+  const preferred = state.lang;
+  const fallback = preferred === 'ru' ? 'en' : 'ru';
+  const complete = lang => !!item[`title_${lang}`] && !!item[`video_url_${lang}`];
+  return complete(preferred) ? preferred : complete(fallback) ? fallback : preferred;
+}
+
+function localVideoValue(item, key, lang = videoLocale(item)) {
+  return item[`${key}_${lang}`] || '';
+}
+
+function videoThumbnail(item, lang = videoLocale(item)) {
+  const custom = BelfedVideoReviews.safeHttpUrl(localVideoValue(item, 'thumbnail_url', lang));
+  if (custom) return custom;
+  const source = localVideoValue(item, 'video_url', lang);
+  try {
+    const url = new URL(source);
+    let id = url.hostname.includes('youtu.be') ? url.pathname.split('/').filter(Boolean)[0] : url.searchParams.get('v');
+    if (!id && /\/(?:embed|shorts|live)\//.test(url.pathname)) id = url.pathname.split('/').filter(Boolean)[1];
+    return id ? `https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg` : '';
+  } catch (_) { return ''; }
+}
+
+function videoLinksHtml(item) {
+  const t = I18N[state.lang];
+  const links = Array.isArray(item.related_content) ? item.related_content : [];
+  const rows = links.map(link => {
+    const url = BelfedVideoReviews.safeHttpUrl(link[`url_${state.lang}`] || link.url || link.url_ru || link.url_en);
+    const label = link[`label_${state.lang}`] || link.label || link.label_ru || link.label_en;
+    return url && label ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(label)} →</a>` : '';
+  }).filter(Boolean);
+  return rows.length ? `<div class="video-links"><div class="video-links-label">${t.videoRelated}</div>${rows.join('')}</div>` : '';
+}
+
+function playVideo(button) {
+  const frame = button.closest('.video-frame');
+  const src = button.dataset.embed;
+  if (!frame || !src) return;
+  const iframe = document.createElement('iframe');
+  iframe.src = src + (src.includes('?') ? '&' : '?') + 'autoplay=1';
+  iframe.title = button.dataset.title || 'Video review';
+  iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+  iframe.allowFullscreen = true;
+  frame.replaceChildren(iframe);
+}
+window.playVideo = playVideo;
+
+function renderVideoReviews(items) {
+  const t = I18N[state.lang];
+  const host = document.getElementById('videoList');
+  document.getElementById('videoCount').textContent = `// ${t.videoFound}: ${(items || []).length}`;
+  if (!items || !items.length) {
+    host.innerHTML = `<div class="video-empty"><b>${t.videoEmptyTitle}</b><span>${t.videoEmptyBody}</span></div>`;
+    return;
+  }
+  host.innerHTML = items.map(item => {
+    const lang = videoLocale(item);
+    const title = localVideoValue(item, 'title', lang);
+    const summary = localVideoValue(item, 'summary', lang);
+    const parsed = BelfedVideoReviews.parseVideoUrl(localVideoValue(item, 'video_url', lang), localVideoValue(item, 'embed_url', lang));
+    const thumb = videoThumbnail(item, lang);
+    const date = fmtDate(item.review_date || (item.published_at || '').slice(0, 10));
+    const meta = [date, item.sector, item.duration_minutes ? `${item.duration_minutes} ${I18N[state.lang].minRead}` : '', parsed?.provider].filter(Boolean).join(' · ');
+    const media = parsed
+      ? `<button class="video-play" type="button" onclick="playVideo(this)" data-embed="${escapeHtml(parsed.embedUrl)}" data-title="${escapeHtml(title)}">${thumb ? `<img src="${escapeHtml(thumb)}" alt="" loading="lazy" decoding="async">` : ''}<span>${t.videoPlay}</span></button>`
+      : `<div class="card-cover-fallback">${escapeHtml(title)}</div>`;
+    return `<article class="video-card" id="video-${escapeHtml(item.slug)}">
+      <div class="video-frame">${media}</div>
+      <div class="video-copy">
+        <div class="video-meta">${escapeHtml(meta)}</div>
+        <h2 class="video-title">${escapeHtml(title)}</h2>
+        ${summary ? `<p class="video-summary">${escapeHtml(summary)}</p>` : ''}
+        ${videoLinksHtml(item)}
+      </div>
+    </article>`;
+  }).join('');
+  const wanted = new URLSearchParams(location.search).get('video');
+  if (wanted) document.getElementById(`video-${CSS.escape(wanted)}`)?.scrollIntoView({ block: 'center' });
+}
+
+async function fetchVideoReviews() {
+  const host = document.getElementById('videoList');
+  host.innerHTML = `<div class="loading">// ${I18N[state.lang].loading}</div>`;
+  const { data, error } = await sb.from('video_reviews')
+    .select('id,slug,review_date,sector,duration_minutes,title_ru,title_en,summary_ru,summary_en,video_url_ru,video_url_en,embed_url_ru,embed_url_en,thumbnail_url_ru,thumbnail_url_en,related_content,published_at')
+    .eq('status', 'published')
+    .order('published_at', { ascending: false });
+  if (error) {
+    host.innerHTML = `<div class="empty">// ${escapeHtml(error.message)}</div>`;
+    return;
+  }
+  renderVideoReviews(data || []);
 }
 
 function fmtTlDate(iso, lang) {
@@ -836,9 +982,11 @@ function onAuthReady(profile, session, entitlement) {
   hasAccess = !!(entitlement && entitlement.access);
   if (!hasAccess) { showMemberLock('expired'); return; }
   showMemberContent();
+  if (new URLSearchParams(location.search).get('tab') === 'videos') activeSeg = 'video';
   // Load the active segment (Timeline by default). Reports loads lazily on switch.
   if (activeSeg === 'tl') { fetchTimeline(false); }
-  else { window.__repLoaded = true; fetchList(); }
+  else if (activeSeg === 'rep') { window.__repLoaded = true; fetchList(); }
+  else { setSeg('video'); }
 }
 function onAuthSignedOut() {
   authReady = true;

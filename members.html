@@ -440,6 +440,10 @@
             <label class="bf-toggle"><input type="checkbox" id="flagAnalytics" disabled><span class="flag-label">Выкл</span></label>
           </div>
           <div class="email-pref-row">
+            <span class="email-pref-label">Видеообзоры<span class="email-pref-hint">Отдельное письмо, когда выходит новый обзор сектора. По умолчанию выключено.</span></span>
+            <label class="bf-toggle"><input type="checkbox" id="flagVideoReviews" disabled><span class="flag-label">Выкл</span></label>
+          </div>
+          <div class="email-pref-row">
             <span class="email-pref-label">Новые позиции<span class="email-pref-hint">Сигнал об открытии: тикер, направление, цена входа, стоп и цели.</span></span>
             <label class="bf-toggle"><input type="checkbox" id="flagOpen" disabled><span class="flag-label">Выкл</span></label>
           </div>
@@ -493,6 +497,7 @@
 
     var FLAG_MAP = {
       flagAnalytics: 'notify_analytics',
+      flagVideoReviews: 'notify_video_reviews',
       flagOpen:      'notify_position_open',
       flagStop:      'notify_stop_hit',
       flagTP:        'notify_take_profit',

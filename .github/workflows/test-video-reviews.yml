@@ -1,0 +1,31 @@
+name: Video review tests
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "analytics.html"
+      - "members.html"
+      - "admin-video-reviews.html"
+      - "belfed-video-reviews.js"
+      - "tests/video-review*.test.js"
+      - "supabase/functions/email-preferences/**"
+      - "supabase/functions/video-review-email-send/**"
+      - "supabase/migrations/20260904_029_video_reviews.sql"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Check client helper syntax
+        run: node --check belfed-video-reviews.js
+      - name: Run provider safety tests
+        run: node --test tests/video-reviews.test.js
+      - name: Run backend contract tests
+        run: node --test tests/video-review-backend.test.js
