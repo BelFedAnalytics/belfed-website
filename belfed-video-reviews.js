@@ -91,19 +91,30 @@
     return lang === 'ru' || lang === 'en' ? lang : 'en';
   }
 
-  function videoCatalogPath(lang) {
+  function videoCatalogPath(lang, sector) {
     const params = new URLSearchParams();
     params.set('tab', 'videos');
     params.set('lang', normalizedLang(lang));
+    if (isVideoSector(sector)) params.set('sector', sector);
     return `/analytics.html?${params.toString()}`;
   }
 
-  function videoDetailPath(slug, lang) {
+  function videoDetailPath(slug, lang, sector) {
     const params = new URLSearchParams();
     params.set('tab', 'videos');
     params.set('video', String(slug || ''));
     params.set('lang', normalizedLang(lang));
+    if (isVideoSector(sector)) params.set('sector', sector);
     return `/analytics.html?${params.toString()}`;
+  }
+
+  function videoSectorPath(href, sector) {
+    const url = new URL(href, 'https://belfed.invalid');
+    url.searchParams.set('tab', 'videos');
+    url.searchParams.delete('video');
+    if (isVideoSector(sector)) url.searchParams.set('sector', sector);
+    else url.searchParams.delete('sector');
+    return `${url.pathname}${url.search}${url.hash}`;
   }
 
   function videoSegmentPath(href, segment) {
@@ -120,6 +131,17 @@
   function selectVideoReviews(items, slug) {
     const catalog = Array.isArray(items) ? items : [];
     return slug ? catalog.filter(item => item && item.slug === slug) : catalog;
+  }
+
+  const videoSectors = Object.freeze(['crypto', 'equities', 'commodities']);
+
+  function isVideoSector(value) {
+    return videoSectors.includes(value);
+  }
+
+  function filterVideoReviews(items, sector) {
+    const catalog = Array.isArray(items) ? items : [];
+    return isVideoSector(sector) ? catalog.filter(item => item && item.sector === sector) : [];
   }
 
   function isAllowedEmbed(value) {
@@ -145,7 +167,11 @@
     providerName,
     videoCatalogPath,
     videoDetailPath,
+    videoSectorPath,
     videoSegmentPath,
     selectVideoReviews,
+    videoSectors,
+    isVideoSector,
+    filterVideoReviews,
   };
 });

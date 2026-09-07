@@ -6,6 +6,7 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const read = (...parts) => fs.readFileSync(path.join(root, ...parts), 'utf8');
 const migration = read('supabase', 'migrations', '20260904_030_video_review_publish_targets.sql');
+const sectorMigration = read('supabase', 'migrations', '20260907_031_video_review_sectors.sql');
 const admin = read('admin-video-reviews.html');
 const analytics = read('analytics.html');
 const telegram = read('supabase', 'functions', 'video-review-publish', 'index.ts');
@@ -97,6 +98,16 @@ test('admin publishes targets atomically and supports separate cover uploads', (
   assert.match(migration, /create table if not exists public\.video_review_telegram_reconciliations/i);
   assert.match(migration, /create or replace function public\.reconcile_video_review_telegram/i);
   assert.match(migration, /reconciliation is available after 15 minutes/i);
+});
+
+test('admin and database enforce the fixed video-review sectors', () => {
+  assert.match(admin, /<select id="sector" required>/);
+  assert.match(admin, /<option value="crypto">Крипто<\/option>/);
+  assert.match(admin, /<option value="equities">Акции<\/option>/);
+  assert.match(admin, /<option value="commodities">Сырьё<\/option>/);
+  assert.match(admin, /isVideoSector\(p\.sector\)/);
+  assert.match(sectorMigration, /alter column sector set not null/i);
+  assert.match(sectorMigration, /check \(sector in \('crypto', 'equities', 'commodities'\)\)/i);
 });
 
 test('RU member catalog uses a locale-scoped RPC without EN fields', () => {

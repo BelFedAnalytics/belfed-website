@@ -83,6 +83,11 @@ a.card{text-decoration:none;color:#000}
 
 /* ===== Video reviews ===== */
 .video-list{display:grid;gap:24px;max-width:920px}
+.video-filters{display:flex;gap:18px;margin-bottom:22px;border-bottom:1px solid #d9d4c7}
+.video-filters[hidden]{display:none}
+.video-filters button{font:700 11px/1.2 'Courier New',monospace;letter-spacing:2px;text-transform:uppercase;color:#aaa;background:none;border:0;border-bottom:2px solid transparent;padding:0 2px 10px;margin-bottom:-1px;cursor:pointer}
+.video-filters button:hover,.video-filters button:focus-visible{color:#555}
+.video-filters button.active{color:#000;border-bottom-color:#000}
 .video-card{background:#fff;border:1px solid #000;display:grid;grid-template-columns:minmax(280px,1.15fr) minmax(260px,.85fr);min-width:0}
 .video-frame{aspect-ratio:16/9;background:#111;position:relative;overflow:hidden}
 .video-frame img{width:100%;height:100%;object-fit:cover;opacity:.78}
@@ -184,6 +189,8 @@ a.card{text-decoration:none;color:#000}
   .video-detail .video-copy{padding:20px 16px}
   .video-detail .video-title{font-size:20px}
   .video-open,.video-back{width:100%;align-self:stretch}
+  .video-filters{gap:0;justify-content:space-between}
+  .video-filters button{font-size:10px;letter-spacing:1px;padding-inline:4px}
   .tl-bar{flex-direction:column;align-items:stretch;gap:14px;margin-bottom:20px;width:100%;min-width:0}
   .tl-filter{display:flex;flex-wrap:nowrap;gap:0;width:100%;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;padding-bottom:8px;scrollbar-width:none;-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 22px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 22px),transparent)}
   .tl-filter::-webkit-scrollbar{display:none}
@@ -320,7 +327,11 @@ a.card{text-decoration:none;color:#000}
 
 <!-- ===== VIDEO REVIEWS VIEW ===== -->
 <section class="view" id="viewVideo" aria-labelledby="segVideo">
-  <div class="results-count" id="videoCount"></div>
+  <div class="video-filters" id="videoFilters" role="group" aria-label="Сектор видеообзора">
+    <button class="active" type="button" data-video-sector="crypto" data-i18n="videoCrypto" aria-pressed="true" onclick="setVideoSector('crypto')">КРИПТО</button>
+    <button type="button" data-video-sector="equities" data-i18n="videoEquities" aria-pressed="false" onclick="setVideoSector('equities')">АКЦИИ</button>
+    <button type="button" data-video-sector="commodities" data-i18n="videoCommodities" aria-pressed="false" onclick="setVideoSector('commodities')">СЫРЬЁ</button>
+  </div>
   <div class="video-list" id="videoList"></div>
 </section>
 
@@ -356,6 +367,9 @@ let state = {
 
 const TL_PAGE = 15;
 let tlState = { offset: 0, total: 0, q: '', category: 'all', loading: false, loaded: false };
+const requestedVideoSector = new URLSearchParams(location.search).get('sector');
+let videoSector = BelfedVideoReviews.isVideoSector(requestedVideoSector) ? requestedVideoSector : 'crypto';
+let videoItems = [];
 
 const I18N = {
   ru: {
@@ -369,7 +383,11 @@ const I18N = {
     segTimeline: 'ЛЕНТА',
     segReports: 'ОБЗОРЫ',
     segVideos: 'ВИДЕООБЗОРЫ',
-    videoFound: 'ВИДЕООБЗОРОВ',
+    videoCrypto: 'КРИПТО',
+    videoEquities: 'АКЦИИ',
+    videoCommodities: 'СЫРЬЁ',
+    videoSectorEmptyTitle: 'В ЭТОМ СЕКТОРЕ ПОКА НЕТ ВИДЕООБЗОРОВ',
+    videoSectorEmptyBody: 'Выберите другой сектор, чтобы посмотреть доступные обзоры.',
     videoEmptyTitle: 'СКОРО ЗДЕСЬ ПОЯВЯТСЯ ВИДЕООБЗОРЫ',
     videoEmptyBody: 'Новые разборы секторов рынка будут собраны в одном месте.',
     videoPlay: 'СМОТРЕТЬ',
@@ -417,7 +435,11 @@ const I18N = {
     segTimeline: 'TIMELINE',
     segReports: 'REPORTS',
     segVideos: 'VIDEO REVIEWS',
-    videoFound: 'VIDEO REVIEWS',
+    videoCrypto: 'CRYPTO',
+    videoEquities: 'STOCKS',
+    videoCommodities: 'COMMODITIES',
+    videoSectorEmptyTitle: 'NO VIDEO REVIEWS IN THIS SECTOR YET',
+    videoSectorEmptyBody: 'Choose another sector to view the available reviews.',
     videoEmptyTitle: 'VIDEO REVIEWS ARE COMING',
     videoEmptyBody: 'New market-sector briefings will be collected here.',
     videoPlay: 'WATCH',
@@ -654,18 +676,30 @@ window.playVideo = playVideo;
 function renderVideoReviews(items) {
   const t = I18N[state.lang];
   const host = document.getElementById('videoList');
+  const filters = document.getElementById('videoFilters');
   const wanted = new URLSearchParams(location.search).get('video');
-  const visibleItems = BelfedVideoReviews.selectVideoReviews(items, wanted);
-  document.getElementById('videoCount').textContent = wanted ? `// ${t.videoSingle}` : `// ${t.videoFound}: ${(items || []).length}`;
+  const visibleItems = wanted
+    ? BelfedVideoReviews.selectVideoReviews(items, wanted)
+    : BelfedVideoReviews.filterVideoReviews(items, videoSector);
+  filters.hidden = !!wanted;
+  filters.querySelectorAll('[data-video-sector]').forEach(button => {
+    const active = button.dataset.videoSector === videoSector;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
   if (wanted && !visibleItems.length) {
-    host.innerHTML = `<a class="video-back" href="${escapeHtml(BelfedVideoReviews.videoCatalogPath(state.lang))}">${t.videoBack}</a><div class="video-empty"><b>${t.videoNotFound}</b></div>`;
+    host.innerHTML = `<a class="video-back" href="${escapeHtml(BelfedVideoReviews.videoCatalogPath(state.lang, videoSector))}">${t.videoBack}</a><div class="video-empty"><b>${t.videoNotFound}</b></div>`;
     return;
   }
   if (!items || !items.length) {
     host.innerHTML = `<div class="video-empty"><b>${t.videoEmptyTitle}</b><span>${t.videoEmptyBody}</span></div>`;
     return;
   }
-  const back = wanted ? `<a class="video-back" href="${escapeHtml(BelfedVideoReviews.videoCatalogPath(state.lang))}">${t.videoBack}</a>` : '';
+  if (!wanted && !visibleItems.length) {
+    host.innerHTML = `<div class="video-empty"><b>${t.videoSectorEmptyTitle}</b><span>${t.videoSectorEmptyBody}</span></div>`;
+    return;
+  }
+  const back = wanted ? `<a class="video-back" href="${escapeHtml(BelfedVideoReviews.videoCatalogPath(state.lang, videoSector))}">${t.videoBack}</a>` : '';
   host.innerHTML = back + visibleItems.map(item => {
     const lang = videoLocale(item);
     const title = localVideoValue(item, 'title', lang);
@@ -673,11 +707,12 @@ function renderVideoReviews(items) {
     const parsed = BelfedVideoReviews.parseVideoUrl(localVideoValue(item, 'video_url', lang), localVideoValue(item, 'embed_url', lang));
     const thumb = videoThumbnail(item, lang);
     const date = fmtDate(item.review_date || (item.published_at || '').slice(0, 10));
-    const meta = [date, item.sector, item.duration_minutes ? `${item.duration_minutes} ${I18N[state.lang].minRead}` : '', parsed?.provider].filter(Boolean).join(' · ');
+    const sector = { crypto: t.videoCrypto, equities: t.videoEquities, commodities: t.videoCommodities }[item.sector] || item.sector;
+    const meta = [date, sector, item.duration_minutes ? `${item.duration_minutes} ${I18N[state.lang].minRead}` : '', parsed?.provider].filter(Boolean).join(' · ');
     const media = parsed
       ? `<button class="video-play" type="button" onclick="playVideo(this)" data-embed="${escapeHtml(parsed.embedUrl)}" data-title="${escapeHtml(title)}">${thumb ? `<img src="${escapeHtml(thumb)}" alt="" loading="lazy" decoding="async">` : ''}<span>${t.videoPlay}</span></button>`
       : `<div class="card-cover-fallback">${escapeHtml(title)}</div>`;
-    const detailUrl = BelfedVideoReviews.videoDetailPath(item.slug, state.lang);
+    const detailUrl = BelfedVideoReviews.videoDetailPath(item.slug, state.lang, videoSector);
     const detailLink = wanted ? '' : `<a class="video-open" href="${escapeHtml(detailUrl)}">${t.videoOpen} →</a>`;
     return `<article class="video-card${wanted ? ' video-detail' : ''}" id="video-${escapeHtml(item.slug)}">
       <div class="video-frame">${media}</div>
@@ -692,6 +727,14 @@ function renderVideoReviews(items) {
   }).join('');
 }
 
+function setVideoSector(sector) {
+  if (!BelfedVideoReviews.isVideoSector(sector)) return;
+  videoSector = sector;
+  history.replaceState(null, '', BelfedVideoReviews.videoSectorPath(location.href, sector));
+  renderVideoReviews(videoItems);
+}
+window.setVideoSector = setVideoSector;
+
 async function fetchVideoReviews() {
   const host = document.getElementById('videoList');
   host.innerHTML = `<div class="loading">// ${I18N[state.lang].loading}</div>`;
@@ -700,7 +743,8 @@ async function fetchVideoReviews() {
     host.innerHTML = `<div class="empty">// ${escapeHtml(error.message)}</div>`;
     return;
   }
-  renderVideoReviews(data || []);
+  videoItems = data || [];
+  renderVideoReviews(videoItems);
 }
 
 function fmtTlDate(iso, lang) {
