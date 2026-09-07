@@ -96,6 +96,14 @@ a.card{text-decoration:none;color:#000}
 .video-meta{display:flex;flex-wrap:wrap;gap:8px 14px;color:#817a6a;font-size:10px;letter-spacing:1.5px;text-transform:uppercase}
 .video-title{font-size:17px;line-height:1.35;letter-spacing:.3px;text-transform:uppercase}
 .video-summary{font-size:13px;line-height:1.7;white-space:pre-wrap}
+.video-open,.video-back{display:inline-flex;align-items:center;justify-content:center;align-self:flex-start;min-height:44px;color:#000;text-decoration:none;border:1px solid #000;padding:10px 14px;font-size:10px;line-height:1.2;letter-spacing:1.6px;text-transform:uppercase;transition:background .15s,color .15s}
+.video-open{margin-top:auto}
+.video-open:hover,.video-open:focus-visible,.video-back:hover,.video-back:focus-visible{background:#000;color:#f5f2eb}
+.video-back{margin-bottom:16px;background:#fff}
+.video-card.video-detail{grid-template-columns:1fr;max-width:880px}
+.video-detail .video-copy{padding:28px 30px}
+.video-detail .video-title{font-size:24px;line-height:1.3;letter-spacing:1px}
+.video-detail .video-summary{font-size:14px;line-height:1.8}
 .video-links{display:flex;flex-direction:column;gap:6px;margin-top:auto;padding-top:8px;border-top:1px dashed #cfc8b8}
 .video-links-label{font-size:9px;letter-spacing:1.7px;color:#817a6a;text-transform:uppercase}
 .video-links a{color:#000;font-size:11px;line-height:1.5;text-underline-offset:3px}
@@ -173,6 +181,9 @@ a.card{text-decoration:none;color:#000}
   .seg{overflow-x:auto;white-space:nowrap}
   .video-card{grid-template-columns:1fr}
   .video-copy{padding:18px 16px}
+  .video-detail .video-copy{padding:20px 16px}
+  .video-detail .video-title{font-size:20px}
+  .video-open,.video-back{width:100%;align-self:stretch}
   .tl-bar{flex-direction:column;align-items:stretch;gap:14px;margin-bottom:20px;width:100%;min-width:0}
   .tl-filter{display:flex;flex-wrap:nowrap;gap:0;width:100%;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;padding-bottom:8px;scrollbar-width:none;-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 22px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 22px),transparent)}
   .tl-filter::-webkit-scrollbar{display:none}
@@ -362,6 +373,10 @@ const I18N = {
     videoEmptyTitle: 'СКОРО ЗДЕСЬ ПОЯВЯТСЯ ВИДЕООБЗОРЫ',
     videoEmptyBody: 'Новые разборы секторов рынка будут собраны в одном месте.',
     videoPlay: 'СМОТРЕТЬ',
+    videoOpen: 'ОТКРЫТЬ ОБЗОР',
+    videoBack: '← ВСЕ ВИДЕООБЗОРЫ',
+    videoSingle: 'ВИДЕООБЗОР',
+    videoNotFound: 'ВИДЕООБЗОР НЕ НАЙДЕН',
     videoRelated: '// СВЯЗАННЫЕ МАТЕРИАЛЫ',
     catAll: 'ВСЁ',
     tlSearchPh: 'Поиск по постам…',
@@ -406,6 +421,10 @@ const I18N = {
     videoEmptyTitle: 'VIDEO REVIEWS ARE COMING',
     videoEmptyBody: 'New market-sector briefings will be collected here.',
     videoPlay: 'WATCH',
+    videoOpen: 'OPEN REVIEW',
+    videoBack: '← ALL VIDEO REVIEWS',
+    videoSingle: 'VIDEO REVIEW',
+    videoNotFound: 'VIDEO REVIEW NOT FOUND',
     videoRelated: '// RELATED RESEARCH',
     catAll: 'ALL',
     tlSearchPh: 'Search posts…',
@@ -581,10 +600,7 @@ function setSeg(seg) {
   if (seg === 'tl' && hasAccess && !tlState.loaded) { tlState.offset = 0; fetchTimeline(false); }
   if (seg === 'rep' && hasAccess && !window.__repLoaded) { window.__repLoaded = true; fetchList(); }
   if (seg === 'video' && hasAccess && !window.__videoLoaded) { window.__videoLoaded = true; fetchVideoReviews(); }
-  const url = new URL(location.href);
-  if (seg === 'video') url.searchParams.set('tab', 'videos');
-  else url.searchParams.delete('tab');
-  history.replaceState(null, '', url.pathname + url.search + url.hash);
+  history.replaceState(null, '', BelfedVideoReviews.videoSegmentPath(location.href, seg));
 }
 document.querySelector('.seg').addEventListener('keydown', event => {
   if (!['ArrowLeft','ArrowRight'].includes(event.key)) return;
@@ -638,12 +654,19 @@ window.playVideo = playVideo;
 function renderVideoReviews(items) {
   const t = I18N[state.lang];
   const host = document.getElementById('videoList');
-  document.getElementById('videoCount').textContent = `// ${t.videoFound}: ${(items || []).length}`;
+  const wanted = new URLSearchParams(location.search).get('video');
+  const visibleItems = BelfedVideoReviews.selectVideoReviews(items, wanted);
+  document.getElementById('videoCount').textContent = wanted ? `// ${t.videoSingle}` : `// ${t.videoFound}: ${(items || []).length}`;
+  if (wanted && !visibleItems.length) {
+    host.innerHTML = `<a class="video-back" href="${escapeHtml(BelfedVideoReviews.videoCatalogPath(state.lang))}">${t.videoBack}</a><div class="video-empty"><b>${t.videoNotFound}</b></div>`;
+    return;
+  }
   if (!items || !items.length) {
     host.innerHTML = `<div class="video-empty"><b>${t.videoEmptyTitle}</b><span>${t.videoEmptyBody}</span></div>`;
     return;
   }
-  host.innerHTML = items.map(item => {
+  const back = wanted ? `<a class="video-back" href="${escapeHtml(BelfedVideoReviews.videoCatalogPath(state.lang))}">${t.videoBack}</a>` : '';
+  host.innerHTML = back + visibleItems.map(item => {
     const lang = videoLocale(item);
     const title = localVideoValue(item, 'title', lang);
     const summary = localVideoValue(item, 'summary', lang);
@@ -654,18 +677,19 @@ function renderVideoReviews(items) {
     const media = parsed
       ? `<button class="video-play" type="button" onclick="playVideo(this)" data-embed="${escapeHtml(parsed.embedUrl)}" data-title="${escapeHtml(title)}">${thumb ? `<img src="${escapeHtml(thumb)}" alt="" loading="lazy" decoding="async">` : ''}<span>${t.videoPlay}</span></button>`
       : `<div class="card-cover-fallback">${escapeHtml(title)}</div>`;
-    return `<article class="video-card" id="video-${escapeHtml(item.slug)}">
+    const detailUrl = BelfedVideoReviews.videoDetailPath(item.slug, state.lang);
+    const detailLink = wanted ? '' : `<a class="video-open" href="${escapeHtml(detailUrl)}">${t.videoOpen} →</a>`;
+    return `<article class="video-card${wanted ? ' video-detail' : ''}" id="video-${escapeHtml(item.slug)}">
       <div class="video-frame">${media}</div>
       <div class="video-copy">
         <div class="video-meta">${escapeHtml(meta)}</div>
         <h2 class="video-title">${escapeHtml(title)}</h2>
         ${summary ? `<p class="video-summary">${escapeHtml(summary)}</p>` : ''}
         ${videoLinksHtml(item)}
+        ${detailLink}
       </div>
     </article>`;
   }).join('');
-  const wanted = new URLSearchParams(location.search).get('video');
-  if (wanted) document.getElementById(`video-${CSS.escape(wanted)}`)?.scrollIntoView({ block: 'center' });
 }
 
 async function fetchVideoReviews() {

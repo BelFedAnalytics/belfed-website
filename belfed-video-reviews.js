@@ -87,6 +87,41 @@
     return 'video';
   }
 
+  function normalizedLang(lang) {
+    return lang === 'ru' || lang === 'en' ? lang : 'en';
+  }
+
+  function videoCatalogPath(lang) {
+    const params = new URLSearchParams();
+    params.set('tab', 'videos');
+    params.set('lang', normalizedLang(lang));
+    return `/analytics.html?${params.toString()}`;
+  }
+
+  function videoDetailPath(slug, lang) {
+    const params = new URLSearchParams();
+    params.set('tab', 'videos');
+    params.set('video', String(slug || ''));
+    params.set('lang', normalizedLang(lang));
+    return `/analytics.html?${params.toString()}`;
+  }
+
+  function videoSegmentPath(href, segment) {
+    const url = new URL(href, 'https://belfed.invalid');
+    if (segment === 'video') {
+      url.searchParams.set('tab', 'videos');
+    } else {
+      url.searchParams.delete('tab');
+      url.searchParams.delete('video');
+    }
+    return url.pathname + url.search + url.hash;
+  }
+
+  function selectVideoReviews(items, slug) {
+    const catalog = Array.isArray(items) ? items : [];
+    return slug ? catalog.filter(item => item && item.slug === slug) : catalog;
+  }
+
   function isAllowedEmbed(value) {
     const url = new URL(value);
     const host = url.hostname.replace(/^www\./, '').toLowerCase();
@@ -104,5 +139,13 @@
     return false;
   }
 
-  return { parseVideoUrl, safeHttpUrl, providerName };
+  return {
+    parseVideoUrl,
+    safeHttpUrl,
+    providerName,
+    videoCatalogPath,
+    videoDetailPath,
+    videoSegmentPath,
+    selectVideoReviews,
+  };
 });

@@ -3,7 +3,14 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { parseVideoUrl, safeHttpUrl } = require('../belfed-video-reviews.js');
+const {
+  parseVideoUrl,
+  safeHttpUrl,
+  videoCatalogPath,
+  videoDetailPath,
+  videoSegmentPath,
+  selectVideoReviews,
+} = require('../belfed-video-reviews.js');
 
 test('parses YouTube watch and short links into privacy-enhanced embeds', () => {
   assert.deepEqual(parseVideoUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ'), {
@@ -50,4 +57,43 @@ test('admin page uses a valid Supabase anon JWT payload', () => {
   assert.equal(payload.iss, 'supabase');
   assert.equal(payload.ref, 'obujqvqqmyfcfflhqvud');
   assert.equal(payload.role, 'anon');
+});
+
+test('video detail routes preserve locale, encode slugs, and clear stale state', () => {
+  assert.equal(videoCatalogPath('ru'), '/analytics.html?tab=videos&lang=ru');
+  assert.equal(videoCatalogPath('en'), '/analytics.html?tab=videos&lang=en');
+  assert.equal(
+    videoDetailPath('weekly review & <script>', 'ru'),
+    '/analytics.html?tab=videos&video=weekly+review+%26+%3Cscript%3E&lang=ru',
+  );
+  assert.equal(
+    videoSegmentPath('https://belfed.ru/analytics.html?tab=videos&video=old&lang=ru&utm=x#top', 'tl'),
+    '/analytics.html?lang=ru&utm=x#top',
+  );
+  assert.equal(
+    videoSegmentPath('https://belfed.ru/analytics.html?lang=ru', 'video'),
+    '/analytics.html?lang=ru&tab=videos',
+  );
+});
+
+test('video selection matches only an exact known slug', () => {
+  const items = [{ slug: 'known' }, { slug: '<img src=x onerror=alert(1)>' }];
+  assert.deepEqual(selectVideoReviews(items, 'known'), [{ slug: 'known' }]);
+  assert.deepEqual(selectVideoReviews(items, 'missing'), []);
+  assert.deepEqual(selectVideoReviews(items, '<img src=x onerror=alert(1)>'), [items[1]]);
+  assert.deepEqual(selectVideoReviews(null, 'known'), []);
+});
+
+test('video catalog renders full-review controls without hijacking playback', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'analytics.html'), 'utf8');
+  assert.match(html, /videoOpen: 'ОТКРЫТЬ ОБЗОР'/);
+  assert.match(html, /const wanted = new URLSearchParams\(location\.search\)\.get\('video'\)/);
+  assert.match(html, /selectVideoReviews\(items, wanted\)/);
+  assert.match(html, /videoDetailPath\(item\.slug, state\.lang\)/);
+  assert.match(html, /videoCatalogPath\(state\.lang\)/);
+  assert.match(html, /videoSegmentPath\(location\.href, seg\)/);
+  assert.match(html, /class="video-card\$\{wanted \? ' video-detail' : ''\}"/);
+  assert.match(html, /class="video-open"/);
+  assert.match(html, /class="video-back"/);
+  assert.match(html, /onclick="playVideo\(this\)"/);
 });
