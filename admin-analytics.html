@@ -2161,7 +2161,20 @@ function updatePublishHint() {
   host.style.color = test ? '#a47800' : '#1a7a1a';
 }
 
+// v37: одна публикация за раз. Повторный вызов (двойной клик, ретрай браузера)
+// раньше уходил на бэкенд вторым запросом и серия отправлялась дважды.
+let publishInFlight = false;
 async function onPublish() {
+  if (publishInFlight) return;
+  publishInFlight = true;
+  try {
+    return await onPublishRun();
+  } finally {
+    publishInFlight = false;
+  }
+}
+
+async function onPublishRun() {
   if (state.destination === 'timeline') return publishTimelinePost();
   const skipTg = document.getElementById('cb-skip-tg').checked;
   const langs = selectedLangs();
