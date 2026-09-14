@@ -827,17 +827,49 @@ async function checkAdminAndShow() {
 }
 
 // ============== Admin Action ==============
+// Access tokens live ~1h. A tab left open past that (or one whose refresh timer
+// stalled while backgrounded) made getSession() hand back a stale token, and the
+// admin function answered 401. Refresh proactively near expiry, and retry once
+// on a 401 with a force-refreshed token.
+async function adminSession(force) {
+  let session = null;
+  try { session = (await sb.auth.getSession()).data.session; } catch (e) { session = null; }
+  const expMs = session && session.expires_at ? session.expires_at * 1000 : 0;
+  const nearExpiry = !expMs || (expMs - Date.now() < 120000);
+  if (force || nearExpiry) {
+    try {
+      const { data, error } = await sb.auth.refreshSession();
+      if (!error && data && data.session) session = data.session;
+    } catch (e) { /* keep whatever we had */ }
+  }
+  return session;
+}
+
 async function adminAction(payload) {
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) return { ok:false, error:'no_session' };
-  try {
+  async function send(token) {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/analytics-admin-action`, {
       method:'POST',
-      headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}` },
+      headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
       body: JSON.stringify(payload),
     });
     const data = await res.json().catch(() => ({}));
     return { ok: res.ok, status: res.status, data };
+  }
+
+  let session = await adminSession(false);
+  if (!session || !session.access_token) return { ok:false, error:'no_session' };
+  try {
+    let r = await send(session.access_token);
+    if (r.status === 401) {
+      const retrySession = await adminSession(true);
+      if (retrySession && retrySession.access_token && retrySession.access_token !== session.access_token) {
+        r = await send(retrySession.access_token);
+      }
+      if (r.status === 401) {
+        r.data = Object.assign({}, r.data, { hint: 'Сессия истекла. Перезайдите в админку.' });
+      }
+    }
+    return r;
   } catch (e) {
     return { ok:false, error:String(e) };
   }
