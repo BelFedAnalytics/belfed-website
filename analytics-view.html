@@ -226,12 +226,20 @@ function renderReport() {
     if (s.linked_post_id && s.linked_post) {
       const lp = s.linked_post;
       if (lp.status !== 'published') return '';
-      const lpHeadline = (state.lang === 'ru' ? lp.headline_ru : lp.headline_en) || lp.headline_ru || '';
       const langPublished = state.lang === 'ru' ? lp.publish_to_ru !== false : lp.publish_to_en === true;
-      if (!lpHeadline || !langPublished) return '';
+      if (!langPublished) return '';
+      // Headline fallback (2026-09-14): asset analyses (`destination='asset'`) are
+      // published without headline_ru/headline_en — the feed titles them with the
+      // $TICKER badge + company name instead. Previously an empty headline made the
+      // whole linked section disappear from the report. Now we synthesise the same
+      // title the feed uses, so asset-analysis links render as full sections.
+      const lpTicker = lp.ticker ? String(lp.ticker).toUpperCase() : '';
+      const explicitHeadline = (state.lang === 'ru' ? lp.headline_ru : lp.headline_en) || lp.headline_ru || lp.headline_en || '';
+      const lpHeadline = explicitHeadline
+        || (lpTicker ? `$${lpTicker}${lp.company_name ? ' · ' + lp.company_name : ''}` : '');
       const linkedLabel = (state.lang === 'ru' ? s.section_label_ru : s.section_label_en) || '';
       const labelText = linkedLabel || `// ${String(s.position).padStart(2,'0')}`;
-      const lpBody = (state.lang === 'ru' ? lp.body_ru : lp.body_en) || '';
+      const lpBody = (state.lang === 'ru' ? lp.body_ru : lp.body_en) || lp.body_ru || lp.body_en || '';
       const bodyHtml = lpBody
         ? '<div class="section-body">' + lpBody
             .split(/\n\s*\n/)
@@ -253,10 +261,13 @@ function renderReport() {
       const feedUrl = `/analysis/${encodeURIComponent(tickerPart)}/${encodeURIComponent(lp.slug || '')}`;
       const feedLinkText = state.lang === 'ru' ? '→ в ленте' : '→ in feed';
       const feedLinkHtml = `<div class="section-feed-link"><a href="${escapeHtml(feedUrl)}">${escapeHtml(feedLinkText)}</a></div>`;
+      // Nothing renderable at all (no title, no text, no charts) — skip silently
+      // rather than emitting an empty numbered block.
+      if (!lpHeadline && !lpBody && imagePaths.length === 0) return '';
       return `
       <div class="section">
         <div class="section-label">${escapeHtml(labelText)}</div>
-        <div class="section-headline">${escapeHtml(lpHeadline)}</div>
+        ${lpHeadline ? `<div class="section-headline">${escapeHtml(lpHeadline)}</div>` : ''}
         ${chartsHtml}
         ${bodyHtml}
         ${feedLinkHtml}
