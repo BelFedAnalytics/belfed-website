@@ -455,6 +455,12 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
       </label>
     </div>
     <div style="margin-top:8px">
+      <label style="font-size:11px;display:flex;gap:6px;align-items:center;cursor:pointer" title="Отправить серию заново, даже если отчёт уже публиковался в TG">
+        <input type="checkbox" id="cb-force-tg">
+        <span>FORCE (повторная отправка)</span>
+      </label>
+    </div>
+    <div style="margin-top:8px">
       <label style="font-size:11px;display:flex;gap:6px;align-items:center;cursor:pointer">
         <input type="checkbox" id="cb-skip-tg" onchange="updatePublishHint()">
         <span>SKIP TG (только сайт)</span>
@@ -2217,15 +2223,25 @@ async function onPublishRun() {
   }
 
   showTopMsg('Публикация в Telegram…', 'info');
+  // v38: бэкенд не отправляет серию второй раз без force — это защита от дублей.
+  const force = document.getElementById('cb-force-tg').checked;
   const pubR = await adminAction({
     action: 'publish',
     report_id: state.id,
     langs,
     test_mode: test,
+    force,
   });
   document.getElementById('btn-publish').disabled = false;
   if (!pubR.ok) {
     showTopMsg('Публикация в TG не удалась: ' + (pubR.data?.error || pubR.status) + ' (но сохранение прошло)', 'err');
+    return;
+  }
+  const skipped = Object.entries(pubR.data?.results || {})
+    .filter(([, v]) => v && v.skipped === 'already_published')
+    .map(([l]) => l.toUpperCase());
+  if (skipped.length) {
+    showTopMsg('Уже публиковалось в TG: ' + skipped.join('+') + '. Повторная отправка не выполнена. Нужна намеренная — включите FORCE.', 'err');
     return;
   }
   const langsLabel = langs.map(l => l.toUpperCase()).join('+');
