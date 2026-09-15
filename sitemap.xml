@@ -48,4 +48,18 @@
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
+  <!-- research:start (managed by scripts/prerender-research.mjs) -->
+  <url>
+    <loc>https://belfed.ru/research/</loc>
+    <lastmod>2026-08-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://belfed.ru/research/2026-08-17-kitayskiy-ii-kompleks-ot-tsenovogo-dempinga-k-fundamentalnoy-pereotsenke/</loc>
+    <lastmod>2026-08-18</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <!-- research:end -->
 </urlset>
