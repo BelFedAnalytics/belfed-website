@@ -248,6 +248,9 @@
         emailInput.classList.remove('error');
         privacyWrap.classList.remove('error');
         termsWrap.classList.remove('error');
+        emailInput.removeAttribute('aria-invalid');
+        privacyCb.removeAttribute('aria-invalid');
+        termsCb.removeAttribute('aria-invalid');
       }
       emailInput.addEventListener('input', clearErrors);
       privacyCb.addEventListener('change', clearErrors);
@@ -266,10 +269,10 @@
         var failed = false;
 
         if (!email || !EMAIL_RE.test(email) || email.length > 254) {
-          emailInput.classList.add('error'); failed = true;
+          emailInput.classList.add('error'); emailInput.setAttribute('aria-invalid', 'true'); failed = true;
         }
-        if (!hasPrivacy) { privacyWrap.classList.add('error'); failed = true; }
-        if (!hasTerms) { termsWrap.classList.add('error'); failed = true; }
+        if (!hasPrivacy) { privacyWrap.classList.add('error'); privacyCb.setAttribute('aria-invalid', 'true'); failed = true; }
+        if (!hasTerms) { termsWrap.classList.add('error'); termsCb.setAttribute('aria-invalid', 'true'); failed = true; }
 
         if (failed) {
           if (!email || !EMAIL_RE.test(email)) {
