@@ -85,7 +85,7 @@ function buildMsg(lang: "ru" | "en", seatsRemaining: number): Msg {
           "You were one of our earliest members — so a *Founding Member* seat is still open for you " +
           `(only *${seatsRemaining} of 50* left):\n\n` +
           "• *Founding Member status* tied to your account: if you ever need to pause again, you'll have up to 30 days to come back without losing your status or discount\n" +
-          "• *Priority processing* — x3 priority asset-analysis requests per day\n" +
+          "• *Priority processing* of your asset-analysis requests\n" +
           "• *30% lifetime discount* off the current price — *$10.50/mo* instead of $15, locked in for as long as your subscription stays active\n\n" +
           "Reactivate now and your seat is reserved for good.",
         button: { text: "⭐ Become a Founding Member", url: FM_LINK_EN },
@@ -106,7 +106,7 @@ function buildMsg(lang: "ru" | "en", seatsRemaining: number): Msg {
         "Вы были одним из первых подписчиков — поэтому место *Founding Member* (со-основателя сервиса) всё ещё закреплено за вами " +
         `(осталось *${seatsRemaining} из 50*):\n\n` +
         "• *Статус Founding Member* закреплён за аккаунтом: при необходимости паузы у вас есть до 30 дней, чтобы вернуться без потери статуса и скидки\n" +
-        "• *Приоритетная обработка* — x3 приоритетных запроса на анализ активов в день\n" +
+        "• *Приоритетная обработка* ваших запросов на анализ активов\n" +
         "• *Пожизненная скидка 30%* от текущего прайс-листа — *1 050 ₽/мес* вместо 1 500 ₽, пока подписка активна\n\n" +
         "Возобновите сейчас — и место закрепится за вами навсегда.",
       button: { text: "⭐ Стать Founding Member", url: FM_LINK_RU },
