@@ -125,6 +125,13 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 .section-type-toggle button.active{background:#000;color:#f5f2eb}
 .section-type-toggle button:not(.active):hover{background:#fff}
 .section-block.linked-mode{background:#fafaf5;border-left:3px solid #000;padding-left:14px}
+.sec-public{display:inline-flex;align-items:center;gap:5px;font-size:10px;letter-spacing:1px;border:1px solid #000;padding:4px 8px;margin-right:8px;cursor:pointer;background:#f5f2eb;white-space:nowrap}
+.sec-public input{margin:0}
+.sec-public.off{background:#fff;opacity:0.55}
+.section-head .sec-public{margin-left:14px;margin-right:auto}
+.public-card .field{margin-bottom:10px}
+.public-card .field label{letter-spacing:1px}
+.public-card .field input,.public-card .field textarea{font-size:11px;padding:6px 8px}
 .linked-post-card{border:1px solid #000;background:#fff;padding:12px 14px;display:flex;gap:12px;align-items:flex-start}
 .linked-post-card .lpc-body{flex:1;min-width:0}
 .linked-post-card .lpc-meta{font-size:10px;letter-spacing:2px;color:#666;text-transform:uppercase;margin-bottom:4px}
@@ -386,10 +393,16 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 
     <!-- CONCLUSION (опциональный) -->
     <div class="section-block" style="margin-top:30px;border-top:2px solid #000;padding-top:24px">
-      <label class="toggle-block">
-        <input type="checkbox" id="cb-conclusion">
-        <span class="label" style="color:#000;opacity:1">// ДОБАВИТЬ ГЛАВНЫЙ ВЫВОД (опционально)</span>
-      </label>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <label class="toggle-block">
+          <input type="checkbox" id="cb-conclusion">
+          <span class="label" style="color:#000;opacity:1">// ДОБАВИТЬ ГЛАВНЫЙ ВЫВОД (опционально)</span>
+        </label>
+        <label class="sec-public" id="lab-conc-public" title="Показывать этот блок на открытой странице /research/. Снятая отметка превращает его в закрытый блок.">
+          <input type="checkbox" id="cb-conc-public" checked onchange="onConcPublicChange()">
+          <span>ПУБЛ.</span>
+        </label>
+      </div>
 
       <div class="conclusion-body" id="conclusion-body">
         <div class="lang-pane active" data-lang="ru">
@@ -431,6 +444,39 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
     <div class="row"><span>Изменён</span><span id="st-updated">—</span></div>
     <div class="row"><span>Секций</span><span id="st-sections">0</span></div>
     <div class="row"><span>Языки</span><span id="st-langs">RU ✗  EN ✗</span></div>
+  </div>
+
+  <div class="sidebar-card public-card">
+    <h3>// ПУБЛИЧНЫЙ ДОСТУП</h3>
+    <label style="font-size:11px;display:flex;gap:6px;align-items:center;cursor:pointer">
+      <input type="checkbox" id="cb-is-public" onchange="onIsPublicChange()">
+      <span><b>Открыть отчёт на /research/</b></span>
+    </label>
+    <div class="help" style="margin-top:6px">Открытая страница показывает только секции с отметкой «ПУБЛ.». Остальные превращаются в закрытый блок с приглашением в бот. Флаг работает только у опубликованных отчётов.</div>
+    <div class="row" style="margin-top:10px"><span>Открыт с</span><span id="st-public-at" style="font-size:10px">—</span></div>
+    <div class="row"><span>Публичных секций</span><span id="st-public-sections" style="font-size:10px">—</span></div>
+    <div id="public-warn" class="help" style="color:#c50000;font-style:normal;display:none"></div>
+    <div id="public-links" style="margin-top:10px;display:none">
+      <a id="lnk-public-ru" class="btn" style="display:block;text-align:center;margin-bottom:6px" target="_blank" rel="noopener">[ ОТКРЫТАЯ RU → belfed.ru ]</a>
+      <a id="lnk-public-en" class="btn" style="display:block;text-align:center" target="_blank" rel="noopener">[ ОТКРЫТАЯ EN → belfed.com ]</a>
+      <div class="help" style="margin-top:6px">Статические страницы собираются пререндером раз в 15 минут, поэтому сразу после сохранения ссылка может ещё отдавать 404.</div>
+    </div>
+    <div id="public-cta-wrap" style="margin-top:12px;border-top:1px dashed #999;padding-top:10px;display:none">
+      <div style="font-size:10px;letter-spacing:1px;color:#666;margin-bottom:8px">ПРИГЛАШЕНИЕ НА ОТКРЫТОЙ СТРАНИЦЕ (ОПЦИОНАЛЬНО)</div>
+      <div class="field"><label>ЗАГОЛОВОК · RU</label>
+        <input type="text" id="f-cta-headline-ru" placeholder="пусто = стандартный текст"></div>
+      <div class="field"><label>HEADLINE · EN</label>
+        <input type="text" id="f-cta-headline-en" placeholder="empty = default copy"></div>
+      <div class="field"><label>ТЕКСТ · RU</label>
+        <textarea id="f-cta-body-ru" rows="3" placeholder="пусто = стандартный текст"></textarea></div>
+      <div class="field"><label>BODY · EN</label>
+        <textarea id="f-cta-body-en" rows="3" placeholder="empty = default copy"></textarea></div>
+      <div class="field"><label>ТИЗЕР ТИКЕРОВ · RU</label>
+        <input type="text" id="f-cta-teaser-ru" placeholder="напр. 3 идеи по нефти и золоту"></div>
+      <div class="field"><label>TICKER TEASER · EN</label>
+        <input type="text" id="f-cta-teaser-en" placeholder="e.g. 3 ideas on oil and gold"></div>
+      <div class="help">Пусто = стандартный текст рендерера. Тизер тикеров показывается в закрытом блоке вместо скрытой секции. Не пишите прямых рекомендаций купить или продать конкретный инструмент.</div>
+    </div>
   </div>
 
   <div class="sidebar-card">
@@ -894,7 +940,7 @@ function initBlank() {
   state.created_at = null;
   state.updated_at = null;
   state.sections = [ blankSection(0) ];
-  state.conclusion = { id:null, enabled:false, headline_ru:'', headline_en:'', body_ru:'', body_en:'', chart_images:[] };
+  state.conclusion = { id:null, enabled:false, headline_ru:'', headline_en:'', body_ru:'', body_en:'', chart_images:[], is_public:true };
   state.cover_image_url = null;
   state.asset_classes = [];
   state.sectors = [];
@@ -907,6 +953,12 @@ function initBlank() {
   state.publish_mode = 'manual';
   state.publish_after = null;
   state.publish_blocked_reason = null;
+  // v14: public research
+  state.is_public = false;
+  state.published_public_at = null;
+  state.cta = { headline_ru:'', headline_en:'', body_ru:'', body_en:'', teaser_ru:'', teaser_en:'' };
+  state.conclusion.is_public = true;
+  applyPublicToUI();
 
   document.getElementById('f-date').value = todayISO();
   document.getElementById('f-type').value = 'daily';
@@ -928,6 +980,8 @@ function blankSection(pos) {
     // v30: linked section fields
     linked_post_id: null,
     linked_post: null,
+    // v14: visible on the public /research/ page by default
+    is_public: true,
   };
 }
 
@@ -968,6 +1022,18 @@ async function loadReport(id) {
   state.publish_mode = rep.publish_mode || 'manual';
   state.publish_after = rep.publish_after || null;
   state.publish_blocked_reason = rep.publish_blocked_reason || null;
+  // v14: public research
+  state.is_public = !!rep.is_public;
+  state.published_public_at = rep.published_public_at || null;
+  state.cta = {
+    headline_ru: rep.cta_headline_ru || '',
+    headline_en: rep.cta_headline_en || '',
+    body_ru:     rep.cta_body_ru || '',
+    body_en:     rep.cta_body_en || '',
+    teaser_ru:   rep.cta_ticker_teaser_ru || '',
+    teaser_en:   rep.cta_ticker_teaser_en || '',
+  };
+  applyPublicToUI();
   applyPublishModeToUI();
   const cbP = document.getElementById('cb-email-premium');
   const cbL = document.getElementById('cb-email-leads');
@@ -990,6 +1056,8 @@ async function loadReport(id) {
     // v30
     linked_post_id: s.linked_post_id || null,
     linked_post: s.linked_post || null,
+    // v14: undefined means public, mirroring the analytics_sections default
+    is_public: (s.is_public === undefined || s.is_public === null) ? true : !!s.is_public,
   }));
   if (state.sections.length === 0) state.sections = [ blankSection(0) ];
 
@@ -1004,10 +1072,13 @@ async function loadReport(id) {
       body_ru:     conc.body_ru || '',
       body_en:     conc.body_en || '',
       chart_images: migrateChartImages(conc),
+      is_public: (conc.is_public === undefined || conc.is_public === null) ? true : !!conc.is_public,
     };
   } else {
-    state.conclusion = { id:null, enabled:false, headline_ru:'', headline_en:'', body_ru:'', body_en:'', chart_images:[] };
+    state.conclusion = { id:null, enabled:false, headline_ru:'', headline_en:'', body_ru:'', body_en:'', chart_images:[], is_public:true };
   }
+  const cbCP = document.getElementById('cb-conc-public');
+  if (cbCP) cbCP.checked = state.conclusion.is_public !== false;
   document.getElementById('cb-conclusion').checked = state.conclusion.enabled;
   document.getElementById('conclusion-body').classList.toggle('on', state.conclusion.enabled);
   document.getElementById('conc-headline-ru').value = state.conclusion.headline_ru;
@@ -1091,6 +1162,7 @@ function renderAll() {
 }
 
 function renderStatus() {
+  applyPublicToUI();
   const pill = document.getElementById('st-status');
   pill.className = 'status-pill ' + state.status;
   pill.textContent = state.status === 'published' ? 'ОПУБЛИКОВАН' : 'ЧЕРНОВИК';
@@ -1212,6 +1284,14 @@ function renderSectionBlock(sec, idx) {
   const isLinked = !!sec.linked_post_id;
   div.className = 'section-block' + (isLinked ? ' linked-mode' : '');
 
+  // v14: per-section visibility on the public /research/ page
+  const secPublic = sec.is_public !== false;
+  const publicToggleHtml = `
+    <label class="sec-public ${secPublic ? '' : 'off'}" title="Показывать эту секцию на открытой странице /research/. Снятая отметка превращает её в закрытый блок.">
+      <input type="checkbox" data-sec-public ${secPublic ? 'checked' : ''}>
+      <span>ПУБЛ.</span>
+    </label>`;
+
   // v30: Standard/Link toggle in section head
   const toggleHtml = `
     <div class="section-type-toggle" role="tablist">
@@ -1267,6 +1347,7 @@ function renderSectionBlock(sec, idx) {
   div.innerHTML = `
     <div class="section-head">
       <span class="label">// СЕКЦИЯ ${String(idx+1).padStart(2,'0')}${isLinked ? ' · ЛИНК' : ''}</span>
+      ${publicToggleHtml}
       ${toggleHtml}
       <div class="section-actions">
         <button class="icon-btn" data-act="up"   ${idx===0 ? 'disabled' : ''}>↑</button>
@@ -1282,6 +1363,18 @@ function renderSectionBlock(sec, idx) {
     const k = el.dataset.bind;
     el.addEventListener('input', () => { sec[k] = el.value; if (!isLinked) updateCounters(div, sec); renderStatus(); });
   });
+
+  // v14: section public toggle wiring
+  const secPubCb = div.querySelector('[data-sec-public]');
+  if (secPubCb) {
+    secPubCb.addEventListener('change', () => {
+      sec.is_public = secPubCb.checked;
+      const lab = secPubCb.closest('.sec-public');
+      if (lab) lab.classList.toggle('off', !secPubCb.checked);
+      applyPublicToUI();
+      renderStatus();
+    });
+  }
 
   // type toggle wiring
   div.querySelector('[data-act="type-standard"]').onclick = () => {
@@ -1637,6 +1730,9 @@ function buildPayload(status) {
       chart_caption_en: isLinked ? '' : (charts[0]?.caption_en || ''),
       // v30
       linked_post_id: s.linked_post_id || null,
+      // v14: public visibility. analytics-save reinserts all sections on every
+      // save, so this field must always be sent or it resets to the DB default.
+      is_public: s.is_public !== false,
     };
   });
   // conclusion as last section — only if checkbox is on
@@ -1660,6 +1756,7 @@ function buildPayload(status) {
       chart_image_url:  concCharts[0]?.url || null,
       chart_caption_ru: concCharts[0]?.caption_ru || '',
       chart_caption_en: concCharts[0]?.caption_en || '',
+      is_public: state.conclusion.is_public !== false,
     });
   }
 
@@ -1679,6 +1776,14 @@ function buildPayload(status) {
     cover_image_url: state.cover_image_url || null,
     email_send_to_premium: !!document.getElementById('cb-email-premium')?.checked,
     email_send_to_leads:   !!document.getElementById('cb-email-leads')?.checked,
+    // v14: public research access + optional CTA overrides
+    is_public: !!document.getElementById('cb-is-public')?.checked,
+    cta_headline_ru: (document.getElementById('f-cta-headline-ru')?.value || '').trim(),
+    cta_headline_en: (document.getElementById('f-cta-headline-en')?.value || '').trim(),
+    cta_body_ru:     (document.getElementById('f-cta-body-ru')?.value || '').trim(),
+    cta_body_en:     (document.getElementById('f-cta-body-en')?.value || '').trim(),
+    cta_ticker_teaser_ru: (document.getElementById('f-cta-teaser-ru')?.value || '').trim(),
+    cta_ticker_teaser_en: (document.getElementById('f-cta-teaser-en')?.value || '').trim(),
     // v30: autopublish
     publish_mode:  readPublishMode(),
     publish_after: readPublishAfterUtc(),
@@ -1748,6 +1853,89 @@ function setupPublishModeUI() {
     state.publish_after = readPublishAfterUtc();
     renderStatus();
   });
+}
+
+// ============== v14: public research helpers ==============
+function fmtPublicAt(v) {
+  if (!v) return '—';
+  try { return new Date(v).toLocaleString('ru-RU', { dateStyle:'short', timeStyle:'short' }); }
+  catch (_) { return String(v).slice(0, 16); }
+}
+
+// Repaints the public-access card from state. Safe to call at any time.
+function applyPublicToUI() {
+  const cb = document.getElementById('cb-is-public');
+  if (!cb) return;
+  cb.checked = !!state.is_public;
+
+  const at = document.getElementById('st-public-at');
+  if (at) at.textContent = fmtPublicAt(state.published_public_at);
+
+  const bodySecs = (state.sections || []).filter(s => !s.linked_post_id);
+  const pubCount = bodySecs.filter(s => s.is_public !== false).length;
+  const concPub = state.conclusion && state.conclusion.enabled && state.conclusion.is_public !== false ? 1 : 0;
+  const total = bodySecs.length + (state.conclusion && state.conclusion.enabled ? 1 : 0);
+  const cnt = document.getElementById('st-public-sections');
+  if (cnt) cnt.textContent = `${pubCount + concPub} из ${total}`;
+
+  const cta = document.getElementById('public-cta-wrap');
+  if (cta) cta.style.display = state.is_public ? 'block' : 'none';
+
+  const links = document.getElementById('public-links');
+  if (links) {
+    const show = !!state.is_public && !!state.slug;
+    links.style.display = show ? 'block' : 'none';
+    if (show) {
+      const ru = document.getElementById('lnk-public-ru');
+      const en = document.getElementById('lnk-public-en');
+      if (ru) ru.href = `https://belfed.ru/research/${state.slug}/`;
+      if (en) en.href = `https://belfed.com/research/${state.slug}/`;
+    }
+  }
+
+  const warn = document.getElementById('public-warn');
+  if (warn) {
+    const msgs = [];
+    if (state.is_public && state.status !== 'published') {
+      msgs.push('Отчёт ещё не опубликован: открытая страница появится только после публикации.');
+    }
+    if (state.is_public && (pubCount + concPub) === 0) {
+      msgs.push('Ни одна секция не открыта: посетитель увидит только закрытые блоки.');
+    }
+    warn.textContent = msgs.join(' ');
+    warn.style.display = msgs.length ? 'block' : 'none';
+  }
+
+  // CTA fields are written back to state on input, so only fill them once per load
+  if (!applyPublicToUI._filled || applyPublicToUI._filledId !== state.id) {
+    const map = {
+      'f-cta-headline-ru': 'headline_ru', 'f-cta-headline-en': 'headline_en',
+      'f-cta-body-ru': 'body_ru',         'f-cta-body-en': 'body_en',
+      'f-cta-teaser-ru': 'teaser_ru',     'f-cta-teaser-en': 'teaser_en',
+    };
+    const c = state.cta || {};
+    for (const [id, key] of Object.entries(map)) {
+      const el = document.getElementById(id);
+      if (el) el.value = c[key] || '';
+    }
+    applyPublicToUI._filled = true;
+    applyPublicToUI._filledId = state.id;
+  }
+}
+
+function onIsPublicChange() {
+  const cb = document.getElementById('cb-is-public');
+  state.is_public = !!(cb && cb.checked);
+  applyPublicToUI();
+  renderStatus();
+}
+
+function onConcPublicChange() {
+  const cb = document.getElementById('cb-conc-public');
+  state.conclusion.is_public = !!(cb && cb.checked);
+  const lab = document.getElementById('lab-conc-public');
+  if (lab) lab.classList.toggle('off', !state.conclusion.is_public);
+  applyPublicToUI();
 }
 
 // ============== v30: post picker ==============

@@ -1,0 +1,75 @@
+name: Prerender public research
+
+# Renders the public /research/ pages from the research-render edge function and
+# commits them into the repo so GitHub Pages serves them as static HTML.
+#
+# Both belfed.ru and belfed.com point straight at GitHub Pages, so there is no
+# proxy that could forward /research/ to Supabase at request time. Prerendering
+# also keeps the public pages reachable if the edge function is briefly down.
+
+on:
+  schedule:
+    # Every 15 minutes: a report opened in the admin panel goes live within one cycle.
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/prerender-research.mjs"
+      - ".github/workflows/prerender-research.yml"
+
+concurrency:
+  group: prerender-research
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  prerender:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Prerender research pages
+        id: build
+        env:
+          RESEARCH_LANG: "ru"
+          SITE_ORIGIN: "https://belfed.ru"
+        run: |
+          node scripts/prerender-research.mjs 2>&1 | tee /tmp/prerender.log
+          if [ -z "$(git status --porcelain -- research sitemap.xml)" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Write step summary
+        if: always()
+        run: |
+          {
+            echo "### Public research prerender"
+            echo ""
+            echo "Changed: ${{ steps.build.outputs.changed }}"
+            echo ""
+            echo '```'
+            cat /tmp/prerender.log 2>/dev/null || echo "no log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit prerendered pages
+        if: steps.build.outputs.changed == 'true'
+        run: |
+          git config user.name "Belfed Bot"
+          git config user.email "bot@belfed.com"
+          git add research sitemap.xml
+          git commit -m "chore: prerender public research ($(date -u +%Y-%m-%dT%H:%MZ))"
+          git push origin main

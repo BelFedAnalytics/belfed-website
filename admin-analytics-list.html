@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
+<meta name="robots" content="noindex,nofollow">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>BELFED ANALYTICS — АДМИН: СПИСОК</title>
 <style>
@@ -64,6 +65,7 @@ td.actions .btn{padding:5px 10px;font-size:10px;letter-spacing:1px;margin-right:
 .tabs button{font-family:'Courier New',monospace;font-size:12px;letter-spacing:2px;padding:10px 22px;border:1px solid #000;border-bottom:none;background:#f5f2eb;cursor:pointer;color:#000;margin-right:-1px;margin-bottom:-1px}
 .tabs button.sel{background:#000;color:#f5f2eb}
 td.cats small{display:inline-block;background:#f0ede4;border:1px solid #000;padding:1px 6px;margin:1px 3px 1px 0;font-size:9px;letter-spacing:1px}
+table td .btn{white-space:nowrap}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -120,6 +122,11 @@ td.cats small{display:inline-block;background:#f0ede4;border:1px solid #000;padd
     <option value="draft">Черновик</option>
     <option value="published">Опубликован</option>
     <option value="archived">Архив</option>
+  </select>
+  <select id="f-public" onchange="reload()">
+    <option value="">Публичность: любая</option>
+    <option value="1">Только публичные</option>
+    <option value="0">Только закрытые</option>
   </select>
   <select id="f-type" onchange="reload()">
     <option value="">Все типы</option>
@@ -197,6 +204,7 @@ function setTab(tab) {
   const isTl = currentTab === 'timeline';
   // Type filter only applies to Reports; hide it for Timeline.
   document.getElementById('f-type').style.display = isTl ? 'none' : '';
+  document.getElementById('f-public').style.display = isTl ? 'none' : '';
   document.getElementById('page-h1').textContent = isTl
     ? '— ЛЕНТА: ПОСТЫ —'
     : '— АНАЛИТИКА: СПИСОК ОТЧЁТОВ —';
@@ -223,6 +231,7 @@ async function reloadReports() {
       q: document.getElementById('f-q').value.trim(),
       status: document.getElementById('f-status').value,
       type:   document.getElementById('f-type').value,
+      public: document.getElementById('f-public').value,
       limit: 100,
     }
   });
@@ -237,7 +246,8 @@ async function reloadReports() {
         <th style="width:8%">ТИП</th>
         <th>ЗАГОЛОВОК</th>
         <th style="width:14%">СТАТУС</th>
-        <th style="width:24%">ДЕЙСТВИЯ</th>
+        <th style="width:13%">ПУБЛИЧНО</th>
+        <th style="width:25%">ДЕЙСТВИЯ</th>
       </tr></thead>
       <tbody id="rows"></tbody>
     </table>
@@ -349,14 +359,18 @@ function renderRow(it) {
       <small style="display:block;margin-top:4px;font-family:monospace">${escapeHtml(slug)}</small>
     </td>
     <td><span class="status-pill ${it.status}">${labelStatus(it.status)}</span></td>
+    <td>${publicCell(it)}</td>
     <td class="actions">
       <a class="btn" href="/admin-analytics.html?id=${encodeURIComponent(it.id)}">[ РЕД ]</a>
       ${slug ? `<a class="btn" target="_blank" href="/analytics-view.html?slug=${encodeURIComponent(slug)}">[ САЙТ ]</a>` : ''}
+      ${it.is_public && slug ? `<a class="btn" target="_blank" rel="noopener" href="${publicUrl(slug)}">[ ОТКР ]</a>` : ''}
       ${it.status === 'draft' ? `<button class="btn danger" data-act="del" data-id="${it.id}">[ × ]</button>` : ''}
     </td>
   `;
   const del = tr.querySelector('[data-act="del"]');
   if (del) del.onclick = () => deleteRow(it.id);
+  const pub = tr.querySelector('[data-act="pub"]');
+  if (pub) pub.onclick = () => togglePublic(it, pub);
   return tr;
 }
 
@@ -365,6 +379,53 @@ async function deleteRow(id) {
   const r = await adminAction({ action:'delete', report_id:id });
   if (!r.ok) { topMsg('Удаление не удалось: '+(r.data?.error||r.status),'err'); return; }
   topMsg('Удалено','ok');
+  reload();
+}
+
+// ===== v14: public research toggle =====
+// The admin panel is served from both domains; keep the public link on the same one.
+function publicUrl(slug) {
+  const host = location.hostname.endsWith('belfed.ru') ? 'belfed.ru' : 'belfed.com';
+  return `https://${host}/research/${encodeURIComponent(slug)}/`;
+}
+
+function fmtPublicAt(v) {
+  if (!v) return '';
+  try { return new Date(v).toLocaleDateString('ru-RU'); }
+  catch (_) { return String(v).slice(0, 10); }
+}
+
+function publicCell(it) {
+  if (it.status !== 'published') {
+    return '<span style="font-size:10px;opacity:0.4">—</span>';
+  }
+  const on = !!it.is_public;
+  const since = fmtPublicAt(it.published_public_at);
+  return `<button class="btn${on ? ' primary' : ''}" data-act="pub" data-id="${it.id}" style="font-size:10px;white-space:nowrap">${on ? '[ ПУБЛИЧНО ]' : '[ ЗАКРЫТО ]'}</button>` +
+         (on && since ? `<small style="display:block;margin-top:4px;opacity:0.6">с ${escapeHtml(since)}</small>` : '');
+}
+
+async function togglePublic(it, btn) {
+  const next = !it.is_public;
+  if (next && !confirm('Открыть отчёт на публичной странице /research/?\n\nПубличными станут только секции, отмеченные «ПУБЛ.» в редакторе. Проверьте это перед открытием.')) return;
+  btn.disabled = true;
+  const prev = btn.textContent;
+  btn.textContent = '[ … ]';
+  const r = await adminAction({ action:'set_public', report_id: it.id, is_public: next });
+  btn.disabled = false;
+  if (!r.ok) {
+    btn.textContent = prev;
+    const err = r.data?.error || r.status;
+    topMsg(err === 'publish_report_first'
+      ? 'Сначала опубликуйте отчёт, потом открывайте его публично.'
+      : 'Не удалось изменить публичность: ' + err, 'err');
+    return;
+  }
+  it.is_public = !!r.data?.is_public;
+  it.published_public_at = r.data?.published_public_at || it.published_public_at;
+  topMsg(it.is_public
+    ? 'Отчёт открыт публично. Статическая страница появится после следующего пререндера (до 15 минут).'
+    : 'Публичный доступ закрыт. Страница исчезнет после следующего пререндера.', 'ok');
   reload();
 }
 
