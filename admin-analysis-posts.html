@@ -210,6 +210,7 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
   <div class="toolbar-right">
     <button class="btn" id="btn-clear">[ ОЧИСТИТЬ ]</button>
     <button class="btn" id="btn-draft">[ СОХРАНИТЬ ЧЕРНОВИК ]</button>
+    <button class="btn" id="btn-preview">[ ПРЕДПРОСМОТР В TELEGRAM ]</button>
     <button class="btn primary" id="btn-publish">[ ОПУБЛИКОВАТЬ ]</button>
   </div>
 </div>
@@ -530,7 +531,7 @@ function initEditor(){
     cntRu:$('#cnt-ru'), cntEn:$('#cnt-en'),
     files:$('#files'), dropzone:$('#dropzone'), thumbs:$('#thumbs'),
     tgFormat:$('#tg-format'), tgFormatHint:$('#tg-format-hint'),
-    btnClear:$('#btn-clear'), btnDraft:$('#btn-draft'), btnPublish:$('#btn-publish'),
+    btnClear:$('#btn-clear'), btnDraft:$('#btn-draft'), btnPreview:$('#btn-preview'), btnPublish:$('#btn-publish'),
     bubbleHost:$('#bubble-host'), topicName:$('#topic-name'),
     history:$('#history'), topMsg:$('#top-msg'),
     searchInput:$('#search-input'), searchClear:$('#search-clear'),
@@ -559,6 +560,7 @@ function initEditor(){
 
   els.btnClear.addEventListener('click', clearForm);
   els.btnDraft.addEventListener('click', saveDraft);
+  if (els.btnPreview) els.btnPreview.addEventListener('click', previewTelegram);
   els.btnPublish.addEventListener('click', publish);
 
   // footer: load saved footers from config, wire Load/Save buttons
@@ -1050,19 +1052,56 @@ async function saveDraft(){
   }
 }
 
+// v8: предпросмотр в Telegram. Сохраняет черновик и отправляет его только
+// в личный чат админа тем же кодом, который публикует в каналы.
+async function previewTelegram(){
+  const data = collectFormData();
+  const err = validate(data);
+  if (err){ flash('err', err); return; }
+  if (els.btnPreview) els.btnPreview.disabled = true;
+  try {
+    flash('info','загрузка изображений...');
+    const paths = await uploadPendingImages();
+    const payload = { ...data, image_paths: paths, image_meta: collectImageMeta(paths) };
+    const session = (await sb.auth.getSession()).data.session;
+    payload.created_by = session.user.id;
+
+    if (editingId){
+      const { error } = await sb.from('analysis_posts').update(payload).eq('id', editingId);
+      if (error) throw error;
+    } else {
+      payload.status = 'draft';
+      const { data: r, error } = await sb.from('analysis_posts').insert(payload).select('id').maybeSingle();
+      if (error) throw error;
+      editingId = r.id;
+    }
+
+    flash('info','отправка предпросмотра...');
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/analysis-publish`, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}` },
+      body: JSON.stringify({ action:'preview', post_id: editingId })
+    });
+    const j = await res.json().catch(()=>({}));
+    if (!res.ok || j.error){
+      const det = Array.isArray(j.results) ? j.results.map(r => `${String(r.lang).toUpperCase()}: ${r.error||'ok'}`).join('; ') : (j.error||res.status);
+      flash('err', `предпросмотр не ушёл: ${det}`);
+    } else {
+      const langs = (j.results||[]).map(r => String(r.lang).toUpperCase()).join(' + ');
+      flash('ok', `Предпросмотр отправлен в ваш личный чат с ботом (${j.format}): ${langs}`);
+      loadHistory();
+    }
+  } catch (e){
+    flash('err','ошибка предпросмотра: '+(e.message||e));
+  } finally {
+    if (els.btnPreview) els.btnPreview.disabled = false;
+  }
+}
+
 async function publish(){
   const data = collectFormData();
   const err = validate(data);
   if (err){ flash('err', err); return; }
-
-  // Формат статьи сохраняется в базе, но публикатор его ещё не умеет отправлять.
-  if (tgFormat() === 'article'){
-    alert(
-      'Выбран формат СТАТЬЯ. Он сохраняется в черновике, но отправка статьёй ещё не подключена в публикаторе.\n\n' +
-      'Сохраните черновик и дождитесь подключения, либо переключите формат на ОБЫЧНЫЙ ПОСТ, чтобы опубликовать сейчас.'
-    );
-    return;
-  }
 
   const alreadyPub = editingId ? await isAlreadyPublished(editingId) : false;
   const tgMode = tgTextOnlyCheck();
@@ -1083,6 +1122,13 @@ async function publish(){
       `На сайте и в личном кабинете пост отобразится полностью: текст и все изображения.\n\n` +
       `Опубликовать в таком виде?`;
     if (!confirm(warn)) return;
+  }
+
+  if (tgFormat() === 'article'){
+    if (!confirm(
+      'Формат СТАТЬЯ: в Telegram уйдёт одно длинное сообщение с графиками внутри текста.\n\n' +
+      'Названия графиков и ссылки берутся из полей под каждым изображением. Продолжить?'
+    )) return;
   }
 
   if (!confirm('Опубликовать в выбранные каналы сейчас?')) return;
@@ -1116,7 +1162,10 @@ async function publish(){
     const j = await res.json().catch(()=>({}));
     if (!res.ok || j.error){
       // v6: caption_too_long — показать детали превышения по каждому языку
-      if (j.error === 'caption_too_long' && Array.isArray(j.failures)){
+      if (j.error === 'article_too_long' && Array.isArray(j.failures)){
+        const lines = j.failures.map(f => `${f.lang.toUpperCase()}: ${f.length} / ${f.limit}`);
+        flash('err', `статья слишком длинная — ${lines.join('; ')}. Сократите текст и повторите.`);
+      } else if (j.error === 'caption_too_long' && Array.isArray(j.failures)){
         const lines = j.failures.map(f => `${f.lang.toUpperCase()}: ${f.length} / ${f.limit} — превышение ${f.excess}`);
         flash('err', `подпись слишком длинная — ${lines.join('; ')}. Сократите текст и повторите.`);
       } else if (j.error === 'partial_failure' && Array.isArray(j.failures)){
