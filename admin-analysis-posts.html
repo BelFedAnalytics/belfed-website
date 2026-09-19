@@ -74,6 +74,7 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 .char-counter{font-size:10px;letter-spacing:1px;opacity:0.6;text-align:right;margin-top:2px}
 .char-counter.warn{color:#e6a800}
 .char-counter.over{color:#c50000;font-weight:bold}
+.tg-mode-note{margin-top:8px;padding:8px 10px;border:1px solid #e6a800;background:rgba(230,168,0,0.08);color:#e6a800;font-size:11px;line-height:1.5;letter-spacing:0.5px}
 
 .section-block{border-top:1px dashed #999;padding-top:18px;margin-top:18px}
 .section-head{font-size:11px;letter-spacing:3px;opacity:0.6;font-weight:bold;margin-bottom:10px}
@@ -326,6 +327,7 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
           <input type="file" id="files" accept="image/*" multiple style="display:none">
         </div>
         <div class="thumbs" id="thumbs"></div>
+        <div class="tg-mode-note" id="tg-mode-note" style="display:none"></div>
       </div>
 
     </div>
@@ -814,6 +816,30 @@ function updateCounters(){
   els.cntRu.classList.toggle('over', ru>limit);
   els.cntEn.classList.toggle('warn', en>warnAt && en<=limit);
   els.cntEn.classList.toggle('over', en>limit);
+
+  const note = document.getElementById('tg-mode-note');
+  if (note){
+    const chk = tgTextOnlyCheck();
+    if (chk.need){
+      const detail = chk.over.map(o => `${o.lang} ${o.len}`).join(', ');
+      note.style.display = 'block';
+      note.textContent = `⚠ Подпись больше 1024 (${detail}). Изображения не будут прикреплены к сообщению в Telegram — вместо них в текст добавятся ссылки (лимит текстового сообщения 4096). На сайте и в кабинете пост отобразится полностью: текст и изображения.`;
+    } else {
+      note.style.display = 'none';
+      note.textContent = '';
+    }
+  }
+}
+
+// v7: обход лимита подписи Telegram (1024). Если приложены изображения и текст
+// превышает лимит хотя бы в одном из выбранных каналов, пост уйдёт в Telegram
+// текстом со ссылками на изображения (tg_text_only), а сайт покажет полную версию.
+function tgTextOnlyCheck(){
+  if (state.images.length === 0) return { need:false, over:[] };
+  const over = [];
+  if (els.chRu.checked){ const n = buildCaption('ru').length; if (n > 1024) over.push({ lang:'RU', len:n }); }
+  if (els.chEn.checked){ const n = buildCaption('en').length; if (n > 1024) over.push({ lang:'EN', len:n }); }
+  return { need: over.length > 0, over };
 }
 function updateReplyVisibility(){ els.replytoBlock.style.display = els.type.value==='request' ? 'block' : 'none'; }
 
@@ -949,6 +975,28 @@ async function publish(){
   const data = collectFormData();
   const err = validate(data);
   if (err){ flash('err', err); return; }
+
+  const alreadyPub = editingId ? await isAlreadyPublished(editingId) : false;
+  const tgMode = tgTextOnlyCheck();
+
+  if (tgMode.need){
+    const detail = tgMode.over.map(o => `${o.lang}: ${o.len} / 1024`).join('; ');
+    if (alreadyPub){
+      alert(
+        `Пост уже опубликован, а текст превышает лимит подписи Telegram (${detail}).\n\n` +
+        `Telegram не позволяет превратить уже отправленное сообщение с фото в текстовое. ` +
+        `Сократите текст либо удалите пост и опубликуйте заново — тогда изображения уйдут ссылками.`
+      );
+      return;
+    }
+    const warn =
+      `ВНИМАНИЕ: текст превышает лимит подписи к изображению в Telegram (${detail}).\n\n` +
+      `Изображения НЕ будут прикреплены к сообщению в Telegram. Вместо них в текст будет добавлена строка со ссылками на изображения.\n` +
+      `На сайте и в личном кабинете пост отобразится полностью: текст и все изображения.\n\n` +
+      `Опубликовать в таком виде?`;
+    if (!confirm(warn)) return;
+  }
+
   if (!confirm('Опубликовать в выбранные каналы сейчас?')) return;
   els.btnPublish.disabled = true;
   try {
@@ -971,11 +1019,11 @@ async function publish(){
     }
 
     flash('info','публикация в telegram...');
-    const action = editingId && (await isAlreadyPublished(editingId)) ? 'edit' : 'publish';
+    const action = alreadyPub ? 'edit' : 'publish';
     const res = await fetch(`${SUPABASE_URL}/functions/v1/analysis-publish`, {
       method:'POST',
       headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}` },
-      body: JSON.stringify({ action, post_id: editingId })
+      body: JSON.stringify({ action, post_id: editingId, tg_text_only: tgMode.need })
     });
     const j = await res.json().catch(()=>({}));
     if (!res.ok || j.error){
