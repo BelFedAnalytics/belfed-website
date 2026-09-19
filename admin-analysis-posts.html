@@ -70,6 +70,11 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 .thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .thumb .ix{position:absolute;left:4px;bottom:4px;background:#000;color:#f5f2eb;padding:1px 6px;font-size:10px;letter-spacing:1px}
 .thumb .x{position:absolute;top:4px;right:4px;background:#c50000;color:#fff;border:none;width:20px;height:20px;cursor:pointer;font-size:11px;font-family:'Courier New',monospace;line-height:1}
+.thumb-card{display:flex;flex-direction:column;gap:6px;width:240px}
+.img-meta{display:flex;flex-direction:column;gap:4px}
+.img-meta label{font-size:9px;letter-spacing:1px;opacity:0.6}
+.img-meta input{font-family:'Courier New',monospace;width:100%;padding:5px 7px;font-size:11px;border:1px solid #000;background:#f5f2eb;outline:none}
+.img-meta input:focus{background:#fff}
 
 .char-counter{font-size:10px;letter-spacing:1px;opacity:0.6;text-align:right;margin-top:2px}
 .char-counter.warn{color:#e6a800}
@@ -847,21 +852,58 @@ function addFiles(list){
   [...list].forEach(f => {
     if (state.images.length >= 4) return;
     const url = URL.createObjectURL(f);
-    state.images.push({ file:f, url, name:f.name, isUploaded:false });
+    state.images.push({ file:f, url, name:f.name, isUploaded:false, title_ru:'', title_en:'', tv_url:'' });
   });
   renderThumbs(); updateCounters(); render();
 }
 function renderThumbs(){
+  // v8: each chart carries its own title (RU/EN) and its own web link. They are
+  // stored in analysis_posts.image_meta, aligned with image_paths by index, and
+  // printed above/below the chart in the article layout.
   els.thumbs.innerHTML = state.images.map((im,i)=>`
-    <div class="thumb">
-      <img src="${im.url}" alt="">
-      <span class="ix">${i+1}</span>
-      <button class="x" data-i="${i}" title="Remove">×</button>
+    <div class="thumb-card">
+      <div class="thumb">
+        <img src="${im.url}" alt="">
+        <span class="ix">${i+1}</span>
+        <button class="x" data-i="${i}" title="Удалить">×</button>
+      </div>
+      <div class="img-meta">
+        <label>// НАЗВАНИЕ RU</label>
+        <input type="text" data-mi="${i}" data-mk="title_ru" value="${escAttr(im.title_ru)}" placeholder="График, дневной таймфрейм">
+        <label>// НАЗВАНИЕ EN</label>
+        <input type="text" data-mi="${i}" data-mk="title_en" value="${escAttr(im.title_en)}" placeholder="Chart, daily timeframe">
+        <label>// ССЫЛКА НА ГРАФИК</label>
+        <input type="text" data-mi="${i}" data-mk="tv_url" value="${escAttr(im.tv_url)}" placeholder="https://www.tradingview.com/x/...">
+      </div>
     </div>
   `).join('');
   els.thumbs.querySelectorAll('.x').forEach(b => b.addEventListener('click', ()=>{
     state.images.splice(+b.dataset.i, 1); renderThumbs(); updateCounters(); render();
   }));
+  // Write straight into state on input: no re-render, so focus is never lost.
+  els.thumbs.querySelectorAll('.img-meta input').forEach(inp => {
+    inp.addEventListener('input', ()=>{
+      const im = state.images[+inp.dataset.mi];
+      if (im) im[inp.dataset.mk] = inp.value;
+    });
+  });
+}
+
+function escAttr(v){
+  return String(v ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Build image_meta aligned with the uploaded paths, by index.
+function collectImageMeta(paths){
+  return (paths||[]).map((path, i) => {
+    const im = state.images[i] || {};
+    return {
+      path,
+      title_ru: (im.title_ru || '').trim(),
+      title_en: (im.title_en || '').trim(),
+      tv_url:   (im.tv_url   || '').trim()
+    };
+  });
 }
 
 function flash(kind, text){
@@ -947,7 +989,7 @@ async function saveDraft(){
   try {
     flash('info','загрузка изображений...');
     const paths = await uploadPendingImages();
-    const payload = { ...data, image_paths: paths, status: 'draft' };
+    const payload = { ...data, image_paths: paths, image_meta: collectImageMeta(paths), status: 'draft' };
     const session = (await sb.auth.getSession()).data.session;
     payload.created_by = session.user.id;
 
@@ -1002,7 +1044,7 @@ async function publish(){
   try {
     flash('info','uploading images...');
     const paths = await uploadPendingImages();
-    const payload = { ...data, image_paths: paths, status: 'draft' };
+    const payload = { ...data, image_paths: paths, image_meta: collectImageMeta(paths), status: 'draft' };
     const session = (await sb.auth.getSession()).data.session;
     payload.created_by = session.user.id;
 
@@ -1213,10 +1255,17 @@ async function loadIntoEditor(id){
   els.tags.value = data.hashtags || '';
   els.chRu.checked = !!data.publish_to_ru;
   els.chEn.checked = !!data.publish_to_en;
-  state.images = (data.image_paths||[]).map(path => ({
-    path, isUploaded:true,
-    url: `${SUPABASE_URL}/storage/v1/object/public/analysis-images/${path}`
-  }));
+  const meta = Array.isArray(data.image_meta) ? data.image_meta : [];
+  state.images = (data.image_paths||[]).map((path, i) => {
+    const m = meta.find(x => x && x.path === path) || meta[i] || {};
+    return {
+      path, isUploaded:true,
+      url: `${SUPABASE_URL}/storage/v1/object/public/analysis-images/${path}`,
+      title_ru: m.title_ru || '',
+      title_en: m.title_en || '',
+      tv_url:   m.tv_url   || ''
+    };
+  });
   // Handle parent if present
   if (parentPostId){
     const { data: parent } = await sb.from('analysis_posts').select('*').eq('id', parentPostId).maybeSingle();
