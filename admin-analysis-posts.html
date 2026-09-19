@@ -324,6 +324,15 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
       </div>
 
       <div class="field">
+        <label>// ФОРМАТ ПУБЛИКАЦИИ В TELEGRAM</label>
+        <select id="tg-format">
+          <option value="post">ОБЫЧНЫЙ ПОСТ — фото с подписью, лимит 1024</option>
+          <option value="article">СТАТЬЯ — длинный текст с графиками внутри, лимит 32768</option>
+        </select>
+        <div class="char-counter" id="tg-format-hint" style="text-align:left"></div>
+      </div>
+
+      <div class="field">
         <label>// ГРАФИКИ <span class="hint">1–4 файла</span></label>
         <div class="dropzone" id="dropzone">
           <div class="dz-icon">⬆</div>
@@ -520,6 +529,7 @@ function initEditor(){
     btnFooterLoad:$('#btn-footer-load'), btnFooterSave:$('#btn-footer-save'), footerMsg:$('#footer-msg'),
     cntRu:$('#cnt-ru'), cntEn:$('#cnt-en'),
     files:$('#files'), dropzone:$('#dropzone'), thumbs:$('#thumbs'),
+    tgFormat:$('#tg-format'), tgFormatHint:$('#tg-format-hint'),
     btnClear:$('#btn-clear'), btnDraft:$('#btn-draft'), btnPublish:$('#btn-publish'),
     bubbleHost:$('#bubble-host'), topicName:$('#topic-name'),
     history:$('#history'), topMsg:$('#top-msg'),
@@ -530,6 +540,7 @@ function initEditor(){
   ['ticker','company','replyName','replyText','greetRu','greetEn','bodyRu','bodyEn','tv','tags','footerRu','footerEn']
     .forEach(k => els[k] && els[k].addEventListener('input', ()=>{ updateCounters(); render(); }));
   els.type.addEventListener('change', ()=>{ updateReplyVisibility(); render(); });
+  if (els.tgFormat) els.tgFormat.addEventListener('change', ()=>{ updateCounters(); render(); });
 
   // hashtag automation: asset class change → swap class tag
   els.assetClass.addEventListener('change', ()=>{ syncAssetClassTag(); render(); });
@@ -808,7 +819,8 @@ function buildCaption(lang){
 }
 function updateCounters(){
   const hasImages = state.images.length > 0;
-  const limit = hasImages ? 1024 : 4096;
+  const article = tgFormat() === 'article';
+  const limit = article ? 32768 : (hasImages ? 1024 : 4096);
   const warnAt = Math.round(limit * 0.85);
 
   const ruText = buildCaption('ru');
@@ -822,8 +834,24 @@ function updateCounters(){
   els.cntEn.classList.toggle('warn', en>warnAt && en<=limit);
   els.cntEn.classList.toggle('over', en>limit);
 
+  if (els.tgFormatHint){
+    els.tgFormatHint.textContent = article
+      ? 'Статья: длинный текст и графики в одном сообщении. Над каждым графиком печатается его название, под ним — ссылка на веб-версию из полей под превью.'
+      : 'Обычный пост: подпись к фото ограничена 1024 знаками. При превышении изображения уйдут ссылками в тексте.';
+  }
+
   const note = document.getElementById('tg-mode-note');
-  if (note){
+  if (note && article){
+    // В формате статьи предупреждение о лимите подписи неуместно.
+    const longest = Math.max(ru, en);
+    if (longest > 32768){
+      note.style.display = 'block';
+      note.textContent = `⚠ Текст больше лимита статьи (${longest} из 32768). Сократите текст.`;
+    } else {
+      note.style.display = 'none';
+      note.textContent = '';
+    }
+  } else if (note){
     const chk = tgTextOnlyCheck();
     if (chk.need){
       const detail = chk.over.map(o => `${o.lang} ${o.len}`).join(', ');
@@ -839,7 +867,14 @@ function updateCounters(){
 // v7: обход лимита подписи Telegram (1024). Если приложены изображения и текст
 // превышает лимит хотя бы в одном из выбранных каналов, пост уйдёт в Telegram
 // текстом со ссылками на изображения (tg_text_only), а сайт покажет полную версию.
+// v8: выбранный в admin формат доставки в Telegram: 'post' или 'article'.
+function tgFormat(){
+  return (els.tgFormat && els.tgFormat.value === 'article') ? 'article' : 'post';
+}
+
 function tgTextOnlyCheck(){
+  // В формате статьи лимит подписи не действует, текстовая страховка не нужна.
+  if (tgFormat() === 'article') return { need:false, over:[] };
   if (state.images.length === 0) return { need:false, over:[] };
   const over = [];
   if (els.chRu.checked){ const n = buildCaption('ru').length; if (n > 1024) over.push({ lang:'RU', len:n }); }
@@ -921,6 +956,7 @@ function clearForm(){
   els.type.value = 'update';
   els.type.disabled = false;
   els.assetClass.value = 'stocks';
+  if (els.tgFormat) els.tgFormat.value = 'post';
   els.chRu.checked = true; els.chEn.checked = true;
   const banner = document.getElementById('parent-banner');
   if (banner) banner.style.display='none';
@@ -968,6 +1004,7 @@ function collectFormData(){
     hashtags: els.tags.value.trim() || null,
     publish_to_ru: els.chRu.checked,
     publish_to_en: els.chEn.checked,
+    tg_format: tgFormat(),
     parent_post_id: parentPostId || null
   };
 }
@@ -1017,6 +1054,15 @@ async function publish(){
   const data = collectFormData();
   const err = validate(data);
   if (err){ flash('err', err); return; }
+
+  // Формат статьи сохраняется в базе, но публикатор его ещё не умеет отправлять.
+  if (tgFormat() === 'article'){
+    alert(
+      'Выбран формат СТАТЬЯ. Он сохраняется в черновике, но отправка статьёй ещё не подключена в публикаторе.\n\n' +
+      'Сохраните черновик и дождитесь подключения, либо переключите формат на ОБЫЧНЫЙ ПОСТ, чтобы опубликовать сейчас.'
+    );
+    return;
+  }
 
   const alreadyPub = editingId ? await isAlreadyPublished(editingId) : false;
   const tgMode = tgTextOnlyCheck();
@@ -1255,6 +1301,7 @@ async function loadIntoEditor(id){
   els.tags.value = data.hashtags || '';
   els.chRu.checked = !!data.publish_to_ru;
   els.chEn.checked = !!data.publish_to_en;
+  if (els.tgFormat) els.tgFormat.value = (data.tg_format === 'article') ? 'article' : 'post';
   const meta = Array.isArray(data.image_meta) ? data.image_meta : [];
   state.images = (data.image_paths||[]).map((path, i) => {
     const m = meta.find(x => x && x.path === path) || meta[i] || {};
@@ -1368,6 +1415,7 @@ function clearFormSilent(){
   parentPostId = null;
   document.querySelectorAll('input[type=text],input[type=url],textarea').forEach(i => i.value='');
   els.tags.value='#equities'; els.type.value='update'; els.type.disabled=false; els.assetClass.value='stocks';
+  if (els.tgFormat) els.tgFormat.value='post';
   const banner = document.getElementById('parent-banner'); if (banner) banner.style.display='none';
   state.images=[]; renderThumbs(); updateCounters(); updateReplyVisibility(); render();
 }
