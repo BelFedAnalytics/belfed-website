@@ -47,6 +47,8 @@ td.actions .btn{padding:5px 10px;font-size:10px;letter-spacing:1px;margin-right:
 .status-pill.draft{background:#f5f2eb}
 .status-pill.published{background:#1a7a1a;color:#fff;border-color:#1a7a1a}
 .status-pill.archived{background:#999;color:#fff;border-color:#999}
+.btn.wknd-on{background:#1a7a1a;color:#fff;border-color:#1a7a1a}
+.tl-sched-note{font-size:10px;letter-spacing:1px;opacity:.7;margin:0 0 10px}
 
 .empty{padding:60px 20px;text-align:center;background:#fff;border:1px solid #000;font-size:12px;letter-spacing:2px;opacity:0.6}
 
@@ -267,7 +269,7 @@ async function reloadTimeline() {
   const statusF = document.getElementById('f-status').value;
 
   let query = sb.from('analysis_posts')
-    .select('id,slug,status,headline_ru,headline_en,categories,report_slug,created_at,updated_at,published_at')
+    .select('id,slug,status,headline_ru,headline_en,categories,report_slug,created_at,updated_at,published_at,scheduled_at,allow_weekend_autopublish')
     .eq('destination', 'timeline')
     .order('created_at', { ascending: false })
     .limit(200);
@@ -286,6 +288,7 @@ async function reloadTimeline() {
   if (items.length === 0) { host.innerHTML = '<div class="empty">— Ничего не найдено —</div>'; return; }
 
   host.innerHTML = `
+    <div class="tl-sched-note">АВТОПУБЛИКАЦИЯ ЛЕНТЫ: ПН–ПТ, 09:30–21:00 МСК. В ВЫХОДНЫЕ ПУБЛИКУЮТСЯ ТОЛЬКО ЧЕРНОВИКИ С ОТМЕТКОЙ «ВЫХОДНЫЕ: ДА».</div>
     <table>
       <thead><tr>
         <th style="width:14%">ДАТА</th>
@@ -322,16 +325,41 @@ function renderTimelineRow(it) {
       ${subEn ? `<small>${escapeHtml(subEn.slice(0,120))}${subEn.length>120?'…':''}</small>` : ''}
       <small style="display:block;margin-top:4px;font-family:monospace">${escapeHtml(slug)}</small>
     </td>
-    <td><span class="status-pill ${it.status}">${labelStatus(it.status)}</span></td>
+    <td><span class="status-pill ${it.status}">${labelStatus(it.status)}</span>${it.status === 'draft' ? tlSchedHtml(it) : ''}</td>
     <td class="actions">
       <a class="btn" href="/admin-analytics.html?id=${encodeURIComponent(it.id)}&type=timeline">[ РЕД ]</a>
+      ${it.status === 'draft' ? `<button class="btn${it.allow_weekend_autopublish ? ' wknd-on' : ''}" data-act="wknd" data-id="${it.id}" title="Разрешить автопубликацию этого черновика в субботу и воскресенье">[ ВЫХОДНЫЕ: ${it.allow_weekend_autopublish ? 'ДА' : 'НЕТ'} ]</button>` : ''}
       ${(slug && it.status === 'published') ? `<a class="btn" target="_blank" href="/analytics.html?post=${encodeURIComponent(slug)}">[ САЙТ ]</a>` : ''}
       ${it.status === 'draft' ? `<button class="btn danger" data-act="del" data-id="${it.id}">[ × ]</button>` : ''}
     </td>
   `;
   const del = tr.querySelector('[data-act="del"]');
   if (del) del.onclick = () => deleteTimelineRow(it.id);
+  const wk = tr.querySelector('[data-act="wknd"]');
+  if (wk) wk.onclick = () => toggleWeekendAutopublish(it, wk);
   return tr;
+}
+
+// Weekend override for the Timeline auto-publisher (weekdays only by default).
+function tlSchedHtml(it) {
+  if (!it.scheduled_at) return '<small style="display:block;margin-top:4px;opacity:.6">в очереди</small>';
+  const t = new Date(it.scheduled_at).toLocaleString('ru-RU', { timeZone:'Europe/Moscow', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+  return `<small style="display:block;margin-top:4px;opacity:.6">слот ${escapeHtml(t)} МСК</small>`;
+}
+
+async function toggleWeekendAutopublish(it, btn) {
+  const next = !it.allow_weekend_autopublish;
+  btn.disabled = true;
+  const { data, error } = await sb.rpc('admin_set_timeline_weekend_autopublish', { p_post_id: it.id, p_allow: next });
+  btn.disabled = false;
+  if (error || !data || data.ok === false) {
+    topMsg('Не удалось изменить: ' + (error?.message || data?.error || 'ошибка'), 'err');
+    return;
+  }
+  it.allow_weekend_autopublish = !!data.allow_weekend_autopublish;
+  btn.textContent = `[ ВЫХОДНЫЕ: ${it.allow_weekend_autopublish ? 'ДА' : 'НЕТ'} ]`;
+  btn.classList.toggle('wknd-on', it.allow_weekend_autopublish);
+  topMsg(it.allow_weekend_autopublish ? 'Черновик может выйти в выходные' : 'Черновик ждёт ближайшего буднего дня', 'ok');
 }
 
 async function deleteTimelineRow(id) {

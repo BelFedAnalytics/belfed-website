@@ -310,6 +310,15 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
       </div>
       <div class="thumbs" id="tl-thumbs"></div>
     </div>
+
+    <!-- ── Auto-publisher: weekend override (default: weekdays only, 09:30–21:00 MSK) ── -->
+    <div class="field">
+      <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
+        <input type="checkbox" id="tl-allow-weekend">
+        <span>// РАЗРЕШИТЬ АВТОПУБЛИКАЦИЮ В ВЫХОДНЫЕ</span>
+      </label>
+      <div class="help">По умолчанию черновики ленты выходят автоматически только в будни, 09:30–21:00 МСК. Отметка разрешает этому черновику выйти в субботу или воскресенье в том же окне.</div>
+    </div>
   </div>
 
   <!-- ═════ REPORT FIELDS (existing multi-section report editor) ═════ -->
@@ -1135,6 +1144,8 @@ async function loadTimelinePost(id) {
   const cbEn = document.getElementById('cb-lang-en');
   if (cbRu) cbRu.checked = post.publish_to_ru !== false;
   if (cbEn) cbEn.checked = post.publish_to_en !== false;
+  const cbWk = document.getElementById('tl-allow-weekend');
+  if (cbWk) cbWk.checked = !!post.allow_weekend_autopublish;
 
   // existing chart images -> thumbs (already uploaded; keep their stored path/url)
   const paths = Array.isArray(post.image_paths) ? post.image_paths : [];
@@ -2197,6 +2208,7 @@ function collectTimelineData(status) {
     hashtags: tlHashtags() || null,
     publish_to_ru: document.getElementById('cb-lang-ru').checked,
     publish_to_en: document.getElementById('cb-lang-en').checked,
+    allow_weekend_autopublish: !!document.getElementById('tl-allow-weekend')?.checked,
     status: status,
   };
 }
