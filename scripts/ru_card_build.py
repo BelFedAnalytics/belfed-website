@@ -176,10 +176,55 @@ def step_label(ev):
     }.get(et, TARGET_LABEL.get(et, et))
 
 
-def _step_html(label, ts, body, link=""):
+CHART_ALT = "График на момент операции"
+
+
+def _https(u):
+    v = (u or "").strip() if isinstance(u, str) else ""
+    return v if re.match(r"^https://\S+$", v, re.I) else ""
+
+
+def _chart_img(url):
+    m = re.search(r"tradingview\.com/x/([A-Za-z0-9]+)", url or "")
+    if not m:
+        return ""
+    c = m.group(1)
+    return "https://s3.tradingview.com/snapshots/%s/%s.png" % (c[0].lower(), c)
+
+
+def _chart_html(url):
+    """Snapshot of the asset at the moment of this operation (or '')."""
+    url = _https(url)
+    if not url:
+        return ""
+    img = _chart_img(url)
+    if not img:
+        return ('<a class="steplink" href="%s" target="_blank" rel="noopener">%s</a>'
+                % (esc(url), esc(CHART_ALT)))
+    return ('<a class="step-chart" href="%s" target="_blank" rel="noopener">'
+            '<img src="%s" alt="%s" loading="lazy" '
+            'onerror="var a=this.closest(&quot;.step-chart&quot;);if(a)a.style.display=&quot;none&quot;;"></a>'
+            % (esc(url), esc(img), esc(CHART_ALT)))
+
+
+def step_chart(ev, pc_by_id):
+    """Chart URL for a published event step. The initial entry step has none
+    (the opening chart already heads the card)."""
+    et = ev.get("event_type")
+    pl = ev.get("payload") or {}
+    if et == "opened" and not pl.get("is_addon"):
+        return ""
+    url = _https(ev.get("chart_url"))
+    if not url and et == "partial_closed":
+        pc = pc_by_id.get(pl.get("partial_close_id")) or {}
+        url = _https(pc.get("chart_url"))
+    return url
+
+
+def _step_html(label, ts, body, link="", chart=""):
     return ('<li class="step"><div class="step-h"><span class="step-lbl">%s</span>'
-            '<span class="step-ts">%s</span></div><div class="step-body">%s</div>%s</li>'
-            % (esc(label), esc(ts), body, link))
+            '<span class="step-ts">%s</span></div><div class="step-body">%s</div>%s%s</li>'
+            % (esc(label), esc(ts), body, _chart_html(chart), link))
 
 
 def _signal_link(message_id_ru):
@@ -217,7 +262,8 @@ def _card_from_events(pos, events, pc_by_id):
         body = step_body(pos, ev, pc_by_id)
         ts = dd(ev.get("triggered_at")) or dd(pos.get("opened_at"))
         steps.append(_step_html(step_label(ev), ts, body,
-                                _signal_link(ev["message_id_ru"])))
+                                _signal_link(ev["message_id_ru"]),
+                                step_chart(ev, pc_by_id)))
     return _wrap(pos, steps)
 
 
@@ -246,7 +292,8 @@ def _card_from_evidence(pos, pc_by_id):
         else:
             body = gen("Закрыто %s%% по %s."
                        % (num(pc.get("pct_closed")), num(pc.get("exit_price"))))
-        steps.append(_step_html("Частичное закрытие", dd(pc.get("closed_at")), body))
+        steps.append(_step_html("Частичное закрытие", dd(pc.get("closed_at")), body,
+                                chart=pc.get("chart_url") or ""))
 
     close_body = ""
     if pos.get("close_comment_ru"):

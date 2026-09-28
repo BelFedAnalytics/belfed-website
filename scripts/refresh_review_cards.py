@@ -67,10 +67,11 @@ RPC = "export_review_card_data"
 POSITION_FIELDS = ("id", "ticker", "direction", "asset_class", "status",
                    "opened_at", "closed_at", "exit_price", "result_rr",
                    "comment_ru", "close_comment_ru", "sheet_row_id")
-EVENT_FIELDS = ("event_type", "message_id_ru", "triggered_at")
+EVENT_FIELDS = ("event_type", "message_id_ru", "triggered_at", "chart_url")
 PAYLOAD_FIELDS = ("triggered_price", "old_stop", "new_stop", "is_addon",
                   "partial_close_id", "comment_ru")
-PARTIAL_FIELDS = ("id", "pct_closed", "exit_price", "closed_at", "comment_ru")
+PARTIAL_FIELDS = ("id", "pct_closed", "exit_price", "closed_at", "comment_ru",
+                  "chart_url")
 
 
 def log(msg):

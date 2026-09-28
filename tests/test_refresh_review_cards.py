@@ -139,7 +139,8 @@ def _envelope():
             {"position_id": 331, "id": 3313, "pct_closed": 25,
              "exit_price": 87.22, "closed_at": "2026-07-22T08:26:11.301Z",
              "comment_ru": "частичное", "comment_en": "ENGLISH PARTIAL LEAK",
-             "source": "manual"},
+             "source": "manual",
+             "chart_url": "https://www.tradingview.com/x/TYz3kDJz/"},
             {"position_id": 999, "id": 9991, "pct_closed": 100,
              "exit_price": 1, "closed_at": "2026-01-01T00:00:00Z",
              "comment_ru": None},
@@ -378,3 +379,21 @@ def test_fetch_positions_reports_other_http_failures():
     with pytest.raises(RuntimeError, match="HTTP 500"):
         R.fetch_positions("https://example.supabase.co", "PUB", "TOKEN",
                           poster=fake_post)
+
+
+def test_step_chart_rendered_for_partial_not_for_entry():
+    """Each operation after entry carries its own chart snapshot."""
+    import ru_card_build as B
+    pc = {"id": 9, "pct_closed": 50, "exit_price": 80, "closed_at": "2026-09-28",
+          "chart_url": "https://www.tradingview.com/x/TYz3kDJz/"}
+    pos = {"direction": "long", "opened_at": "2026-09-21", "closed_at": "2026-09-28",
+           "result_rr": 1.2, "partial_closes": [pc],
+           "events": [
+               {"event_type": "opened", "message_id_ru": 1, "triggered_at": "2026-09-21",
+                "chart_url": "https://www.tradingview.com/x/AAAA1111/", "payload": {}},
+               {"event_type": "partial_closed", "message_id_ru": 2,
+                "triggered_at": "2026-09-28", "payload": {"partial_close_id": 9}}]}
+    html = B.build_card(pos, {9: pc})
+    assert "s3.tradingview.com/snapshots/t/TYz3kDJz.png" in html
+    assert "AAAA1111" not in html
+    assert B._chart_html("javascript:alert(1)") == ""

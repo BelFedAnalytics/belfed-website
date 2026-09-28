@@ -265,7 +265,7 @@ td.col-rem-partial{background:#fff4e0;color:#ff9500;font-weight:bold}
             <input id="f-risk_r" type="number" step="0.1" min="0.1" max="10" placeholder="1.0">
           </div>
         </div>
-        <label>TradingView URL (опционально)</label>
+        <label>График на момент входа <span class="muted" style="font-weight:normal">(обязательно для новой позиции и добавления)</span></label>
         <input id="f-tradingview_url" placeholder="https://www.tradingview.com/x/...">
 
         <label>Комментарий RU (опционально)</label>
@@ -318,6 +318,8 @@ td.col-rem-partial{background:#fff4e0;color:#ff9500;font-weight:bold}
     <textarea id="close-comment_ru" rows="2" placeholder="пусто — комментария не будет"></textarea>
     <label>Комментарий EN <span class="muted" style="font-weight:normal">(опционально, появится в сигнале о закрытии)</span></label>
     <textarea id="close-comment_en" rows="2" placeholder="empty — no comment will be shown"></textarea>
+    <label>График на момент операции <span class="muted" style="font-weight:normal">(обязательно, снимок TradingView)</span></label>
+    <input id="close-chart_url" type="url" placeholder="https://www.tradingview.com/x/..." autocomplete="off">
     <div class="checkbox-row"><input type="checkbox" id="close-publish-ru"><label for="close-publish-ru" style="margin:0">Опубликовать RU</label></div>
     <div class="checkbox-row"><input type="checkbox" id="close-publish-en"><label for="close-publish-en" style="margin:0">Опубликовать EN</label></div>
     <div class="btn-row">
@@ -342,6 +344,8 @@ td.col-rem-partial{background:#fff4e0;color:#ff9500;font-weight:bold}
     <label>Комментарий EN <span class="muted" style="font-weight:normal">(опционально, появится в сигнале о переносе стопа)</span></label>
     <textarea id="stop-comment_en" rows="2" maxlength="4096" placeholder="empty — no comment will be shown" oninput="updateStopCommentCounter('en')"></textarea>
     <div class="char-counter" id="stop-counter-en" aria-live="polite">EN: 0 / 4096</div>
+    <label>График на момент операции <span class="muted" style="font-weight:normal">(обязательно, снимок TradingView)</span></label>
+    <input id="stop-chart_url" type="url" placeholder="https://www.tradingview.com/x/..." autocomplete="off">
     <div class="checkbox-row"><input type="checkbox" id="stop-publish-ru"><label for="stop-publish-ru" style="margin:0">Опубликовать RU</label></div>
     <div class="checkbox-row"><input type="checkbox" id="stop-publish-en"><label for="stop-publish-en" style="margin:0">Опубликовать EN</label></div>
     <div class="btn-row">
@@ -368,6 +372,8 @@ td.col-rem-partial{background:#fff4e0;color:#ff9500;font-weight:bold}
     <textarea id="partial-comment-ru" maxlength="280" placeholder="Коротко по идее..."></textarea>
     <label>Комментарий EN (опционально)</label>
     <textarea id="partial-comment-en" maxlength="280" placeholder="Short note..."></textarea>
+    <label>График на момент операции <span class="muted" style="font-weight:normal">(обязательно, снимок TradingView)</span></label>
+    <input id="partial-chart_url" type="url" placeholder="https://www.tradingview.com/x/..." autocomplete="off">
     <div class="checkbox-row"><input type="checkbox" id="partial-publish-ru"><label for="partial-publish-ru" style="margin:0">Опубликовать в RU канал</label></div>
     <div class="checkbox-row"><input type="checkbox" id="partial-publish-en"><label for="partial-publish-en" style="margin:0">Опубликовать в EN канал</label></div>
     <div class="btn-row">
@@ -375,6 +381,20 @@ td.col-rem-partial{background:#fff4e0;color:#ff9500;font-weight:bold}
       <button class="secondary" onclick="hideModal('modal-partial')">Отмена</button>
     </div>
     <div id="partial-msg"></div>
+  </div>
+</div>
+
+<!-- Modal: charts per stage (v2026-09-28) -->
+<div id="modal-charts" class="modal" style="display:none">
+  <div class="modal-box" style="max-width:760px;width:94%">
+    <h3>Графики по этапам позиции</h3>
+    <div id="charts-info" class="muted" style="margin-bottom:6px"></div>
+    <div class="muted" style="font-size:11px;line-height:1.5;margin-bottom:12px">Каждый этап (вход, добавление, сокращение, закрытие, перенос стопа) хранит свой снимок. Для целей и стопов, сработавших автоматически, график можно прикрепить здесь: пост в Telegram обновится, а если его нельзя отредактировать, под ним появится ответ с графиком. Письма повторно не отправляются.</div>
+    <div id="charts-list"></div>
+    <div class="btn-row">
+      <button class="secondary" onclick="hideModal('modal-charts')">Закрыть</button>
+    </div>
+    <div id="charts-msg"></div>
   </div>
 </div>
 
@@ -645,6 +665,7 @@ function renderOpenList() {
           <button class="secondary" data-tooltip="Добавить к позиции" onclick="addToPosition('${p.ticker}','${p.asset_class||'stock'}','${p.direction}')">➕</button>
           <button class="secondary" data-tooltip="Редактировать позицию" onclick="editPosition(${p.id})">✎</button>
           <button class="danger" data-tooltip="Закрыть позицию" onclick="openClose(${p.id},'${p.ticker}',${p.entry_price})">✕</button>
+          <button class="secondary" data-tooltip="Графики по этапам сделки" onclick="openCharts(${p.id},\'${p.ticker}\')">🖼</button>
           <button class="danger" data-tooltip="Удалить (TG + Sheet + БД)" onclick="deletePosition(${p.id},'${p.ticker}')">🗑</button>
         </td>
       </tr>
@@ -715,6 +736,7 @@ function renderClosedList() {
       <td>${p.closed_at ? new Date(p.closed_at).toLocaleString() : '—'}</td>
       <td>${p.archived_to_sheet_at ? '✓' : '—'}</td>
       <td class="actions-cell">
+        <button class="secondary" data-tooltip="Графики по этапам сделки" onclick="openCharts(${p.id},\'${p.ticker}\')">🖼</button>
         <button class="danger" data-tooltip="Удалить (TG + Sheet + БД)" onclick="deletePosition(${p.id},'${p.ticker}')">🗑</button>
       </td>
     </tr>`;
@@ -849,6 +871,7 @@ async function savePosition() {
   const p = getFormPayload();
   const err = validate(p);
   if (err) return showMsg('form-msg', err, 'err');
+  if (!editingId && !readChartUrl('f-tradingview_url')) return showMsg('form-msg', CHART_MSG.need, 'err');
 
   let row;
   const wasEditing = !!editingId;
@@ -1050,6 +1073,7 @@ function openClose(id, ticker, entry) {
   document.getElementById('close-publish-ru').checked = true;
   document.getElementById('close-publish-en').checked = true;
   document.getElementById('close-msg').innerHTML = '';
+  document.getElementById('close-chart_url').value = '';
   showModal('modal-close');
 }
 
@@ -1062,6 +1086,8 @@ function openClose(id, ticker, entry) {
 async function confirmClose() {
   const exit = parseFloat(document.getElementById('close-exit_price').value);
   if (!exit || exit <= 0) return showMsg('close-msg', 'Введи корректную цену выхода', 'err');
+  const closeChart = readChartUrl('close-chart_url');
+  if (!closeChart) return showMsg('close-msg', CHART_MSG.need, 'err');
 
   const closeCommentRu = document.getElementById('close-comment_ru').value.trim() || null;
   const closeCommentEn = document.getElementById('close-comment_en').value.trim() || null;
@@ -1077,6 +1103,7 @@ async function confirmClose() {
     comment_en: closeCommentEn,
     publish_to_ru: pubRu,
     publish_to_en: pubEn,
+    chart_url: closeChart,
   });
 
   if (!r.ok) {
@@ -1120,6 +1147,7 @@ function openMoveStop(id, ticker, currentStop) {
   document.getElementById('stop-publish-ru').checked = false;
   document.getElementById('stop-publish-en').checked = false;
   document.getElementById('stop-msg').innerHTML = '';
+  document.getElementById('stop-chart_url').value = '';
   showModal('modal-stop');
 }
 
@@ -1140,6 +1168,8 @@ async function translateStopComment() {
 async function confirmStop() {
   const newStop = parseFloat(document.getElementById('stop-new').value);
   if (!newStop || newStop <= 0) return showMsg('stop-msg', 'Введи корректный стоп', 'err');
+  const stopChart = readChartUrl('stop-chart_url');
+  if (!stopChart) return showMsg('stop-msg', CHART_MSG.need, 'err');
   const oldStop = modalCtx.currentStop;
   const comment_ru = document.getElementById('stop-comment_ru').value.trim();
   const comment_en = document.getElementById('stop-comment_en').value.trim();
@@ -1151,6 +1181,7 @@ async function confirmStop() {
   // чтобы можно было аннотировать, почему сдвинули стоп.
   const r = await adminAction({
     action: 'stop_change',
+    chart_url: stopChart,
     position_id: modalCtx.id,
     new_stop: newStop,
     comment_ru: comment_ru || null,
@@ -1229,6 +1260,7 @@ function openPartial(id, ticker, entry, stop, direction, currentRem) {
   document.getElementById('partial-publish-ru').checked = false;
   document.getElementById('partial-publish-en').checked = false;
   document.getElementById('partial-msg').innerHTML = '';
+  document.getElementById('partial-chart_url').value = '';
   updatePartialPreview();
   showModal('modal-partial');
 }
@@ -1266,8 +1298,11 @@ async function confirmPartial() {
   if (!pct || pct < 1 || pct > 100) return showMsg('partial-msg', 'Введите % от 1 до 100', 'err');
   if (pct > cur) return showMsg('partial-msg', `Осталось всего ${Math.round(cur)}% — нельзя закрыть ${pct}%`, 'err');
   if (!exit || exit <= 0) return showMsg('partial-msg', 'Введите корректную цену выхода', 'err');
+  const partialChart = readChartUrl('partial-chart_url');
+  if (!partialChart) return showMsg('partial-msg', CHART_MSG.need, 'err');
   const payload = {
     action: 'partial_close',
+    chart_url: partialChart,
     position_id: modalCtx.id,
     pct_to_close: pct,
     exit_price: exit,
@@ -1284,6 +1319,83 @@ async function confirmPartial() {
   const remAfter = Math.max(0, cur - pct);
   showMsg('partial-msg', `✓ Закрыто ${pct}% · остаток ${Math.round(remAfter)}%`, 'ok');
   setTimeout(() => { hideModal('modal-partial'); loadList(); loadClosed(); }, 1000);
+}
+
+// ========== Charts per trade stage (2026-09-28) ==========
+// Every manual operation stores a TradingView snapshot of the asset at that
+// moment (position_events.chart_url / partial_closes.chart_url). Automatic
+// monitor events (targets/stops) can get their chart attached later here.
+const CHART_MSG = { need: 'Вставь ссылку на снимок графика TradingView (https://www.tradingview.com/x/...)', notv: 'Ссылка не похожа на TradingView. Всё равно сохранить?' };
+const CHART_EVENT_LABELS = {opened:'Вход',stop_moved:'Перенос стопа',partial_closed:'Частичное закрытие',closed:'Закрытие',stop_hit:'Стоп',target_1_hit:'Цель 1',target_2_hit:'Цель 2',target_3_hit:'Цель 3',partial_stop_1_hit:'Частичный стоп 1',partial_stop_2_hit:'Частичный стоп 2',partial_stop_3_hit:'Частичный стоп 3',comment:'Комментарий'};
+
+function readChartUrl(id) {
+  const el = document.getElementById(id);
+  const v = (el && el.value || '').trim();
+  if (!/^https:\/\/\S+$/i.test(v)) return null;
+  return v;
+}
+
+function chartSnapshotImg(url) {
+  const m = String(url || '').match(/tradingview\.com\/x\/([A-Za-z0-9]+)/);
+  if (!m) return null;
+  const c = m[1];
+  return 'https://s3.tradingview.com/snapshots/' + c.charAt(0).toLowerCase() + '/' + c + '.png';
+}
+
+function escAttr(v) {
+  return String(v ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+async function openCharts(id, ticker) {
+  modalCtx = { id, ticker };
+  document.getElementById('charts-info').textContent = `#${id} ${ticker}`;
+  document.getElementById('charts-msg').innerHTML = '';
+  document.getElementById('charts-list').innerHTML = `<div class="muted">Загрузка...</div>`;
+  showModal('modal-charts');
+  await renderChartsList(id);
+}
+
+async function renderChartsList(id) {
+  const { data, error } = await sb.from('position_events')
+    .select('id,event_type,triggered_at,triggered_price,chart_url,chart_added_at,message_id_ru,message_id_en,payload')
+    .eq('position_id', id)
+    .neq('event_type', 'edited')
+    .order('triggered_at', { ascending: true });
+  const box = document.getElementById('charts-list');
+  if (error) { box.innerHTML = `<div class="msg err">${escAttr(error.message)}</div>`; return; }
+  if (!data || !data.length) { box.innerHTML = `<div class="muted">Событий пока нет</div>`; return; }
+  box.innerHTML = data.map(ev => {
+    const isAddon = ev.event_type === 'opened' && ev.payload && ev.payload.is_addon;
+    const lbl = isAddon ? 'Добавление' : (CHART_EVENT_LABELS[ev.event_type] || ev.event_type);
+    const ts = ev.triggered_at ? new Date(ev.triggered_at).toLocaleString() : '';
+    const price = ev.triggered_price != null ? ' @ ' + fmt(ev.triggered_price) : '';
+    const img = ev.chart_url ? chartSnapshotImg(ev.chart_url) : null;
+    const thumb = ev.chart_url
+      ? `<a href="${escAttr(ev.chart_url)}" target="_blank" rel="noopener">${img ? `<img src="${escAttr(img)}" alt="" style="width:180px;max-width:100%;border:1px solid #333;display:block">` : escAttr(ev.chart_url)}</a>`
+      : `<span class="muted" style="color:#a24b00;font-weight:bold">нет графика</span>`;
+    const tg = (ev.message_id_ru || ev.message_id_en) ? ' · TG' : '';
+    return `<div style="display:grid;grid-template-columns:minmax(150px,1fr) 190px minmax(220px,1.4fr);gap:12px;align-items:start;padding:10px 0;border-top:1px solid #222">
+      <div><b>${escAttr(lbl)}</b><div class="muted" style="font-size:11px">${escAttr(ts)}${escAttr(price)}${tg}</div></div>
+      <div>${thumb}</div>
+      <div>
+        <input id="chart-ev-${ev.id}" type="url" placeholder="https://www.tradingview.com/x/..." value="" autocomplete="off">
+        <button class="secondary" style="margin-top:6px;font-size:11px;padding:6px 12px" onclick="attachChart(${ev.id})">${ev.chart_url ? 'Заменить' : 'Прикрепить'}</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function attachChart(eventId) {
+  const url = readChartUrl(`chart-ev-${eventId}`);
+  if (!url) return showMsg('charts-msg', CHART_MSG.need, 'err');
+  if (!/tradingview\.com\//i.test(url) && !confirm(CHART_MSG.notv)) return;
+  showMsg('charts-msg', 'Загрузка...', 'info');
+  const r = await adminAction({ action: 'attach_chart', event_id: eventId, chart_url: url });
+  if (!r.ok) return showMsg('charts-msg', `Ошибка: ${r.data?.error || r.status || r.error}`, 'err');
+  const tg = r.data?.telegram || {};
+  const parts = Object.entries(tg).map(([k, v]) => `${k.toUpperCase()}: ${v}`).join(', ');
+  showMsg('charts-msg', `✓ График прикреплён${parts ? ' · TG ' + parts : ''}`, 'ok');
+  await renderChartsList(modalCtx.id);
 }
 
 // ========== Init ==========
