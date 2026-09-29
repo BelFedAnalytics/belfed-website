@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://script.google.com https://docs.google.com https://script.googleusercontent.com https://*.supabase.co; img-src 'self'; frame-src 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://script.google.com https://docs.google.com https://script.googleusercontent.com https://*.supabase.co; img-src 'self' https://s3.tradingview.com; frame-src 'none';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BELFED ANALYTICS — Открытые позиции</title>
 <style>
@@ -101,6 +101,7 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 .tg-bar .tg-saved{color:#1a7a1a;font-size:11px;display:none}
 @media(max-width:900px){header{display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:26px;padding-bottom:16px}header h1{font-size:clamp(13px,4vw,16px);letter-spacing:1px;line-height:1.35;margin:0;max-width:100%;overflow-wrap:anywhere}.updated{font-size:11px}.header-actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:4px;width:100%}.members-link,.logout-btn{position:static;transform:none;display:inline-flex;align-items:center;justify-content:center;min-height:34px;min-width:104px;font-size:10px;letter-spacing:.8px;padding:7px 12px;line-height:1}.sub-nav,.tab-bar{justify-content:center;flex-wrap:wrap;row-gap:4px}.sub-nav a,.tab-btn{font-size:11px;letter-spacing:1px;padding:9px 10px}}
 </style>
+<link rel="stylesheet" href="member-trade-history.css">
 </head>
 <body>
 <!-- LOGIN SCREEN -->
@@ -280,6 +281,7 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="belfed-analytics.js"></script>
 <script src="belfed-auth.js"></script>
+<script src="member-trade-history.js" defer></script>
 <script src="belfed-account-menu.js"></script>
 <script src="belfed-payments.js"></script>
 <script>
