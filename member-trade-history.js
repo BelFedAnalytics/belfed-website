@@ -381,32 +381,38 @@
   }
 
   // ------------------------------------------------------------------ rows
-  // tbody id -> [ticker col, direction col, date col, closed?]
+  // The History button replaces the Telegram link in open-position tables
+  // (the card already links every Telegram message) and sits next to the
+  // chart link in the closed table. If a row has no matching position, the
+  // original cell content stays untouched.
+  // key -> { ticker, dir, date, closed, target column, replace? }
   var TABLES = {
-    openBody: [0, 1, 8, false],
-    openedWeekBody: [0, 1, 8, false],
-    closedWeekBody: [0, 1, 4, true]
+    openBody:       { t: 0, d: 1, dt: 8, closed: false, col: 9, replace: true },
+    openedWeekBody: { t: 0, d: 1, dt: 8, closed: false, col: 9, replace: true },
+    closedWeekBody: { t: 0, d: 1, dt: 4, closed: true,  col: 6, replace: false },
+    watchlistBody:  { t: 0, d: 1, dt: 6, closed: false, col: 7, replace: true }
   };
 
-  function decorate(tbodyId) {
-    var tb = document.getElementById(tbodyId);
-    if (!tb || !positions.length) return;
-    var cfg = TABLES[tbodyId];
-    Array.prototype.forEach.call(tb.rows, function (tr) {
-      if (tr.cells.length <= cfg[2] || tr.querySelector(".mth-btn")) return;
-      var tickerCell = tr.cells[cfg[0]];
-      var ticker = trim(tickerCell.textContent);
-      var dir = trim(tr.cells[cfg[1]].textContent);
-      var date = trim(tr.cells[cfg[2]].textContent);
-      var p = findPosition(ticker, dir, date, cfg[3]);
+  function decorate(key) {
+    var root = document.getElementById(key);
+    if (!root || !positions.length) return;
+    var cfg = TABLES[key];
+    Array.prototype.forEach.call(root.querySelectorAll("tr"), function (tr) {
+      if (tr.cells.length <= Math.max(cfg.dt, cfg.col) || tr.querySelector(".mth-btn")) return;
+      var ticker = trim(tr.cells[cfg.t].textContent);
+      var dir = trim(tr.cells[cfg.d].textContent);
+      var date = trim(tr.cells[cfg.dt].textContent);
+      var p = findPosition(ticker, dir, date, cfg.closed);
       if (!p) return;
       var b = document.createElement("button");
       b.type = "button";
-      b.className = "mth-btn";
+      b.className = "mth-btn" + (cfg.replace ? " mth-btn-solo" : "");
       b.textContent = T.btn;
       b.setAttribute("aria-label", T.btnAria + " " + ticker);
       b.setAttribute("data-position-id", String(p.id));
-      tickerCell.appendChild(b);
+      var cell = tr.cells[cfg.col];
+      if (cfg.replace) cell.textContent = "";
+      cell.appendChild(b);
     });
   }
   function decorateAll() { Object.keys(TABLES).forEach(decorate); }
@@ -425,10 +431,13 @@
     load().then(function (list) {
       if (!list || !list.length) return;
       decorateAll();
-      Object.keys(TABLES).forEach(function (id) {
-        var tb = document.getElementById(id);
-        if (tb && window.MutationObserver) new MutationObserver(function () { decorate(id); }).observe(tb, { childList: true });
-      });
+      if (!window.MutationObserver) return;
+      var pending = false;
+      new MutationObserver(function () {
+        if (pending) return;
+        pending = true;
+        setTimeout(function () { pending = false; decorateAll(); }, 50);
+      }).observe(document.body, { childList: true, subtree: true });
     });
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
