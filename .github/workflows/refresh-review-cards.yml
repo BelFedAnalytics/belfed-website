@@ -10,10 +10,9 @@ name: Refresh RU review cards
 # malformed payload, by contrast, fails the run loudly and commits nothing.
 
 on:
-  # Daily, shortly after the bot's overnight archive pass. Deliberately off the
-  # hour so it does not pile onto the top-of-hour scheduler peak.
+  # Every 15 minutes, staggered from EN. Scheduler/build propagation adds delay.
   schedule:
-    - cron: "23 4 * * *"
+    - cron: "11,26,41,56 * * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -27,6 +26,7 @@ concurrency:
 
 permissions:
   contents: write
+  pages: write
 
 jobs:
   refresh:
@@ -91,3 +91,11 @@ jobs:
           git add ru/trade_review_cards.json
           git commit -m "chore: refresh RU review cards ($(date -u +%Y-%m-%d))"
           git push origin main
+
+      # This site uses branch-based Pages. GITHUB_TOKEN pushes do not trigger
+      # another workflow, so explicitly request its legacy Pages build.
+      - name: Rebuild live Pages site
+        if: steps.build.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST "repos/$GITHUB_REPOSITORY/pages/builds"

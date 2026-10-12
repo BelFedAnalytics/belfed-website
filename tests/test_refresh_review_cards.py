@@ -261,11 +261,12 @@ def test_refresh_respects_closed_only_gate():
     assert man == {} and added == [] and written == 0
 
 
-def test_refresh_refuses_to_clobber_an_existing_entry():
-    """Hand-tuned cards are immutable; a would-be overwrite aborts the run."""
-    man = {CL_KEYS[1]: {"kind": "bot", "ru": "<article>hand tuned</article>"}}
-    with pytest.raises(RuntimeError, match="clobber"):
-        R.refresh([_cl331()], _sheets(), man)
+def test_refresh_preserves_a_manual_entry():
+    """Only generated bot cards refresh; reviewed manual cards are immutable."""
+    man = {CL_KEYS[1]: {"kind": "manual", "ru": "<article>hand tuned</article>"}}
+    before = dict(man)
+    R.refresh([_cl331()], _sheets(), man)
+    assert man == before
 
 
 def test_refresh_preserves_unrelated_entries():
