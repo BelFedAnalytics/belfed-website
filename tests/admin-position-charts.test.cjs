@@ -1,0 +1,11 @@
+const fs=require('fs'),assert=require('node:assert/strict');
+const html=fs.readFileSync('admin-positions.html','utf8');
+assert.match(html,/admin-position-charts\.js/);
+assert.match(html,/tab-charts/);
+const js=fs.readFileSync('admin-position-charts.js','utf8');
+assert.match(js,/createImageBitmap/);
+assert.match(js,/expected_updated_at/);
+assert.match(js,/21:00/);
+assert.match(js,/Без опубликованного сигнала/);
+assert.match(js,/data-filter/);
+console.log('Admin chart completion wiring passes');

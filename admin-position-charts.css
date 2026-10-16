@@ -1,0 +1,46 @@
+.pc-audit{padding:22px 0;color:#181916}
+.pc-heading,.pc-filters,.pc-footer,.pc-dialog-heading,.pc-dialog-actions{display:flex;gap:16px;align-items:center;justify-content:space-between}
+.pc-heading h2{font:600 19px 'DM Sans',sans-serif;margin:0 0 6px;border:0;padding:0}
+.pc-heading p,.pc-note{color:#55584f;font-size:12px;line-height:1.6;margin:6px 0}
+.pc-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0}
+.pc-stats>div{background:#fffef9;border:1px solid #d5d5cb;border-radius:6px;padding:16px}
+.pc-stats strong{display:block;font-size:26px;color:#181916}
+.pc-stats span{color:#55584f;font-size:12px}
+.pc-filters{justify-content:flex-start;align-items:end}
+.pc-filters>div{max-width:330px;width:100%;min-width:0}
+.pc-audit label,.pc-dialog label{display:block;color:#41443b;font-size:12px;opacity:1}
+.pc-audit input,.pc-audit select,.pc-dialog input{display:block;width:100%;box-sizing:border-box;margin:7px 0 0;padding:11px 12px;background:#fffef9;color:#181916;border:1px solid #8b8e82;border-radius:4px;font:inherit}
+.pc-audit input::placeholder,.pc-dialog input::placeholder{color:#65685e;opacity:1}
+.pc-filters input:focus,.pc-filters select:focus,.pc-dialog input:focus{outline:2px solid #45583a;outline-offset:2px}
+.pc-button{cursor:pointer;min-height:42px;padding:9px 13px;border:1px solid #8b8e82;border-radius:4px;background:#fffef9;color:#24271e;font:500 12px 'DM Sans',sans-serif;white-space:nowrap;letter-spacing:normal}
+.pc-button:hover{background:#e9ebdf}
+.pc-button:focus-visible,.pc-close:focus-visible{outline:2px solid #45583a;outline-offset:3px}
+.pc-primary{background:#22271c;border-color:#22271c;color:#fffef9}
+.pc-primary:hover{background:#414c34}
+.pc-button:disabled{background:#e4e5dd;color:#575b50;border-color:#a8ac9d;cursor:wait;opacity:1}
+.pc-row{display:grid;grid-template-columns:1.1fr 1.2fr .8fr 1fr auto;gap:18px;align-items:center;border:1px solid #d5d5cb;border-radius:6px;padding:17px;margin:10px 0;background:#fffef9}
+.pc-row strong,.pc-row span,.pc-row small{display:block}
+.pc-row strong{font-size:13px;line-height:1.5;color:#181916}
+.pc-instrument strong{font-size:17px}
+.pc-row span,.pc-row small{font-size:11px;line-height:1.7;color:#55584f}
+.pc-row .pc-label{font-size:10px;letter-spacing:.04em;color:#55584f}
+.pc-row .pc-chip{display:inline-block;padding:4px 8px;border-radius:4px;background:#e9ebe3;color:#44483c;font-size:11px}
+.pc-row .pc-chip-missing{background:#f8e9ca;color:#734b0d}
+.pc-row .pc-chip-ready{background:#dcebdd;color:#275631}
+.pc-status{min-height:22px;margin:12px 0;color:#55584f;font-size:12px;line-height:1.5}
+.pc-status.pc-error,.pc-form-status{color:#983a20}
+.pc-empty{padding:45px 20px;text-align:center;border:1px dashed #a6aa9c;border-radius:6px;color:#55584f}
+.pc-footer{font-size:12px;color:#55584f;margin:18px 0}
+.pc-dialog{box-sizing:border-box;color:#181916;background:#f7f7ef;border:1px solid #a6aa9c;border-radius:8px;width:min(640px,calc(100% - 24px));max-height:calc(100dvh - 28px);margin:auto;padding:24px;overflow-y:auto}
+.pc-dialog::backdrop{background:rgb(20 23 17 / .6);backdrop-filter:blur(3px)}
+.pc-dialog h3{font-size:18px;margin:0}
+.pc-dialog label{margin:18px 0 8px}
+.pc-close{border:1px solid #8b8e82;background:transparent;color:#24271e;font-size:24px;border-radius:4px;cursor:pointer;min-width:40px;min-height:40px;padding:0}
+.pc-preview{display:block;max-width:100%;height:auto;max-height:330px;object-fit:contain;background:#e9ebe3;margin:12px auto;border-radius:4px}
+.pc-preview[hidden],.pc-button[hidden]{display:none}
+.pc-form-status{min-height:22px;font-size:12px;margin:12px 0;line-height:1.5}
+.pc-dialog-actions{justify-content:flex-end;margin-top:14px}
+.pc-dialog input[type=file]{max-width:100%;overflow:hidden}
+.pc-row>div{min-width:0;overflow-wrap:anywhere}
+@media(max-width:760px){.tab-bar{flex-wrap:wrap}.tab-bar .tab-btn{flex:1 1 45%;padding:10px 8px;letter-spacing:1px}.pc-row{grid-template-columns:1fr 1fr;gap:14px}.pc-row>button{grid-column:1/-1}.pc-filters{flex-direction:column;align-items:stretch}.pc-filters>div{max-width:none}.pc-stats{gap:6px}.pc-stats>div{padding:12px 9px}.pc-stats strong{font-size:23px}.pc-stats span{font-size:11px}.pc-dialog{padding:18px}.pc-heading{align-items:start}.pc-heading h2{font-size:17px}.pc-heading p{max-width:230px}}
+@media(max-width:700px){.admin-nav{margin:-14px -10px 24px}}

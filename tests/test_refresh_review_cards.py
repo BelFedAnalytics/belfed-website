@@ -140,7 +140,7 @@ def _envelope():
              "exit_price": 87.22, "closed_at": "2026-07-22T08:26:11.301Z",
              "comment_ru": "частичное", "comment_en": "ENGLISH PARTIAL LEAK",
              "source": "manual",
-             "chart_url": "https://www.tradingview.com/x/TYz3kDJz/"},
+             "chart_url": "https://www.tradingview.com/x/TYz3kDJz/", "chart_image_url": None},
             {"position_id": 999, "id": 9991, "pct_closed": 100,
              "exit_price": 1, "closed_at": "2026-01-01T00:00:00Z",
              "comment_ru": None},

@@ -8,7 +8,8 @@
  *
  * Data comes live from the member-only RPC public.member_position_history()
  * (requires an active subscription, trial or admin). Nothing is cached in
- * public files. No storage APIs are used.
+ * public files. Private chart uploads are resolved through an access-checked
+ * endpoint into short-lived signed image URLs.
  */
 (function () {
   "use strict";
@@ -162,9 +163,31 @@
             if (++tries < 60) return setTimeout(wait, 500);
             return resolve(null);
           }
-          c.rpc("member_position_history").then(function (res) {
+          c.rpc("member_position_history").then(async function (res) {
             if (res.error || !res.data) { console.warn("[BFD history]", res.error); return resolve(null); }
             positions = res.data.positions || [];
+            var mediaItems = [];
+            positions.forEach(function(p){ mediaItems.push.apply(mediaItems,(p.events||[]).concat(p.partial_closes||[])); });
+            var ids = [];
+            mediaItems.forEach(function(item){
+              try {
+                var u=new URL(item.chart_image_url);
+                if(u.origin==='https://obujqvqqmyfcfflhqvud.supabase.co'&&u.pathname==='/functions/v1/position-chart-media'){
+                  var id=u.searchParams.get('id');if(id&&ids.indexOf(id)<0)ids.push(id);
+                }
+              } catch(e) {}
+            });
+            var signed = {};
+            try {
+              for(var offset=0;offset<ids.length;offset+=100){
+                var media=await c.functions.invoke('position-chart-media',{body:{ids:ids.slice(offset,offset+100)}});
+                if(media.error)throw media.error;
+                Object.assign(signed,media.data.urls||{});
+              }
+              mediaItems.forEach(function(item){
+                try { var id=new URL(item.chart_image_url).searchParams.get('id');if(signed[id])item.chart_image_url=signed[id]; } catch(e) {}
+              });
+            } catch(e) { console.warn('[BFD history] Chart access temporarily unavailable'); }
             resolve(positions);
           }, function (err) { console.warn("[BFD history]", err); resolve(null); });
         });
@@ -202,10 +225,12 @@
     return linkify(h) + "</div>";
   }
 
-  function chartBlock(url, cap) {
+  function chartBlock(url, cap, image) {
+    var uploaded = /^https:\/\/obujqvqqmyfcfflhqvud\.supabase\.co\/(?:functions\/v1\/position-chart-media\?id=|storage\/v1\/object\/sign\/position-close-charts\/)/i.test(image||'') ? image : '';
     var u = httpsOnly(url);
-    if (!u) return "";
-    var img = chartImg(u);
+    if (!u && !uploaded) return "";
+    u = u || uploaded;
+    var img = uploaded || chartImg(u);
     if (!img) return '<a class="mth-link" href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(cap) + " ↗</a>";
     return '<a class="mth-chart" href="' + esc(u) + '" target="_blank" rel="noopener">' +
       '<img src="' + esc(img) + '" alt="' + esc(cap) + '" loading="lazy" ' +
@@ -241,6 +266,7 @@
       var price = fmtNum(e.triggered_price);
       var lbl, fb = "", cm = trim(e[ck]);
       var chart = httpsOnly(e.chart_url);
+      var image = httpsOnly(e.chart_image_url);
       switch (e.event_type) {
         case "opened":
           lbl = e.is_addon ? T.added : T.opened;
@@ -267,6 +293,7 @@
             fb = T.fPartial(Math.round(num(pc.pct_closed)), fmtNum(pc.exit_price), fmtR(pc.r_result));
             cm = cm || trim(pc[ck]);
             if (!chart) chart = httpsOnly(pc.chart_url);
+            if (!image) image = httpsOnly(pc.chart_image_url);
           } else {
             fb = T.fPartial("", price, "");
           }
@@ -278,16 +305,16 @@
           if (/^partial_stop_\d+_hit$/.test(e.event_type)) { lbl = T.stopHit; fb = T.fStopHit(price) + autoPc(e); break; }
           return;
       }
-      steps.push({ ts: e.triggered_at, lbl: lbl, body: stepBody(e[tk], fb, cm), chart: chart, mid: e[TG.midKey] });
+      steps.push({ ts: e.triggered_at, lbl: lbl, body: stepBody(e[tk], fb, cm), chart: chart, image: image, mid: e[TG.midKey] });
     });
 
     // Partial closes recorded without a published event (e.g. from the sheet).
     (p.partial_closes || []).forEach(function (pc) {
-      if (usedPc[pc.id] || isSystem(pc.comment_en)) return;
+      if (usedPc[pc.id] || (isSystem(pc.comment_en) && !pc.chart_url && !pc.chart_image_url)) return;
       steps.push({
         ts: pc.closed_at, lbl: T.partialLbl,
         body: stepBody("", T.fPartial(Math.round(num(pc.pct_closed)), fmtNum(pc.exit_price), fmtR(pc.r_result)), pc[ck]),
-        chart: httpsOnly(pc.chart_url), mid: null
+        chart: httpsOnly(pc.chart_url), image: httpsOnly(pc.chart_image_url), mid: null
       });
     });
     steps.sort(function (a, b) { return new Date(a.ts) - new Date(b.ts); });
@@ -325,7 +352,7 @@
       ? '<ol class="mth-tl">' + steps.map(function (s) {
           var link = tgHref(s.mid);
           return '<li class="mth-step"><div class="mth-step-h"><b>' + esc(s.lbl) + "</b><time>" + esc(fmtDateTime(s.ts)) + "</time></div>" +
-            s.body + chartBlock(s.chart, T.stepChart) +
+            s.body + chartBlock(s.chart, T.stepChart, s.image) +
             (link ? '<a class="mth-link" href="' + esc(link) + '" target="_blank" rel="noopener">' + esc(T.tgLink) + " ↗</a>" : "") +
             "</li>";
         }).join("") + "</ol>"

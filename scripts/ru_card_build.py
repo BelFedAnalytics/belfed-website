@@ -264,12 +264,13 @@ def _chart_img(url):
     return "https://s3.tradingview.com/snapshots/%s/%s.png" % (c[0].lower(), c)
 
 
-def _chart_html(url):
+def _chart_html(url, image=""):
     """Snapshot of the asset at the moment of this operation (or '')."""
-    url = _https(url)
+    image = image if re.fullmatch(r"https://obujqvqqmyfcfflhqvud\.supabase\.co/functions/v1/position-chart-media\?id=[0-9a-fA-F-]{36}", str(image or "")) else ""
+    url = _https(url) or image
     if not url:
         return ""
-    img = _chart_img(url)
+    img = image or _chart_img(url)
     if not img:
         return ('<a class="steplink" href="%s" target="_blank" rel="noopener">%s</a>'
                 % (esc(url), esc(CHART_ALT)))
@@ -293,10 +294,10 @@ def step_chart(ev, pc_by_id):
     return url
 
 
-def _step_html(label, ts, body, link="", chart=""):
+def _step_html(label, ts, body, link="", chart="", image=""):
     return ('<li class="step"><div class="step-h"><span class="step-lbl">%s</span>'
             '<span class="step-ts">%s</span></div><div class="step-body">%s</div>%s%s</li>'
-            % (esc(label), esc(ts), body, _chart_html(chart), link))
+            % (esc(label), esc(ts), body, _chart_html(chart, image), link))
 
 
 def _signal_link(message_id_ru):
@@ -344,12 +345,12 @@ def _card_from_events(pos, events, pc_by_id):
         chart = step_chart(local_ev, pc_by_id) or (_https(pc.get("chart_url")) if pc else "")
         steps.append((_timestamp(ev.get("triggered_at")), _step_html(step_label(ev), ts, body,
                                 _signal_link(ev["message_id_ru"]),
-                                chart)))
+                                chart, ev.get("chart_image_url") or (pc.get("chart_image_url") if pc else "") )))
     for i, pc in enumerate(partials):
         if i not in used:
             steps.append((_timestamp(pc.get("closed_at")), _step_html(
                 "Частичное закрытие", dd(pc.get("closed_at")), _partial_body(pc),
-                chart=pc.get("chart_url") or "")))
+                chart=pc.get("chart_url") or "", image=pc.get("chart_image_url") or "")))
     return _wrap(pos, [s for _, s in sorted(steps, key=lambda item: item[0])])
 
 
@@ -375,7 +376,7 @@ def _card_from_evidence(pos, pc_by_id):
     for pc in partials:
         body = _partial_body(pc)
         steps.append(_step_html("Частичное закрытие", dd(pc.get("closed_at")), body,
-                                chart=pc.get("chart_url") or ""))
+                                chart=pc.get("chart_url") or "", image=pc.get("chart_image_url") or ""))
 
     close_body = ""
     if pos.get("close_comment_ru"):
