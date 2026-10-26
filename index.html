@@ -936,7 +936,14 @@
     .form-msg.err a { color: var(--green-strong); font-weight: 700; }
     .form-msg.err a:hover { text-decoration: underline; text-underline-offset: 3px; }
 
-    </style>
+        /* nav-fit: keep primary nav on one line */
+    .nav-links a, .nav-right .btn { white-space: nowrap; }
+    @media (max-width: 1360px) { .nav-links { gap: 20px; } }
+    @media (max-width: 1320px) {
+      .nav-links { display: none; }
+      .hamburger { display: inline-flex; }
+    }
+  </style>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -996,6 +1003,7 @@
     <li><a href="#tour" data-spy="tour">Что вы получаете</a></li>
     <li><a href="#how" data-spy="how">Как это работает</a></li>
     <li><a href="/ru/trades.html" target="_blank" rel="noopener">История сделок ↗</a></li>
+    <li><a href="/research/">Исследования</a></li>
     <li><a href="/learn/" class="nav-learn" aria-label="Обучение, бета">Обучение<span class="nav-beta" aria-hidden="true">бета</span></a></li>
     <li><a href="#pricing" data-spy="pricing">Тарифы</a></li>
     <li><a href="#faq" data-spy="faq">FAQ</a></li>
@@ -1539,7 +1547,7 @@
       </div>
       <div class="foot-col">
         <h3>Продукт</h3>
-        <ul><li><a href="#tour">Что вы получаете</a></li><li><a href="#how">Как это работает</a></li><li><a href="#pricing">Тарифы</a></li><li><a href="/ru/trades.html" target="_blank" rel="noopener">История сделок</a></li><li><a href="/learn/">Обучение</a></li><li><a href="#free-analysis">Бесплатный анализ</a></li></ul>
+        <ul><li><a href="#tour">Что вы получаете</a></li><li><a href="#how">Как это работает</a></li><li><a href="#pricing">Тарифы</a></li><li><a href="/ru/trades.html" target="_blank" rel="noopener">История сделок</a></li><li><a href="/research/">Исследования</a></li><li><a href="/learn/">Обучение</a></li><li><a href="#free-analysis">Бесплатный анализ</a></li></ul>
       </div>
       <div class="foot-col">
         <h3>Сообщество</h3>
