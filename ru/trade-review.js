@@ -79,6 +79,65 @@
     },
   }[LANG];
 
+  // Shareable deep links: every card has its own address
+  // (trades.html#trade-sol-long-2026-08-08-2026-08-12). Opening such a link
+  // loads the page, finds the row and opens the card automatically.
+  var SHARE = {
+    en: { copy: "Copy link", copied: "Link copied", failed: "Copy failed" },
+    ru: { copy: "Скопировать ссылку", copied: "Ссылка скопирована", failed: "Не удалось скопировать" },
+  }[LANG];
+  var HASH_PREFIX = "trade-";
+  var LINK_SVG = '<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+                 '<path d="M6.5 9.5a3 3 0 0 0 4.2 0l2.3-2.3a3 3 0 0 0-4.2-4.2l-.9.9"/><path d="M9.5 6.5a3 3 0 0 0-4.2 0L3 8.8a3 3 0 0 0 4.2 4.2l.9-.9"/></svg>';
+
+  function slugPart(v) {
+    return String(v == null ? "" : v).trim().toLowerCase()
+      .replace(/[^a-z0-9.]+/g, "-").replace(/^-+|-+$/g, "");
+  }
+  function slugFor(data) {
+    var t = slugPart(data.ticker);
+    if (!t) return "";
+    var d = String(data.dir || "").trim().toLowerCase().charAt(0) === "s" ? "short" : "long";
+    var f = toISO(data.entryDate) || "na";
+    var x = toISO(data.exitDate) || "open";
+    return HASH_PREFIX + t + "-" + d + "-" + f + "-" + x;
+  }
+  function hashSlug() {
+    var h = "";
+    try { h = decodeURIComponent((location.hash || "").replace(/^#/, "")); } catch (e) {}
+    return h.indexOf(HASH_PREFIX) === 0 ? h.toLowerCase() : "";
+  }
+  function cardURL(slug) {
+    return location.origin + location.pathname + location.search + "#" + slug;
+  }
+  function setHash(slug) {
+    try {
+      if (!window.history || !history.replaceState) return;
+      var url = location.pathname + location.search + (slug ? "#" + slug : "");
+      history.replaceState(history.state, "", url);
+    } catch (e) {}
+  }
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text).catch(function () { return legacyCopy(text); });
+    }
+    return legacyCopy(text);
+  }
+  function legacyCopy(text) {
+    return new Promise(function (resolve, reject) {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.cssText = "position:fixed;top:0;left:0;opacity:0;pointer-events:none";
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(ta);
+      ok ? resolve() : reject(new Error("copy failed"));
+    });
+  }
+
   var ARROW = "↗"; // ↗
   // Bar-replay affordance: a small play glyph echoing TradingView's replay control.
   var PLAY_SVG = '<svg viewBox="0 0 12 12" width="11" height="11" fill="currentColor" aria-hidden="true">' +
@@ -249,6 +308,33 @@
 
   // --- overlay ---
   var overlay, box, bodyEl, titleEl, closeBtn, lastFocused = null;
+  var copyBtn, copyLabel, srEl, copyTimer = null, currentSlug = "";
+
+  function resetCopy() {
+    if (copyTimer) { clearTimeout(copyTimer); copyTimer = null; }
+    if (!copyBtn) return;
+    copyBtn.classList.remove("is-copied", "is-failed");
+    copyLabel.textContent = SHARE.copy;
+    copyBtn.setAttribute("aria-label", SHARE.copy);
+  }
+  function onCopy() {
+    if (!currentSlug) return;
+    var url = cardURL(currentSlug);
+    copyText(url).then(function () {
+      resetCopy();
+      copyBtn.classList.add("is-copied");
+      copyLabel.textContent = SHARE.copied;
+      srEl.textContent = SHARE.copied;
+    }, function () {
+      resetCopy();
+      copyBtn.classList.add("is-failed");
+      copyLabel.textContent = SHARE.failed;
+      srEl.textContent = SHARE.failed;
+      try { window.prompt(SHARE.copy, url); } catch (e) {}
+    }).then(function () {
+      copyTimer = setTimeout(function () { resetCopy(); srEl.textContent = ""; }, 2200);
+    });
+  }
 
   function buildOverlay() {
     overlay = document.createElement("div");
@@ -259,7 +345,12 @@
       '<div class="brc-box" role="dialog" aria-modal="true" aria-labelledby="brc-title">' +
         '<div class="brc-bar">' +
           '<h2 id="brc-title" class="brc-title"></h2>' +
-          '<button class="brc-close" type="button" aria-label="' + esc(T.close) + '">✕</button>' +
+          '<div class="brc-actions">' +
+            '<button class="brc-copy" type="button" hidden>' + LINK_SVG +
+              '<span class="brc-copy-label">' + esc(SHARE.copy) + '</span></button>' +
+            '<button class="brc-close" type="button" aria-label="' + esc(T.close) + '">✕</button>' +
+          '</div>' +
+          '<span class="brc-sr" role="status" aria-live="polite"></span>' +
         "</div>" +
         '<div class="brc-body"></div>' +
       "</div>";
@@ -269,6 +360,10 @@
     titleEl = overlay.querySelector(".brc-title");
     closeBtn = overlay.querySelector(".brc-close");
     closeBtn.addEventListener("click", close);
+    copyBtn = overlay.querySelector(".brc-copy");
+    copyLabel = overlay.querySelector(".brc-copy-label");
+    srEl = overlay.querySelector(".brc-sr");
+    copyBtn.addEventListener("click", onCopy);
     overlay.addEventListener("click", function (e) { if (e.target === overlay) close(); });
     document.addEventListener("keydown", onKeydown);
   }
@@ -294,6 +389,10 @@
     lastFocused = trigger;
     bodyEl.innerHTML = html;
     titleEl.textContent = title || "";
+    currentSlug = (trigger && trigger.getAttribute("data-brc-slug")) || "";
+    resetCopy();
+    copyBtn.hidden = !currentSlug;
+    if (currentSlug) setHash(currentSlug);
     overlay.hidden = false;
     document.body.style.overflow = "hidden";
     closeBtn.focus();
@@ -304,6 +403,9 @@
     overlay.hidden = true;
     bodyEl.innerHTML = "";
     document.body.style.overflow = "";
+    if (currentSlug && hashSlug() === currentSlug) setHash("");
+    currentSlug = "";
+    resetCopy();
     if (lastFocused && lastFocused.focus) lastFocused.focus();
     lastFocused = null;
   }
@@ -372,9 +474,43 @@
     btn.setAttribute("aria-haspopup", "dialog");
     btn.setAttribute("aria-label", T.review + ": " + T.reviewAria + " " + (data.ticker || ""));
     btn.setAttribute("data-brc", JSON.stringify(data));
+    var slug = slugFor(data);
+    if (slug) {
+      btn.setAttribute("data-brc-slug", slug);
+      var row = cell.closest ? cell.closest("tr") : null;
+      if (row && !row.id) row.id = slug;
+    }
     btn.addEventListener("click", function () { openFor(btn); });
     cell.appendChild(btn);
+    if (slug && slug === pendingSlug) {
+      pendingSlug = "";
+      openFromLink(btn);
+    }
   }
+
+  // Deep link handling. The rows are rendered asynchronously from the sheet,
+  // so a link waits until its button is attached, then opens the card.
+  var pendingSlug = hashSlug();
+  function openFromLink(btn) {
+    ready(function () {
+      var row = btn.closest ? btn.closest("tr") : null;
+      if (row && row.scrollIntoView) { try { row.scrollIntoView({ block: "center" }); } catch (e) { row.scrollIntoView(); } }
+      openFor(btn);
+    });
+  }
+  function findButton(slug) {
+    var all = document.querySelectorAll(".brc-review-btn[data-brc-slug]");
+    for (var i = 0; i < all.length; i++) {
+      if (all[i].getAttribute("data-brc-slug") === slug) return all[i];
+    }
+    return null;
+  }
+  window.addEventListener("hashchange", function () {
+    var slug = hashSlug();
+    if (!slug || (overlay && !overlay.hidden && slug === currentSlug)) return;
+    var btn = findButton(slug);
+    if (btn) openFromLink(btn); else pendingSlug = slug;
+  });
 
   function ready(fn) {
     if (document.readyState !== "loading") fn();
