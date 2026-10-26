@@ -51,9 +51,15 @@
   <!-- research:start (managed by scripts/prerender-research.mjs) -->
   <url>
     <loc>https://belfed.ru/research/</loc>
-    <lastmod>2026-08-18</lastmod>
+    <lastmod>2026-10-26</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://belfed.ru/research/2026-10-26-positioning-wipeout/</loc>
+    <lastmod>2026-10-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://belfed.ru/research/2026-08-17-kitayskiy-ii-kompleks-ot-tsenovogo-dempinga-k-fundamentalnoy-pereotsenke/</loc>
