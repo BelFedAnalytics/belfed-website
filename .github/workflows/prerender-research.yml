@@ -9,8 +9,10 @@ name: Prerender public research
 
 on:
   schedule:
-    # Every 15 minutes: a report opened in the admin panel goes live within one cycle.
-    - cron: "*/15 * * * *"
+    # GitHub delays scheduled runs heavily at :00/:15/:30/:45 (observed gaps of
+    # 2 to 5 hours), so use off-peak minutes. This is a fallback only: run the
+    # workflow manually (Actions -> Run workflow) to publish a report instantly.
+    - cron: "7,22,37,52 * * * *"
   workflow_dispatch:
   push:
     branches: [main]
