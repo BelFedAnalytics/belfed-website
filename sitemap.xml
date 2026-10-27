@@ -51,9 +51,15 @@
   <!-- research:start (managed by scripts/prerender-research.mjs) -->
   <url>
     <loc>https://belfed.ru/research/</loc>
-    <lastmod>2026-10-26</lastmod>
+    <lastmod>2026-10-27</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://belfed.ru/research/2026-10-27-hudshiy-period-dlya-serebra-so-vremen-covid/</loc>
+    <lastmod>2026-10-27</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://belfed.ru/research/2026-09-24-1/</loc>
