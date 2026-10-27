@@ -38,7 +38,7 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 .layout{display:grid;grid-template-columns:1fr 360px;gap:20px}
 @media(max-width:900px){.layout{grid-template-columns:1fr}}
 
-.editor{background:#fff;border:1px solid #000;padding:0}
+.editor{background:#fff;border:1px solid #000;padding:0;min-width:0}
 .lang-tabs{display:flex;border-bottom:1px solid #000}
 .lang-tabs button{flex:1;font-family:'Courier New',monospace;font-size:12px;letter-spacing:2px;padding:10px;background:none;border:none;border-right:1px solid #000;cursor:pointer;font-weight:bold}
 .lang-tabs button:last-child{border-right:none}
@@ -88,7 +88,7 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 .tag-input input{flex:1;border:none;background:transparent;outline:none;font-family:'Courier New',monospace;font-size:12px;min-width:120px}
 
 .section-block{border-top:1px dashed #999;padding-top:18px;margin-top:18px;position:relative}
-.section-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.section-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px}
 .section-head .label{font-size:11px;letter-spacing:3px;opacity:0.6;font-weight:bold}
 .section-actions{display:flex;gap:6px}
 .icon-btn{font-family:'Courier New',monospace;font-size:10px;padding:4px 8px;border:1px solid #000;background:#fff;cursor:pointer}
@@ -384,15 +384,17 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
       </div>
     </div>
 
-    <div class="field">
-      <label>// COVER (опционально, для превью на сайте)</label>
-      <div class="dropzone" id="dz-cover">
-        <div class="dz-icon">⬆</div>
-        <div class="dz-text">[ ПЕРЕТАЩИТЕ ИЛИ КЛИКНИТЕ ]</div>
-        <div class="dz-sub">PNG, JPG, WEBP · до 5 MB</div>
+    <div class="row-2">
+      <div class="field">
+        <label id="cover-label-ru">// ОБЛОЖКА RU</label>
+        <div class="dropzone" id="dz-cover-ru" role="button" tabindex="0" aria-labelledby="cover-label-ru"></div>
       </div>
-      <div class="help">Если не загружен — на ленте показывается стилизованный fallback с заголовком.</div>
+      <div class="field">
+        <label id="cover-label-en">// COVER EN</label>
+        <div class="dropzone" id="dz-cover-en" role="button" tabindex="0" aria-labelledby="cover-label-en"></div>
+      </div>
     </div>
+    <div class="help">Обложки независимы: RU для русской версии, EN для английской (сайт, Telegram и email). PNG, JPG, WEBP · до 5 MB. Без обложки на сайте показывается заголовок. В старых отчётах прежняя общая обложка подставляется в оба поля.</div>
 
     <div id="sections-host"></div>
 
@@ -635,7 +637,8 @@ const state = {
   id: null,
   slug: null,
   status: 'draft',
-  cover_image_url: null,
+  cover_image_url_ru: null,
+  cover_image_url_en: null,
   asset_classes: [],
   sectors: [],
   tags: [],
@@ -950,7 +953,8 @@ function initBlank() {
   state.updated_at = null;
   state.sections = [ blankSection(0) ];
   state.conclusion = { id:null, enabled:false, headline_ru:'', headline_en:'', body_ru:'', body_en:'', chart_images:[], is_public:true };
-  state.cover_image_url = null;
+  state.cover_image_url_ru = null;
+  state.cover_image_url_en = null;
   state.asset_classes = [];
   state.sectors = [];
   state.tags = [];
@@ -1017,7 +1021,8 @@ async function loadReport(id) {
   state.id = rep.id;
   state.slug = rep.slug;
   state.status = rep.status;
-  state.cover_image_url = rep.cover_image_url || null;
+  state.cover_image_url_ru = rep.cover_image_url_ru || rep.cover_image_url || null;
+  state.cover_image_url_en = rep.cover_image_url_en || rep.cover_image_url || null;
   state.asset_classes = rep.asset_classes || [];
   state.sectors = rep.sectors || [];
   state.tags = rep.tags || [];
@@ -1245,16 +1250,21 @@ function setupTagInputs() {
 
 // ============== Cover ==============
 function renderCover() {
+  for (const lang of ['ru', 'en']) renderCoverLanguage(lang);
+}
+
+function renderCoverLanguage(lang) {
   // Сбрасываем накопленные обработчики click/drag…, клонируя узел. Предотвращает двойные срабатывания при повторных renderCover()
-  let dz = document.getElementById('dz-cover');
+  const key = 'cover_image_url_' + lang;
+  let dz = document.getElementById('dz-cover-' + lang);
   const fresh = dz.cloneNode(false); // без детей — innerHTML ниже всё перезапишет
   dz.parentNode.replaceChild(fresh, dz);
   dz = fresh;
-  if (state.cover_image_url) {
+  if (state[key]) {
     dz.classList.add('has-file');
     dz.innerHTML = `
-      <img src="${state.cover_image_url}" alt="">
-      <div class="dz-remove"  title="Удалить обложку">[ × УДАЛИТЬ ]</div>
+      <img src="${escapeHtml(state[key])}" alt="Обложка ${lang.toUpperCase()}">
+      <button type="button" class="dz-remove" title="Удалить обложку ${lang.toUpperCase()}">[ × УДАЛИТЬ ${lang.toUpperCase()} ]</button>
       <div class="dz-replace" title="Загрузить другую">[ ЗАМЕНИТЬ ]</div>
     `;
     // Кнопка удаления — отдельный обработчик, клик НЕ должен открывать file picker.
@@ -1262,8 +1272,8 @@ function renderCover() {
     rm.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (!confirm('Удалить обложку отчёта?')) return;
-      state.cover_image_url = null;
+      if (!confirm('Удалить обложку ' + lang.toUpperCase() + '?')) return;
+      state[key] = null;
       renderCover();
     });
   } else {
@@ -1274,9 +1284,28 @@ function renderCover() {
       <div class="dz-sub">PNG, JPG, WEBP · до 5 MB</div>
     `;
   }
+  let uploading = false;
   attachDz(dz, async (file) => {
+    if (uploading) return;
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+      showTopMsg('Обложка: только PNG, JPG, WEBP.', 'err');
+      return;
+    }
+    uploading = true;
+    dz.setAttribute('aria-busy', 'true');
+    try {
     const url = await uploadImage(file, dz);
-    if (url) { state.cover_image_url = url; renderCover(); }
+    if (url) { state[key] = url; renderCoverLanguage(lang); }
+    } finally {
+      uploading = false;
+      dz.removeAttribute('aria-busy');
+    }
+  });
+  dz.addEventListener('keydown', e => {
+    if (e.target === dz && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      dz.click();
+    }
   });
 }
 
@@ -1784,7 +1813,11 @@ function buildPayload(status) {
     asset_classes: state.asset_classes,
     sectors:       state.sectors,
     tags:          state.tags,
-    cover_image_url: state.cover_image_url || null,
+    // Migrate legacy shared cover into the two explicit slots on save.
+    // Clearing the shared field lets either language remove its cover independently.
+    cover_image_url: null,
+    cover_image_url_ru: state.cover_image_url_ru || null,
+    cover_image_url_en: state.cover_image_url_en || null,
     email_send_to_premium: !!document.getElementById('cb-email-premium')?.checked,
     email_send_to_leads:   !!document.getElementById('cb-email-leads')?.checked,
     // v14: public research access + optional CTA overrides

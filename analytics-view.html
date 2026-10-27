@@ -210,8 +210,9 @@ function renderReport() {
   const typeStr = (r.report_type || '').toUpperCase();
   const tags = (r.tags || []).map(tg => `<span class="report-tag">${escapeHtml(tg)}</span>`).join('');
 
-  const coverHtml = r.cover_image_url
-    ? `<div class="cover-image"><img src="${escapeHtml(r.cover_image_url)}" alt=""></div>`
+  const coverUrl = r['cover_image_url_' + state.lang] || r.cover_image_url || null;
+  const coverHtml = coverUrl
+    ? `<div class="cover-image"><img src="${escapeHtml(coverUrl)}" alt=""></div>`
     : '';
 
   const sectionHtml = sections.map((s, i) => {

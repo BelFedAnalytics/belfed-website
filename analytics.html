@@ -586,8 +586,9 @@ function renderCards(items) {
     const subtitle = (state.lang === 'ru' ? r.subtitle_ru : (r.subtitle_en || r.subtitle_ru)) || '';
     const link = `/analytics-view.html?slug=${encodeURIComponent(r.slug)}&lang=${state.lang}`;
     const tags = (r.tags || []).slice(0, 3);
-    const cover = r.cover_image_url
-      ? `<img src="${escapeHtml(r.cover_image_url)}" alt="">`
+    const coverUrl = r['cover_image_url_' + state.lang] || r.cover_image_url || null;
+    const cover = coverUrl
+      ? `<img src="${escapeHtml(coverUrl)}" alt="">`
       : `<div class="card-cover-fallback">${escapeHtml(title.slice(0, 60))}</div>`;
     const card = document.createElement('a');
     card.className = 'card';
