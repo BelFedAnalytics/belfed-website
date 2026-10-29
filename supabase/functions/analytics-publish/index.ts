@@ -92,12 +92,14 @@ const MAX_RETRIES = 3;
 
 function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 
-function getCharts(section: any) {
+// Localized charts: an item may carry url_en; EN publishing uses it, RU and fallback use url.
+function getCharts(section: any, lang = "ru") {
   const arr = Array.isArray(section?.chart_images) ? section.chart_images : [];
   const out: any[] = [];
   for (const it of arr) {
     if (it && typeof it === "object" && typeof it.url === "string" && it.url) {
-      out.push({ url: it.url, caption_ru: it.caption_ru, caption_en: it.caption_en });
+      const url = lang === "en" && typeof it.url_en === "string" && it.url_en ? it.url_en : it.url;
+      out.push({ url, caption_ru: it.caption_ru, caption_en: it.caption_en });
     }
   }
   if (out.length === 0 && typeof section?.chart_image_url === "string" && section.chart_image_url) {
@@ -534,7 +536,7 @@ function buildSectionCaptions(section: any, standardIdx: number, standardTotal: 
   const headlineRaw = (lang === "ru" ? section.headline_ru : section.headline_en) ?? "";
   const body = (lang === "ru" ? section.body_ru : section.body_en) ?? "";
   const extraHtml = (section.extra_html ?? "") as string;
-  const charts = getCharts(section);
+  const charts = getCharts(section, lang);
   const partsLabel = isConclusion
     ? (lang === "ru" ? "ГЛАВНЫЙ ВЫВОД" : "KEY TAKEAWAY")
     : (lang === "ru" ? `Часть ${standardIdx + 2}/${standardTotal + 1}` : `Part ${standardIdx + 2}/${standardTotal + 1}`);
@@ -808,7 +810,7 @@ Deno.serve(async (req) => {
     // v35: iterate EVERY section, linked ones included, in position order.
     for (let i = 0; i < orderedSections.length; i++) {
       const section = orderedSections[i];
-      const charts = getCharts(section);
+      const charts = getCharts(section, lang);
       const caps = buildSectionCaptions(section, i, totalSections, lang, !!section.is_conclusion, report);
       const out = await publishSection(topic.chat_id, topic.thread_id, charts, caps, coverMsgId, silent);
       const sectionResult: any = {

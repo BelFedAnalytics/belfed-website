@@ -346,7 +346,7 @@ async function fetchReport(supabase: ReturnType<typeof createClient>, reportId: 
       for (const c of s.chart_images) {
         if (c && c.url) {
           charts.push({
-            url: c.url,
+            url: lang === "en" && c.url_en ? c.url_en : c.url,
             caption: lang === "ru" ? (c.caption_ru || c.caption_en || "") : (c.caption_en || c.caption_ru || ""),
           });
         }

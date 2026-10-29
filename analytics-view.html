@@ -289,7 +289,7 @@ function renderReport() {
       ? `<div class="section-charts">${charts.map(c => {
           const cap = (state.lang === 'ru' ? c.caption_ru : c.caption_en) || '';
           return `<div class="section-chart">
-            <img src="${escapeHtml(c.url)}" alt="">
+            <img src="${escapeHtml(state.lang === 'en' && c.url_en ? c.url_en : c.url)}" alt="">
             ${cap ? `<div class="section-chart-caption">${escapeHtml(cap)}</div>` : ''}
           </div>`;
         }).join('')}</div>`

@@ -53,15 +53,18 @@ function slugify(s: string): string {
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
 }
 
-function normalizeChartImages(raw: unknown): Array<{ url: string; caption_ru: string; caption_en: string }> {
+// v19: optional url_en — a separate EN version of the chart. When absent, EN uses url.
+function normalizeChartImages(raw: unknown): Array<{ url: string; url_en?: string; caption_ru: string; caption_en: string }> {
   if (!Array.isArray(raw)) return [];
-  const out: Array<{ url: string; caption_ru: string; caption_en: string }> = [];
+  const out: Array<{ url: string; url_en?: string; caption_ru: string; caption_en: string }> = [];
   for (const item of raw) {
     if (!item || typeof item !== "object") continue;
     const url = String((item as any).url ?? "").trim();
     if (!url) continue;
+    const urlEn = String((item as any).url_en ?? "").trim();
     out.push({
       url,
+      ...(urlEn && urlEn !== url ? { url_en: urlEn } : {}),
       caption_ru: String((item as any).caption_ru ?? ""),
       caption_en: String((item as any).caption_en ?? ""),
     });

@@ -69,7 +69,7 @@ interface SectionRow {
   chart_image_url?: string | null;
   chart_caption_ru?: string | null;
   chart_caption_en?: string | null;
-  chart_images?: Array<{ url: string; caption_ru?: string; caption_en?: string }> | null;
+  chart_images?: Array<{ url: string; url_en?: string; caption_ru?: string; caption_en?: string }> | null;
   teaser_ru?: string;
   teaser_en?: string;
   teaser_imgs?: string[];
@@ -684,7 +684,8 @@ function renderSection(s: SectionRow, lang: Lang, t: typeof T.ru, startPayload: 
   if (Array.isArray(s.chart_images) && s.chart_images.length > 0) {
     chartsHtml = s.chart_images.map(c => {
       const cap = lang === "ru" ? c.caption_ru : c.caption_en;
-      return `<figure><img src="${attr(c.url)}" alt="${attr(cap || (headline || label || ""))}">${cap ? `<figcaption>${esc(cap)}</figcaption>` : ""}</figure>`;
+      const src = lang === "en" && c.url_en ? c.url_en : c.url;
+      return `<figure><img src="${attr(src)}" alt="${attr(cap || (headline || label || ""))}">${cap ? `<figcaption>${esc(cap)}</figcaption>` : ""}</figure>`;
     }).join("\n");
   } else if (s.chart_image_url) {
     const cap = lang === "ru" ? s.chart_caption_ru : s.chart_caption_en;
@@ -992,7 +993,7 @@ Deno.serve(async (req) => {
     if (sErr) return htmlResponse(`<h1>Server error</h1><pre>${esc(sErr.message)}</pre>`, 500, { "cache-control": "no-store" });
     const secs = (sections || []).map((s: Record<string, unknown>) => {
       if (s.is_public === false) {
-        const ci = Array.isArray(s.chart_images) ? (s.chart_images as Array<{ url?: string }>).map(c => c && c.url) : [];
+        const ci = Array.isArray(s.chart_images) ? (s.chart_images as Array<{ url?: string; url_en?: string }>).map(c => c && (lang === "en" && c.url_en ? c.url_en : c.url)) : [];
         const urls = (ci.length ? ci : [s.chart_image_url as string | null]).map(u => teaserThumb(u as string | null)).filter(Boolean) as string[];
         return { id: s.id, position: s.position, is_conclusion: s.is_conclusion, is_public: false,
           section_label_ru: s.section_label_ru, section_label_en: s.section_label_en,

@@ -25,12 +25,14 @@ const MAX_RETRIES = 3;
 
 function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 
-function getCharts(section: any) {
+// Localized charts: an item may carry url_en; EN publishing uses it, RU and fallback use url.
+function getCharts(section: any, lang = "ru") {
   const arr = Array.isArray(section?.chart_images) ? section.chart_images : [];
   const out: any[] = [];
   for (const it of arr) {
     if (it && typeof it === "object" && typeof it.url === "string" && it.url) {
-      out.push({ url: it.url, caption_ru: it.caption_ru, caption_en: it.caption_en });
+      const url = lang === "en" && typeof it.url_en === "string" && it.url_en ? it.url_en : it.url;
+      out.push({ url, caption_ru: it.caption_ru, caption_en: it.caption_en });
     }
   }
   if (out.length === 0 && typeof section?.chart_image_url === "string" && section.chart_image_url) {
@@ -220,7 +222,7 @@ function buildSectionCaptions(section: any, idx: number, total: number, lang: st
   const label = labelRaw.trim();
   const headlineRaw = (lang === "ru" ? section.headline_ru : section.headline_en) ?? "";
   const body = (lang === "ru" ? section.body_ru : section.body_en) ?? "";
-  const charts = getCharts(section);
+  const charts = getCharts(section, lang);
   const useLegacyChartCap = charts.length <= 1;
   const chartCap = useLegacyChartCap
     ? ((lang === "ru" ? section.chart_caption_ru : section.chart_caption_en) ?? (charts[0]?.[lang === "ru" ? "caption_ru" : "caption_en"] ?? ""))
@@ -269,7 +271,7 @@ async function publishOneSection(
   silent: boolean,
   coverMsgId: number,
 ) {
-  const charts = getCharts(section);
+  const charts = getCharts(section, lang);
   const caps = buildSectionCaptions(section, idx, allSections.length, lang, !!section.is_conclusion, report);
 
   const tg = lang === "ru" ? report.tg_message_ids_ru : report.tg_message_ids_en;
