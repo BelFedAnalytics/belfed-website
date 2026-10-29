@@ -26,6 +26,7 @@
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { syncSiteHeader } from "./sync-site-header.mjs";
 
 const LANG = (process.env.RESEARCH_LANG || "").trim();
 const ORIGIN = (process.env.SITE_ORIGIN || "").trim().replace(/\/$/, "");
@@ -175,6 +176,7 @@ async function main() {
     console.warn("prerender-research: no sitemap.xml in this repo, skipping sitemap update");
   }
 
+  await syncSiteHeader(ROOT);
   console.log(`prerender-research: lang=${LANG} pages=${pages.size} reports=${items.length} removed_dirs=${removed}`);
 }
 
