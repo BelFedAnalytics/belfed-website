@@ -1,3 +1,5 @@
+// analytics-republish-section v15 (2026-10-29): honour Telegram retry_after up to 45 s, 4 attempts,
+// and report rate_limited instead of "unknown".
 // analytics-republish-section v3
 // v3: Architectural alignment with analytics-publish v23.
 //     - All section albums (>=2 charts) go through multipart sendMediaGroup (download in
@@ -21,7 +23,8 @@ const supa = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 const TG_CAPTION_LIMIT = 1024;
 const TG_TEXT_LIMIT = 4096;
 const DELAY_BEFORE_MEDIA_GROUP_MS = 1100;
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 4;
+const MAX_RETRY_WAIT_MS = 45_000; // v15: honour Telegram retry_after (was capped at 10 s)
 
 function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -68,7 +71,9 @@ async function tgFetch(method: string, body: any): Promise<{ ok: boolean; result
       if (json.ok) return { ok: true, result: json.result };
       if (res.status === 429 || json.parameters?.retry_after) {
         const retryAfter = (json.parameters?.retry_after ?? 1) * 1000 + 200;
-        await sleep(Math.min(retryAfter, 10_000));
+        lastError = `rate_limited: retry_after=${json.parameters?.retry_after ?? 1}s`;
+        console.warn(`tg 429, retry_after=${retryAfter}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
+        if (attempt < MAX_RETRIES - 1) await sleep(Math.min(retryAfter, MAX_RETRY_WAIT_MS));
         continue;
       }
       lastError = `tg_api_error: ${json.error_code} ${json.description}`;
@@ -93,7 +98,9 @@ async function tgFetchMultipart(method: string, buildFd: () => FormData): Promis
       if (json.ok) return { ok: true, result: json.result };
       if (res.status === 429 || json.parameters?.retry_after) {
         const retryAfter = (json.parameters?.retry_after ?? 1) * 1000 + 200;
-        await sleep(Math.min(retryAfter, 10_000));
+        lastError = `rate_limited: retry_after=${json.parameters?.retry_after ?? 1}s`;
+        console.warn(`tg 429, retry_after=${retryAfter}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
+        if (attempt < MAX_RETRIES - 1) await sleep(Math.min(retryAfter, MAX_RETRY_WAIT_MS));
         continue;
       }
       lastError = `tg_api_error: ${json.error_code} ${json.description}`;

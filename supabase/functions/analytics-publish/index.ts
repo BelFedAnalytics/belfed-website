@@ -1,3 +1,10 @@
+// analytics-publish v44
+// v44 (2026-10-29): Telegram flood control.
+//   - Incident: in the 12-section crypto report of 2026-10-29, section 011 was dropped in RU
+//     and EN. Telegram answered 429 retry_after=34 s after ~20 messages in a minute; the
+//     helper waited at most 10 s per retry and gave up after 3 tries with error "unknown".
+//   - retry_after is now honoured (up to 45 s, 4 attempts), the stored error says
+//     rate_limited, and RU/EN are published concurrently to keep the run short.
 // analytics-publish v38
 // v38 (2026-09-14): Idempotent publishing.
 //   - Incident: the analytics channel received the series three times (one partial run
@@ -88,7 +95,10 @@ const TG_TEXT_LIMIT = 4096;
 
 const DELAY_BETWEEN_SECTIONS_MS = 1100;
 const DELAY_BEFORE_MEDIA_GROUP_MS = 1100;
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 4;
+// v44: Telegram's retry_after is honoured in full up to this cap. The old 10 s cap made all
+// retries land inside the flood-control window (e.g. retry_after=34 s), so the photo was dropped.
+const MAX_RETRY_WAIT_MS = 45_000;
 
 function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -148,8 +158,10 @@ async function tgFetch(method: string, body: any): Promise<{ ok: boolean; result
       if (json.ok) return { ok: true, result: json.result };
       if (res.status === 429 || json.parameters?.retry_after) {
         const retryAfter = (json.parameters?.retry_after ?? 1) * 1000 + 200;
+        lastError = `rate_limited: retry_after=${json.parameters?.retry_after ?? 1}s`;
         console.warn(`tg ${method} 429, retry_after=${retryAfter}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
-        await sleep(Math.min(retryAfter, 10_000)); continue;
+        if (attempt < MAX_RETRIES - 1) await sleep(Math.min(retryAfter, MAX_RETRY_WAIT_MS));
+        continue;
       }
       lastError = `tg_api_error: ${json.error_code} ${json.description}`;
       console.error(`tg ${method} failed (non-retryable):`, json);
@@ -173,8 +185,10 @@ async function tgFetchMultipart(method: string, buildFd: () => FormData): Promis
       if (json.ok) return { ok: true, result: json.result };
       if (res.status === 429 || json.parameters?.retry_after) {
         const retryAfter = (json.parameters?.retry_after ?? 1) * 1000 + 200;
+        lastError = `rate_limited: retry_after=${json.parameters?.retry_after ?? 1}s`;
         console.warn(`tg ${method} (multipart) 429, retry_after=${retryAfter}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
-        await sleep(Math.min(retryAfter, 10_000)); continue;
+        if (attempt < MAX_RETRIES - 1) await sleep(Math.min(retryAfter, MAX_RETRY_WAIT_MS));
+        continue;
       }
       lastError = `tg_api_error: ${json.error_code} ${json.description}`;
       console.error(`tg ${method} (multipart) failed (non-retryable):`, json);
@@ -698,7 +712,7 @@ Deno.serve(async (req) => {
   const silent = !!body.silent;
   const results: any = {};
 
-  for (const lang of langs) {
+  const publishLang = async (lang: string) => {
     // v38: idempotency. The 5-minute lock only protects against *concurrent* duplicates.
     // A run that failed partway, or a second attempt made minutes later, still resent the
     // whole series into a live channel. A report that already has a cover message id for
@@ -707,11 +721,11 @@ Deno.serve(async (req) => {
     if (!body.dry_run && !body.test_mode && !body.force && alreadySent && alreadySent.cover) {
       console.warn(`[analytics-publish v38] ${lang}: already published (cover ${alreadySent.cover}), skipping`);
       results[lang] = { skipped: "already_published", cover: alreadySent.cover, chat_id: alreadySent.chat_id ?? null };
-      continue;
+      return;
     }
 
     const topic = await getTopic(lang, "analytics", !!body.test_mode);
-    if (!topic) { results[lang] = { skipped: "no_active_topic" }; continue; }
+    if (!topic) { results[lang] = { skipped: "no_active_topic" }; return; }
 
     // v30: resolve the analysis (timeline posts) topic for THIS lang — used to build
     // t.me/c/<...> links to the linked posts. If missing, link block is empty for this lang.
@@ -768,11 +782,11 @@ Deno.serve(async (req) => {
             preview: caps.full,
             full_len: caps.full.length, compact_len: caps.compact.length,
             minimal_len: caps.minimal.length, ultra_minimal_len: caps.ultraMinimal.length,
-            chart_count: getCharts(s).length,
+            chart_count: getCharts(s, lang).length,
           };
         }),
       };
-      continue;
+      return;
     }
 
     // Send cover.
@@ -784,7 +798,7 @@ Deno.serve(async (req) => {
       const r = await tgSendMessage(topic.chat_id, topic.thread_id, cover.caption, null, coverReplyMarkup, silent);
       coverMsgId = r.msg_id; coverError = r.error;
     }
-    if (!coverMsgId) { results[lang] = { error: "cover_send_failed", tg_error: coverError }; continue; }
+    if (!coverMsgId) { results[lang] = { error: "cover_send_failed", tg_error: coverError }; return; }
 
     // v30: If link block didn't fit in the caption, send it as a reply message.
     let linkReplyMsgId: number | null = null;
@@ -848,7 +862,14 @@ Deno.serve(async (req) => {
       linked_count: linkedSections.length,
       sections: sectionResults,
     };
-  }
+  };
+
+  // v44: RU and EN go to different chats, and Telegram's ~20 messages/minute group limit is
+  // per chat, so both languages are published concurrently. That halves the run time and
+  // leaves room to honour retry_after without hitting the 150 s response limit. Test mode
+  // may route EN to the RU chat, so it stays sequential.
+  if (body.test_mode) { for (const lang of langs) await publishLang(lang); }
+  else await Promise.all(langs.map((lang: string) => publishLang(lang)));
 
   if (!body.dry_run) {
     const update: any = { tg_publish_lock: null };
