@@ -1,3 +1,5 @@
+// analytics-republish-section v16 (2026-10-29): after a successful send, the navigator message
+// is re-edited with links to every section (reports without linked sections; relink_nav=false to skip).
 // analytics-republish-section v15 (2026-10-29): honour Telegram retry_after up to 45 s, 4 attempts,
 // and report rate_limited instead of "unknown".
 // analytics-republish-section v3
@@ -359,6 +361,32 @@ async function publishOneSection(
   };
 }
 
+// v16: navigator ("СОДЕРЖАНИЕ / CONTENTS") relink after a section is (re)sent.
+// Mirrors analytics-publish buildNavigator for reports without linked sections.
+function buildTgMessageUrl(chatId: number, threadId: number | null, messageId: number): string {
+  const absId = String(chatId).replace(/^-100/, "").replace(/^-/, "");
+  if (threadId != null) return `https://t.me/c/${absId}/${threadId}/${messageId}`;
+  return `https://t.me/c/${absId}/${messageId}`;
+}
+
+function buildNavigator(sections: any[], lang: string, report: any, chatId: number, threadId: number | null, msgIds: (number | null)[]): string {
+  const head = lang === "ru" ? "// СОДЕРЖАНИЕ" : "// CONTENTS";
+  const lines: string[] = [];
+  for (let i = 0; i < sections.length; i++) {
+    const sec = sections[i];
+    const labelRaw = ((lang === "ru" ? sec.section_label_ru : sec.section_label_en) ?? "").trim();
+    const headlineRaw = ((lang === "ru" ? sec.headline_ru : sec.headline_en) ?? "").trim();
+    const name = headlineRaw || labelRaw;
+    if (!name) continue;
+    const label = labelRaw || String(i + 1);
+    const msgId = msgIds[i];
+    if (msgId != null) lines.push(`${escapeHtml(label)}. <a href="${escapeHtml(buildTgMessageUrl(chatId, threadId, msgId))}">${escapeHtml(name)}</a>`);
+    else lines.push(`${escapeHtml(label)}. ${escapeHtml(name)}`);
+  }
+  if (!lines.length) return "";
+  return [head, "", lines.join("\n"), "", buildFullFooter(report, lang)].join("\n");
+}
+
 Deno.serve(async (req) => {
   const headers = { "content-type": "application/json" };
   if (req.method !== "POST") return new Response(JSON.stringify({ ok: false, error: "method" }), { status: 405, headers });
@@ -418,7 +446,20 @@ Deno.serve(async (req) => {
         newSections.push(newSectionRecord);
         newSections.sort((a: any, b: any) => a.position - b.position);
       }
-      const newTg = { ...tg, sections: newSections };
+      const newTg: any = { ...tg, sections: newSections };
+      // v16: relink the navigator so the new message is reachable from the contents list.
+      // Only for reports without linked sections (their navigator order depends on linked posts).
+      if (tg.nav_msg_id && body.relink_nav !== false && !allSections.some((s: any) => s.linked_post_id)) {
+        const byPos = new Map(newSections.map((s: any) => [s.position, s]));
+        const msgIds = allSections.map((s: any) => { const r: any = byPos.get(s.position); return r ? (r.photo_msg_id ?? r.body_msg_id ?? null) : null; });
+        const navText = buildNavigator(allSections, lang, report, tg.chat_id, tg.thread_id ?? null, msgIds);
+        if (navText) {
+          await sleep(400);
+          const rEdit = await tgFetch("editMessageText", { chat_id: tg.chat_id, message_id: tg.nav_msg_id, text: navText, parse_mode: "HTML", disable_web_page_preview: true });
+          newTg.nav_linked = rEdit.ok; newTg.nav_edit_error = rEdit.ok ? null : (rEdit.error ?? null);
+          results[lang].nav_edit = rEdit.ok ? "ok" : rEdit.error;
+        }
+      }
       const updateCol = lang === "ru" ? "tg_message_ids_ru" : "tg_message_ids_en";
       const { error: upErr } = await supa.from("analytics_reports").update({ [updateCol]: newTg }).eq("id", reportId);
       if (upErr) {
