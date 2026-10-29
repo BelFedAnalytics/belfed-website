@@ -114,6 +114,13 @@
       '<div class="bf-foot-tools"><a class="bf-foot-language">' + t.language + '</a><a href="#bf-site-header">' +
       t.top + ' ↑</a></div></div><p class="bf-foot-risk">' + t.risk + '</p></div>';
     footer.querySelector('.bf-foot-language').href = languageUrl;
+    footer.querySelector('a[href="#bf-site-header"]').addEventListener('click', function (event) {
+      event.preventDefault();
+      var logo = document.querySelector('#bf-site-header .bf-logo');
+      if (logo) logo.focus({ preventScroll: true });
+      var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      window.scrollTo({ top: 0, behavior: reducedMotion ? 'instant' : 'smooth' });
+    });
     document.body.appendChild(footer);
     function fitBody() {
       var bodyStyle = getComputedStyle(document.body);

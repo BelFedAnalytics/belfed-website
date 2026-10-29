@@ -18,6 +18,7 @@ const path = require('node:path');
   const browser = await chromium.launch({ headless: true });
   try {
     const page = await browser.newPage();
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     const base = `http://127.0.0.1:${server.address().port}`;
     await page.route('**/*', route => route.request().url().startsWith(base) ? route.continue() : route.abort());
     const pages = ['/', '/members.html', '/dashboard.html', '/analytics.html', '/asset-analysis.html',
@@ -54,6 +55,11 @@ const path = require('node:path');
         }
         await page.addScriptTag({ url: base + '/belfed-site-footer.js' });
         assert.equal(await footer.count(), 1, 'idempotent');
+        if (url === '/') {
+          await footer.locator('a[href="#bf-site-header"]').click();
+          await page.waitForFunction(() => window.scrollY < 100, null, { timeout: 2000 });
+          assert(await page.locator('#bf-site-header .bf-logo').evaluate(el => el === document.activeElement), 'back-to-top restores keyboard focus');
+        }
       }
     }
     console.log(`PASS ${pages.length} pages x 4 widths: footer parity, links, legal warning, language, overflow and idempotence`);
