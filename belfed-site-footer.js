@@ -13,7 +13,7 @@
       members: 'Кабинет', freeAnalysis: 'Бесплатный анализ',
       terms: 'Договор-оферта', privacy: 'Конфиденциальность', disclaimer: 'Раскрытие рисков', contact: 'Связаться с нами',
       bot: 'Telegram-бот', rights: 'Все права защищены.', payments: 'Платежи через Tribute.',
-      risk: 'Трейдинг сопряжён со значительным риском убытков. Прошлые результаты не гарантируют будущих. Ничто на этом сайте не является индивидуальной инвестиционной рекомендацией.',
+      risk: 'Трейдинг сопряжён со значительным риском убытков. Прошлые результаты не гарантируют будущих. Ничто на этом сайте не является финансовой рекомендацией.',
       language: 'English version', top: 'Наверх', navLabel: 'Навигация в подвале сайта'
     } : {
       description: 'Independent global market analytics. Research and trade ideas across equities, cryptocurrencies and commodities.',
