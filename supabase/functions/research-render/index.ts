@@ -536,6 +536,28 @@ function searchText(r: ReportRow, lang: Lang, dateStr: string, classes: string[]
     .filter(Boolean).join(" ").toLowerCase().replace(/ё/g, "е").replace(/\s+/g, " ");
 }
 
+// The static /research/ index can lag behind publishing (GitHub cron runs every few
+// hours). On load, compare it with research-list; if a newer public report exists,
+// swap in a fresh render from this function. One attempt per set of missing slugs.
+function freshScript(lang: Lang): string {
+  return `<script>
+(function(){
+  try{
+    var F=${JSON.stringify(SUPABASE_URL + "/functions/v1/")}, L=${JSON.stringify(lang)};
+    var have={}; [].forEach.call(document.querySelectorAll('a.card'),function(a){have[a.getAttribute('href')]=1;});
+    fetch(F+'research-list?lang='+L,{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){
+      var items=(j&&j.items)||[]; var miss=items.filter(function(it){return it&&it.slug&&!have['/research/'+it.slug+'/'];}).map(function(it){return it.slug;});
+      if(!miss.length) return;
+      var k='rs_fresh_'+L+'_'+miss.join(','); if(sessionStorage.getItem(k)) return; sessionStorage.setItem(k,'1');
+      return fetch(F+'research-render?lang='+L+'&v='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.text():null;}).then(function(h){
+        if(h&&h.indexOf('class="cards"')>-1){document.open();document.write(h);document.close();}
+      });
+    }).catch(function(){});
+  }catch(e){}
+})();
+</script>`;
+}
+
 function renderCard(r: ReportRow, lang: Lang, t: typeof T.ru): string {
   const title = reportTitle(r, lang);
   const sub = reportSubtitle(r, lang);
@@ -659,6 +681,7 @@ ${indexPageStyles()}
   </main>
   ${footerBar(lang, t)}
   ${filterScript}
+  ${freshScript(lang)}
   <script src="/belfed-analytics.js"></script>
 </body>
 </html>`;
@@ -918,6 +941,8 @@ function htmlResponse(body: string, status: number, extraHeaders: Record<string,
       "vary": "accept-language",
       "x-content-type-options": "nosniff",
       "referrer-policy": "strict-origin-when-cross-origin",
+      // public HTML; lets belfed.ru/.com fetch fresh pages before the static prerender catches up
+      "access-control-allow-origin": "*",
       ...extraHeaders,
     },
   });
