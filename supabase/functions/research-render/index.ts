@@ -1,17 +1,26 @@
-// research-render v3 — SSR HTML for /research/ index and /research/<slug>/ pages
+// research-render v20: SSR HTML for the public /research/ index and /research/<slug>/ pages
 //
-// v3 (2026-09-15): SEO hardening for the static prerender pipeline.
-//   - hreflang alternates (ru / en / x-default) on the index and on every report,
-//     pointing at the same slug across belfed.ru and belfed.com.
-//   - JSON-LD: Organization + WebSite on the index, Article + BreadcrumbList on
-//     reports (Article uses published_public_at as datePublished).
-//   - The "report not found" page is now noindex,follow.
+// v20 (2026-10-30): Direction 2 redesign "Mono Header + Readable Text".
+//   - Shared site header/footer (belfed-site-header.js / belfed-site-footer.js) are
+//     emitted by the renderer itself, so prerendered pages, the 404 fresh render and
+//     the index fresh swap all look the same. No legacy <nav>/<footer> any more.
+//   - Light theme by default with the site-wide dark theme (html[data-theme="dark"],
+//     localStorage "belfed-theme"); prefers-color-scheme when nothing is stored.
+//   - Index: hero, sticky filter bar (6 asset classes, search, ?class=&q= in URL,
+//     empty state), featured + latest stream, archive grouped by month.
+//     Reports without a cover are not listed.
+//   - Report: mono meta line, reading time, short disclaimer above the fold, key
+//     takeaways (verbatim lead sentences), 640px measure, sticky TOC with scroll-spy
+//     (collapsible on mobile), reading progress, chart lightbox, honest member gate,
+//     mid and final CTA (free Telegram), email lead form, trust block, prev/next and
+//     related reports, one dismissible sticky banner.
+//   - Removed hardcoded track-record numbers; the page links to the live track record.
 //
-// One edge function that renders both languages (ru/en) for both surfaces:
-//   /functions/v1/research-render?lang=ru                → RU index
-//   /functions/v1/research-render?lang=en                → EN index
-//   /functions/v1/research-render?lang=ru&slug=<slug>    → RU report
-//   /functions/v1/research-render?lang=en&slug=<slug>    → EN report
+// v3 (2026-09-15): hreflang alternates, JSON-LD (Organization, CollectionPage,
+// Article, BreadcrumbList), noindex not-found page.
+//
+//   /functions/v1/research-render?lang=ru|en               -> index
+//   /functions/v1/research-render?lang=ru|en&slug=<slug>    -> report
 //
 // verify_jwt=false, cache-friendly (5 min CDN cache).
 //
@@ -19,6 +28,7 @@
 // wired to marketing sequences until landing-lead-create split-consent rollout.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { RS_CSS } from "./styles.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -53,7 +63,11 @@ interface ReportRow {
   cta_body_en?: string | null;
   cta_ticker_teaser_ru?: string | null;
   cta_ticker_teaser_en?: string | null;
+  words_ru?: number;
+  words_en?: number;
 }
+
+interface ChartImage { url: string; url_en?: string; caption_ru?: string; caption_en?: string }
 
 interface SectionRow {
   id: string;
@@ -69,427 +83,255 @@ interface SectionRow {
   chart_image_url?: string | null;
   chart_caption_ru?: string | null;
   chart_caption_en?: string | null;
-  chart_images?: Array<{ url: string; url_en?: string; caption_ru?: string; caption_en?: string }> | null;
+  chart_images?: ChartImage[] | null;
   teaser_ru?: string;
   teaser_en?: string;
   teaser_imgs?: string[];
+  hidden_words_ru?: number;
+  hidden_words_en?: number;
+  hidden_charts?: number;
 }
+
+const TG_FREE: Record<Lang, string> = { ru: "https://t.me/BelFedFreeRU", en: "https://t.me/BelFedFreeEN" };
+const BOT = "https://t.me/belfedbot";
 
 const T = {
   ru: {
-    nav_home: "Главная", nav_track: "История сделок", nav_research: "Исследования",
-    nav_products: "Тарифы", nav_about: "О нас", nav_lang: "EN",
-    nav_cta: "14 дней бесплатно", skip: "Перейти к содержимому",
+    brand: "BelFed Analytics", site: "BelFed", skip: "Перейти к содержимому",
     index_kicker: "// Публичные исследования BelFed", index_title: "Исследования",
-    index_subtitle: "Независимые отчёты BelFed Analytics по секторам, отдельным темам и макро-циклам.",
+    index_lead: "Независимые отчёты BelFed Analytics по секторам, отдельным компаниям, макроциклам и крипторынку. Публичные разделы открыты всем, разделы для участников отмечены.",
     index_empty: "Пока нет публичных отчётов. Загляните позже.",
-    f_all: "Все", f_group: "Класс активов", f_search_label: "Поиск по отчётам", f_search_ph: "Поиск: Nvidia, биткоин, ФРС",
-    f_clear: "Очистить поиск", f_none: "Ничего не найдено.", f_reset: "Сбросить фильтры",
-    f_count: (n: number, total: number) => n === total ? `Отчётов: ${total}` : `Найдено: ${n} из ${total}`,
-    cls: { equities: "Акции", crypto: "Криптовалюты", macro: "Макро", rates: "Облигации и ставки", commodities: "Сырьё", fx: "Валюты" } as Record<string, string>,
     index_meta_title: "Исследования | BelFed Analytics",
     index_meta_desc: "Независимые исследовательские отчёты BelFed Analytics: акции, крипта, макро, сектора и отдельные темы.",
-    report_reading: "Время чтения", report_author: "Автор", report_coverage: "Покрытие",
-    report_kicker_prefix: "Исследовательский отчёт · ",
-    report_date_fmt: (d: string) => formatDateRu(d),
-    key_takeaways: "Ключевые выводы",
-    gated_label: "Доступно подписчикам",
-    gated_body: "Продолжение раздела и графики открыты подписчикам. Первые 14 дней бесплатно.",
-    gated_btn: "Подписаться и читать полностью →",
-    cta_default_headline: "Мы уже определили точки входа по тикерам из этого отчёта.",
-    cta_default_body: "Уровни, стопы и цели публикуются в закрытой части сервиса и в Telegram в момент срабатывания сетапа. Начните 14-дневный триал и получите доступ до того, как мы откроем первую позицию по этой теме. Карта не требуется.",
-    cta_kicker: "// От анализа к позициям",
-    cta_start_trial: "Открыть 14-дневный триал →",
-    cta_notify_email: "Просто уведомите меня по email",
-    sticky_body: "Мы уже определили точки входа по тикерам из этого отчёта.",
-    sticky_link: "Открыть 14-дневный триал →", sticky_close: "Закрыть",
-    final_kicker: "// Два способа быть в курсе",
-    final_title: "Вы прочитали тезис. Как теперь на нём торговать.",
-    final_lead: "Закрытая часть BelFed публикует входы, стопы и цели по этой теме в момент срабатывания: в Telegram и на дашборде. Каждая закрытая сделка навсегда попадает в наш публичный журнал.",
-    track_ytd_label: "YTD 2026 · 87 сделок · win rate ~62%",
-    track_2025_label: "2025 · 61 сделка",
-    track_all_label: "Каждая сделка публично",
-    path_1_label: "Вариант 1 · Полный доступ",
-    path_1_title: "Открыть 14-дневный триал",
-    path_1_body: "Полный доступ к закрытой части, оповещения в Telegram, возможность заказать анализ любого актива. Без карты. Отмена в один клик.",
-    path_1_cta: "Открыть 14-дневный триал →",
-    path_2_label: "Вариант 2 · Только оповещения",
-    path_2_title: "Получить уведомление, когда откроем позицию",
-    path_2_body: "Одно короткое письмо, когда мы совершим сделку по этой теме. Отписка в один клик.",
-    lead_email_placeholder: "you@example.com",
+    f_all: "Все", f_group: "Класс активов", f_search_label: "Поиск по отчётам", f_search_ph: "Поиск: Nvidia, биткоин, ФРС",
+    f_clear: "Очистить поиск", f_reset: "Сбросить фильтры",
+    f_count_all: "Отчётов: {t}", f_count_some: "Найдено: {n} из {t}",
+    empty_title: "Ничего не найдено",
+    empty_text: "По этому запросу в выбранном классе активов отчётов нет. Попробуйте запрос короче или сбросьте фильтры.",
+    cls: { equities: "Акции", crypto: "Криптовалюты", macro: "Макро", rates: "Облигации и ставки", commodities: "Сырьё", fx: "Валюты" } as Record<string, string>,
+    type: { daily: "Обзор", weekly: "Недельный обзор", flash: "Экспресс-обзор" } as Record<string, string>,
+    type_default: "Отчёт",
+    latest: "Новое", archive: "Архив", results: "Результаты", by_date: "по дате", read: "Читать",
+    min_read: "{n} мин чтения",
+    brief_kicker: "// Бесплатный доступ", brief_title: "Исследования в вашем Telegram",
+    brief_text: "Публичные отчёты выходят в бесплатном канале BelFed в момент публикации. Без расписания и лишнего шума.",
+    brief_tg: "Открыть бесплатный канал",
+    nl_kicker: "// Для участников", nl_title: "От исследований к сделкам",
+    nl_text: "Участники получают входы, стопы и цели по этим темам в Telegram и на дашборде. Каждая закрытая сделка попадает в публичную историю сделок.",
+    nl_trial: "14 дней бесплатно", nl_track: "История сделок",
+    crumb: "Все исследования", report_kicker: "// Исследовательский отчёт",
+    published: "Опубликовано", author: "Автор",
+    copy: "Скопировать ссылку", copied: "Ссылка скопирована", share_tg: "Telegram", share_x: "X", share: "Поделиться",
+    disc_short: "Аналитика, а не инвестиционная рекомендация. Независимое рыночное исследование в информационных целях, оно не учитывает вашу ситуацию. Рынки связаны с риском убытков.",
+    disc_link: "Полный дисклеймер",
+    takeaways: "Главное в отчёте",
+    toc: "Содержание", progress: "Прогресс чтения",
+    chart: "График", source: "Источник", enlarge: "Увеличить", enlarge_aria: "Открыть график в полном размере", close: "Закрыть",
+    locked_label: "Раздел для участников", locked_title: "Продолжение раздела открыто участникам",
+    locked_text: "За этой отметкой: продолжение раздела{w}{c}. Участники читают его полностью на сайте и в Telegram.",
+    locked_words: (n: number) => ` (около ${n} ${plural(n, "слова", "слов", "слов")})`,
+    locked_charts: (n: number) => ` и ${n} ${plural(n, "график", "графика", "графиков")}`,
+    locked_cta: "Открыть 14 дней бесплатно", locked_login: "Уже участник? Войти",
+    locked_fine: "Без карты. Отмена в любой момент.",
+    chart_locked: "Для участников",
+    mid_kicker: "// Бесплатный доступ", mid_title: "Публичные отчёты выходят в бесплатном Telegram-канале",
+    mid_text: "Пост только в момент публикации отчёта. Сделки участников со входами и стопами ведутся отдельно.",
+    mid_btn: "Открыть бесплатный канал", mid_alt: "Или посмотреть публичную историю сделок",
+    final_kicker: "// Следующий шаг", final_title: "Следите за темой дальше",
+    final_text: "Публичные исследования в Telegram бесплатны. Участники также получают входы, стопы и цели по этим темам в Telegram и на дашборде, а каждая закрытая сделка попадает в публичную историю сделок.",
+    final_tg: "Бесплатный Telegram-канал", final_trial: "14 дней бесплатно",
+    lead_kicker: "// Или по email",
+    lead_title: "Получить уведомление, когда откроем позицию",
+    lead_text: "Одно короткое письмо, когда мы совершим сделку по этой теме. Отписка в один клик.",
+    lead_email_placeholder: "you@example.com", lead_email_label: "Email",
     lead_consent: "Я согласен получать исследовательские материалы BelFed и уведомления по этой теме по email. Одно короткое письмо за раз, отписка в один клик.",
-    lead_submit: "Уведомить меня →",
+    lead_submit: "Уведомить меня",
     lead_ok: "Готово. Мы напишем вам, когда сработает сделка по этой теме.",
     lead_err: "Что-то пошло не так. Попробуйте, пожалуйста, ещё раз через минуту.",
     lead_no_consent: "Пожалуйста, отметьте согласие, чтобы продолжить.",
+    trust_track: "Публичная история сделок", trust_track_text: "Каждая закрытая сделка записана со входом, выходом и результатом в R.",
+    trust_track_link: "Открыть историю",
     disclaimer_label: "Дисклеймер.",
     disclaimer_body: 'Данный отчёт является независимым рыночным исследованием BelFed Analytics, публикуемым в информационных и образовательных целях. Он не является инвестиционной рекомендацией, офертой или приглашением к совершению сделок с ценными бумагами, цифровыми активами или производными инструментами, и не учитывает целей, финансового положения или потребностей конкретного читателя. Изложенные взгляды отражают наш анализ на дату публикации и могут изменяться без уведомления. Любое решение действовать на основе этого материала остаётся полностью на ответственности читателя. Торговля и инвестиции сопряжены с риском убытков, вплоть до потери всего капитала. Полный текст: <a href="/disclaimer.html">дисклеймер</a> и <a href="/privacy.html">политика конфиденциальности</a>.',
-    footer_copyright: "© 2025–2026 BelFed Analytics. Все права защищены.",
-    footer_research: "Исследования", footer_disclaimer: "Дисклеймер",
-    footer_privacy: "Конфиденциальность", footer_terms: "Оферта",
-    footer_alt_site: "EN версия", footer_note: "Не является финансовой рекомендацией.",
-    card_reading: "мин", author_name: "BelFed Analytics",
+    prev: "Предыдущий отчёт", next: "Следующий отчёт", related: "Похожие отчёты", related_sub: "по классу активов",
+    banner_text: "Публичные отчёты бесплатно в Telegram.", banner_btn: "Открыть канал", banner_close: "Скрыть",
+    section: "Раздел",
+    nf_title: "Отчёт не найден", nf_text: "Возможно, отчёт был снят с публикации или ссылка устарела.", nf_back: "К списку исследований",
   },
   en: {
-    nav_home: "Home", nav_track: "Track record", nav_research: "Research",
-    nav_products: "Products", nav_about: "About", nav_lang: "RU",
-    nav_cta: "Start 14-day trial", skip: "Skip to main content",
+    brand: "Belfed Analytics", site: "Belfed", skip: "Skip to main content",
     index_kicker: "// Belfed public research", index_title: "Research",
-    index_subtitle: "Independent Belfed Analytics reports on sectors, single-name themes, and macro cycles.",
+    index_lead: "Independent Belfed Analytics reports on sectors, single-name themes, macro cycles and crypto. Public sections are open to everyone; member sections are marked.",
     index_empty: "No public reports yet. Check back soon.",
-    f_all: "All", f_group: "Asset class", f_search_label: "Search reports", f_search_ph: "Search: Nvidia, bitcoin, Fed",
-    f_clear: "Clear search", f_none: "No reports match.", f_reset: "Reset filters",
-    f_count: (n: number, total: number) => n === total ? `${total} reports` : `${n} of ${total} reports`,
-    cls: { equities: "Equities", crypto: "Crypto", macro: "Macro", rates: "Rates & credit", commodities: "Commodities", fx: "FX" } as Record<string, string>,
     index_meta_title: "Research | Belfed Analytics",
     index_meta_desc: "Independent Belfed Analytics research reports: equities, crypto, macro, sectors, and single-name themes.",
-    report_reading: "Reading time", report_author: "Author", report_coverage: "Coverage",
-    report_kicker_prefix: "Research report · ",
-    report_date_fmt: (d: string) => formatDateEn(d),
-    key_takeaways: "Key takeaways",
-    gated_label: "Available to subscribers",
-    gated_body: "The rest of this section and its charts are open to subscribers. The first 14 days are free.",
-    gated_btn: "Subscribe to read in full →",
-    cta_default_headline: "We've already mapped entries on the tickers in this report.",
-    cta_default_body: "Levels, stops, and targets live inside the members area and Telegram, pushed the moment a setup triggers. Start a 14-day trial and get access before we open the first position in this theme. No card required.",
-    cta_kicker: "// From analysis to positions",
-    cta_start_trial: "Start 14-day trial →",
-    cta_notify_email: "Just notify me by email",
-    sticky_body: "We've already mapped entries on the tickers in this report.",
-    sticky_link: "Start 14-day trial →", sticky_close: "Dismiss",
-    final_kicker: "// Two ways to stay in the loop",
-    final_title: "You've read the thesis. Here's how to trade it.",
-    final_lead: "The Belfed members area publishes entries, stops and targets on this theme the moment they trigger, in Telegram and on the dashboard. Every closed trade is then logged permanently on our public track record.",
-    track_ytd_label: "YTD 2026 · 87 trades · win rate ~62%",
-    track_2025_label: "2025 · 61 trades",
-    track_all_label: "Every trade logged publicly",
-    path_1_label: "Option 1 · Full access",
-    path_1_title: "Start a 14-day trial",
-    path_1_body: "Full members area, Telegram alerts, request analysis on any asset. No card required. Cancel with one tap.",
-    path_1_cta: "Start 14-day trial →",
-    path_2_label: "Option 2 · Just the alerts",
-    path_2_title: "Get notified when we open the first position",
-    path_2_body: "One short email when we act on this theme. Unsubscribe in one click.",
-    lead_email_placeholder: "you@example.com",
+    f_all: "All", f_group: "Asset class", f_search_label: "Search reports", f_search_ph: "Search: Nvidia, bitcoin, Fed",
+    f_clear: "Clear search", f_reset: "Reset filters",
+    f_count_all: "{t} reports", f_count_some: "{n} of {t} reports",
+    empty_title: "Nothing found",
+    empty_text: "No reports match this search in the selected asset class. Try a shorter query or reset the filters.",
+    cls: { equities: "Equities", crypto: "Crypto", macro: "Macro", rates: "Rates & credit", commodities: "Commodities", fx: "FX" } as Record<string, string>,
+    type: { daily: "Brief", weekly: "Weekly", flash: "Flash note" } as Record<string, string>,
+    type_default: "Report",
+    latest: "The latest", archive: "Archive", results: "Results", by_date: "by date", read: "Read",
+    min_read: "{n} min read",
+    brief_kicker: "// Free access", brief_title: "Research in your Telegram",
+    brief_text: "Public reports go to the free Belfed channel when they are published. No schedule and no noise.",
+    brief_tg: "Open free channel",
+    nl_kicker: "// For members", nl_title: "From research to trades",
+    nl_text: "Members get entries, stops and targets on these themes in Telegram and on the dashboard. Every closed trade is logged in the public track record.",
+    nl_trial: "14-day free access", nl_track: "Track record",
+    crumb: "All research", report_kicker: "// Research report",
+    published: "Published", author: "Author",
+    copy: "Copy link", copied: "Link copied", share_tg: "Telegram", share_x: "X", share: "Share",
+    disc_short: "Analytics, not investment advice. Independent market research for information only; it does not consider your situation. Markets carry risk of loss.",
+    disc_link: "Full disclaimer",
+    takeaways: "Key takeaways",
+    toc: "Contents", progress: "Reading progress",
+    chart: "Chart", source: "Source", enlarge: "Enlarge", enlarge_aria: "Open chart at full size", close: "Close",
+    locked_label: "Member section", locked_title: "The rest of this section is for members",
+    locked_text: "Behind this marker: the rest of this section{w}{c}. Members read it in full on the site and in Telegram.",
+    locked_words: (n: number) => ` (about ${n} words)`,
+    locked_charts: (n: number) => ` and ${n} ${n === 1 ? "chart" : "charts"}`,
+    locked_cta: "Get 14-day free access", locked_login: "Already a member? Log in",
+    locked_fine: "No card required. Cancel any time.",
+    chart_locked: "Members only",
+    mid_kicker: "// Free access", mid_title: "Public reports arrive in the free Telegram channel",
+    mid_text: "A post only when a report is published. Member trades with entries and stops are a separate service.",
+    mid_btn: "Open free channel", mid_alt: "Or read the public track record",
+    final_kicker: "// Next step", final_title: "Keep following this theme",
+    final_text: "Public research in Telegram is free. Members also get entries, stops and targets on these themes in Telegram and on the dashboard, and every closed trade is logged in the public track record.",
+    final_tg: "Free Telegram channel", final_trial: "14-day free access",
+    lead_kicker: "// Or by email",
+    lead_title: "Get notified when we open the first position",
+    lead_text: "One short email when we act on this theme. Unsubscribe in one click.",
+    lead_email_placeholder: "you@example.com", lead_email_label: "Email",
     lead_consent: "I agree to receive Belfed research updates and alerts on this theme by email. One short email at a time, unsubscribe in one click.",
-    lead_submit: "Notify me →",
+    lead_submit: "Notify me",
     lead_ok: "Got it. We'll email you when we act on this theme.",
     lead_err: "Something went wrong. Please try again in a minute.",
     lead_no_consent: "Please tick the consent box to continue.",
+    trust_track: "Public track record", trust_track_text: "Every closed trade is logged with entry, exit and result in R.",
+    trust_track_link: "Open the track record",
     disclaimer_label: "Disclaimer.",
     disclaimer_body: 'This report is independent market research produced by Belfed Analytics for informational and educational purposes only. It is not investment advice, an offer, or a solicitation to buy or sell any security, digital asset, or derivative, and it does not take into account the reader\'s objectives, financial situation, or needs. Views expressed reflect our analysis on the publication date and may change without notice. Any decision to act on this material is the reader\'s sole responsibility. Trading and investing carry risk of loss, including total loss of capital. See our full <a href="/disclaimer.html">disclaimer</a> and <a href="/privacy.html">privacy policy</a>.',
-    footer_copyright: "© 2025–2026 Belfed Analytics. All rights reserved.",
-    footer_research: "Research", footer_disclaimer: "Disclaimer",
-    footer_privacy: "Privacy", footer_terms: "Terms",
-    footer_alt_site: "RU site", footer_note: "Not financial advice.",
-    card_reading: "min", author_name: "Belfed Analytics",
+    prev: "Previous report", next: "Next report", related: "Related reports", related_sub: "by asset class",
+    banner_text: "Public reports are free in Telegram.", banner_btn: "Open channel", banner_close: "Dismiss",
+    section: "Section",
+    nf_title: "Report not found", nf_text: "The report may have been unpublished or the link is out of date.", nf_back: "Back to research",
   },
-} as const;
+};
+type Dict = typeof T.ru;
+
+function plural(n: number, one: string, few: string, many: string): string {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+  return many;
+}
+function tpl(s: string, o: Record<string, string | number>): string { return s.replace(/\{(\w+)\}/g, (_, k) => String(o[k] ?? "")); }
 
 const MONTHS_RU = ["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+const MONTHS_RU_NOM = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
 const MONTHS_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
-function formatDateRu(iso: string): string { const d = new Date(iso); return `${d.getDate()} ${MONTHS_RU[d.getMonth()]} ${d.getFullYear()}`; }
-function formatDateEn(iso: string): string { const d = new Date(iso); return `${MONTHS_EN[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`; }
+function fmtDate(lang: Lang, iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return lang === "ru" ? `${d.getUTCDate()} ${MONTHS_RU[d.getUTCMonth()]} ${d.getUTCFullYear()}` : `${MONTHS_EN[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
+}
+function isoDay(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+}
+function monthKey(iso: string | null | undefined): string { return isoDay(iso).slice(0, 7); }
+function monthLabel(lang: Lang, key: string): string {
+  const [y, m] = key.split("-").map(Number);
+  if (!y || !m) return key;
+  return `${(lang === "ru" ? MONTHS_RU_NOM : MONTHS_EN)[m - 1]} ${y}`;
+}
 
 function esc(s: string | null | undefined): string {
   if (!s) return "";
-  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 }
-function attr(s: string | null | undefined): string { return esc(s); }
+const attr = esc;
 
+// ---------- body text ----------
+function inline(p: string): string {
+  let out = esc(p);
+  out = out.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  out = out.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (_, t, u) => `<a href="${u}" target="_blank" rel="noopener">${t}</a>`);
+  // Bare links to our own sites (track-record deep links) become clickable.
+  out = out.replace(/(^|[\s(>])(https:\/\/(?:www\.)?belfed\.(?:com|ru)\/[^\s<)"']*)/g, (_, pre, u) => `${pre}<a href="${u}">${u.replace(/^https:\/\//, "")}</a>`);
+  return out;
+}
+function renderTable(lines: string[]): string {
+  const rows = lines.map(l => l.trim().replace(/^\||\|$/g, "").split("|").map(c => c.trim()));
+  const isSep = (r: string[]) => r.every(c => /^:?-{2,}:?$/.test(c));
+  let head: string[] | null = null;
+  let body = rows;
+  if (rows.length > 1 && isSep(rows[1])) { head = rows[0]; body = rows.slice(2); }
+  return `<div class="tbl-wrap"><div class="tbl-scroll" tabindex="0"><table>${head ? `<thead><tr>${head.map(c => `<th scope="col">${inline(c)}</th>`).join("")}</tr></thead>` : ""}<tbody>${body.filter(r => !isSep(r)).map(r => `<tr>${r.map(c => `<td>${inline(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div></div>`;
+}
 function renderBody(text: string | null | undefined): string {
   if (!text) return "";
-  const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
-  return paragraphs.map(p => {
-    let out = esc(p).replace(/\n/g, "<br>");
-    out = out.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-    out = out.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, (_, t, u) => `<a href="${u}" target="_blank" rel="noopener">${t}</a>`);
-    return `<p>${out}</p>`;
+  const blocks = String(text).replace(/\r\n?/g, "\n").split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  return blocks.map(p => {
+    const lines = p.split("\n");
+    if (lines.length >= 2 && lines.every(l => /^\s*\|.*\|\s*$/.test(l))) return renderTable(lines);
+    if (lines.every(l => /^\s*[-•]\s+/.test(l))) return `<ul>${lines.map(l => `<li>${inline(l.replace(/^\s*[-•]\s+/, ""))}</li>`).join("")}</ul>`;
+    return `<p>${lines.map(inline).join("<br>")}</p>`;
   }).join("\n");
 }
+function plainText(s: string | null | undefined): string {
+  return String(s || "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(/^\s*\|.*\|\s*$/gm, "")
+    .replace(/\s+/g, " ").trim();
+}
+function wordCount(s: string | null | undefined): number {
+  const p = plainText(s);
+  return p ? p.split(" ").length : 0;
+}
+function sentences(s: string | null | undefined): string[] {
+  const p = plainText(s);
+  if (!p) return [];
+  const parts = p.split(/(?<=[.!?…])\s+(?=[A-ZА-ЯЁ0-9$«"(])/);
+  const out: string[] = [];
+  for (const part of parts) {
+    if (out.length && out[out.length - 1].length < 40) out[out.length - 1] += " " + part;
+    else out.push(part);
+  }
+  return out.map(x => x.trim()).filter(x => x.length >= 25);
+}
+function clip(s: string, max = 300): string {
+  return s.length <= max ? s : s.slice(0, max).replace(/\s+\S*$/, "") + "…";
+}
 
-function slugSuffix(slug: string): string { return slug.replace(/-/g, "_"); }
+// ---------- report helpers ----------
 function domain(lang: Lang): string { return lang === "ru" ? "belfed.ru" : "belfed.com"; }
-function altDomain(lang: Lang): string { return lang === "ru" ? "belfed.com" : "belfed.ru"; }
-
 function reportTitle(r: ReportRow, lang: Lang): string {
   const t = lang === "ru" ? r.title_ru : r.title_en;
   return t || r.title_en || r.title_ru || r.slug;
 }
-function reportSubtitle(r: ReportRow, lang: Lang): string {
-  const s = lang === "ru" ? r.subtitle_ru : r.subtitle_en;
-  return s || "";
-}
-function ctaHeadline(r: ReportRow, lang: Lang, t: typeof T.ru): string {
-  const custom = lang === "ru" ? r.cta_headline_ru : r.cta_headline_en;
-  return custom || t.cta_default_headline;
-}
-function ctaBody(r: ReportRow, lang: Lang, t: typeof T.ru): string {
-  const custom = lang === "ru" ? r.cta_body_ru : r.cta_body_en;
-  return custom || t.cta_default_body;
-}
+function reportSubtitle(r: ReportRow, lang: Lang): string { return (lang === "ru" ? r.subtitle_ru : r.subtitle_en) || ""; }
+function typeLabel(r: ReportRow, t: Dict): string { return t.type[String(r.report_type || "").toLowerCase()] || t.type_default; }
+function readMinutes(words: number, lang: Lang): number { return Math.max(1, Math.round(words / (lang === "ru" ? 170 : 210))); }
+function cleanTag(s: string): string { return String(s || "").replace(/^#+/, "").trim(); }
 
-function altPair(path: string): string {
-  // Same path lives on both domains; RU on belfed.ru, EN on belfed.com.
-  return `  <link rel="alternate" hreflang="ru" href="${attr(`https://belfed.ru${path}`)}" />
-  <link rel="alternate" hreflang="en" href="${attr(`https://belfed.com${path}`)}" />
-  <link rel="alternate" hreflang="x-default" href="${attr(`https://belfed.com${path}`)}" />`;
-}
-
-function jsonLdBlock(obj: unknown): string {
-  // JSON-LD must not be HTML-escaped, but "<" has to be neutralised so a stray
-  // tag inside a title cannot break out of the script element.
-  const raw = JSON.stringify(obj).replace(/</g, "\\u003c");
-  return `  <script type="application/ld+json">${raw}</script>`;
-}
-
-function headBase(lang: Lang, opts: { title: string; description: string; canonical: string; ogTitle: string; ogDescription: string; ogImage: string; ogType?: "website" | "article"; altPath?: string; jsonLd?: unknown[]; robots?: string; }): string {
-  return `<!DOCTYPE html>
-<html lang="${lang}">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" type="image/png" href="/logo-belfed-512.png">
-  <title>${esc(opts.title)}</title>
-  <link rel="canonical" href="${attr(opts.canonical)}" />
-  <meta name="description" content="${attr(opts.description)}" />
-  <meta property="og:type" content="${opts.ogType || "website"}" />
-  <meta property="og:site_name" content="${lang === "ru" ? "BelFed" : "Belfed"}" />
-  <meta property="og:title" content="${attr(opts.ogTitle)}" />
-  <meta property="og:description" content="${attr(opts.ogDescription)}" />
-  <meta property="og:url" content="${attr(opts.canonical)}" />
-  <meta property="og:image" content="${attr(opts.ogImage)}" />
-  ${/og-belfed\.png$/.test(opts.ogImage) ? `<meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />` : `<meta property="og:image:alt" content="${attr(opts.ogTitle)}" />`}
-  <meta property="og:locale" content="${lang === "ru" ? "ru_RU" : "en_US"}" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="${attr(opts.ogTitle)}" />
-  <meta name="twitter:description" content="${attr(opts.ogDescription)}" />
-  <meta name="twitter:image" content="${attr(opts.ogImage)}" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-${opts.robots ? `  <meta name="robots" content="${attr(opts.robots)}" />` : ""}
-${opts.altPath ? altPair(opts.altPath) : ""}
-${(opts.jsonLd || []).map(jsonLdBlock).join("\n")}`;
-}
-
-const ORG_ID = "https://belfed.com/#organization";
-
-function orgNode(lang: Lang) {
-  return {
-    "@type": "Organization",
-    "@id": ORG_ID,
-    name: lang === "ru" ? "BelFed Analytics" : "Belfed Analytics",
-    url: `https://${domain(lang)}/`,
-    logo: `https://${domain(lang)}/logo-belfed-512.png`,
-    sameAs: [
-      "https://belfed.com/",
-      "https://belfed.ru/",
-      "https://t.me/BelFedFreeEN",
-      "https://t.me/BelFedFreeRU",
-      "https://x.com/art_the_trader",
-      "https://www.tradingview.com/u/BelFed_Analytics/",
-    ],
-  };
-}
-
-function sharedStyles(): string {
-  return `<style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root { --black:#0a0a0a; --white:#f5f5f0; --paper:#efefe7; --gray:#66665f; --gray-soft:#888; --border:#d0d0ca; --green:#1a6b3a; --green-soft:#1a6b3a14; --red:#8b1a1a; --font:'Courier Prime','Courier New',monospace; }
-    html { scroll-behavior: smooth; scroll-padding-top: 72px; }
-    body { font-family: var(--font); background: var(--white); color: var(--black); font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
-    nav { position: fixed; top:0; left:0; right:0; z-index:100; background: var(--white); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 40px; height:56px; }
-    .nav-logo { font-size:17px; font-weight:700; letter-spacing:0.05em; text-decoration:none; color: var(--black); }
-    .nav-links { display:flex; gap:32px; list-style:none; }
-    .nav-links a { font-size:11px; letter-spacing:0.12em; text-transform:uppercase; text-decoration:none; color: var(--black); transition: opacity 0.2s; }
-    .nav-links a:hover { opacity: 0.5; }
-    .nav-links a.current { border-bottom: 1px solid var(--black); padding-bottom: 2px; }
-    .nav-cta { font-size:11px; letter-spacing:0.12em; text-transform:uppercase; text-decoration:none; color: var(--white); background: var(--black); padding: 10px 20px; border:1px solid var(--black); transition: background 0.2s, color 0.2s; }
-    .nav-cta:hover { background: transparent; color: var(--black); }
-    main { padding-top: 56px; }
-    footer { border-top: 1px solid var(--border); padding: 24px 40px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--gray); flex-wrap: wrap; gap: 12px; }
-    footer a { color: var(--gray); text-decoration: none; }
-    footer a:hover { color: var(--black); }
-    .footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
-    .skip-link{position:absolute;left:-9999px;top:0;z-index:1000;background:var(--black);color:var(--white);padding:10px 16px;border-radius:0 0 6px 0;font-weight:700;text-decoration:none}
-    .skip-link:focus{left:0}
-    @media (max-width: 700px) { nav { padding: 0 20px; } .nav-links { display: none; } footer { padding: 20px; } }
-  </style>`;
-}
-
-function reportPageStyles(): string {
-  return `<style>
-    .sticky-banner { position: fixed; top: 56px; left: 0; right: 0; z-index: 99; background: var(--black); color: var(--white); padding: 10px 40px; font-size: 12px; letter-spacing: 0.05em; display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap; transform: translateY(-100%); transition: transform 0.3s ease-out; }
-    .sticky-banner.show { transform: translateY(0); }
-    .sticky-banner a { color: var(--white); text-decoration: underline; text-underline-offset: 3px; font-weight: 700; }
-    .sticky-banner button.close { background: transparent; border: 1px solid rgba(255,255,255,0.4); color: var(--white); padding: 4px 10px; cursor: pointer; font: inherit; font-size: 11px; }
-    .hero { max-width: 820px; margin: 0 auto; padding: 80px 40px 40px; }
-    .hero .kicker { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); margin-bottom: 24px; }
-    .hero h1 { font-size: clamp(30px, 4.4vw, 52px); font-weight: 700; line-height: 1.12; letter-spacing: -0.01em; margin-bottom: 24px; text-wrap: balance; }
-    .hero .subhead { font-size: 18px; color: #333; line-height: 1.6; margin-bottom: 32px; text-wrap: pretty; }
-    .hero .meta { display: flex; gap: 24px; flex-wrap: wrap; font-size: 12px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.1em; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 16px 0; }
-    .hero .meta span strong { color: var(--black); font-weight: 700; }
-    .hero .hero-cover { margin: 32px 0 0; border: 1px solid var(--border); background: var(--paper); aspect-ratio: 16 / 9; overflow: hidden; }
-    .hero .hero-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .report { max-width: 720px; margin: 0 auto; padding: 40px 40px 80px; }
-    .report h2 { font-size: 24px; font-weight: 700; margin: 56px 0 16px; letter-spacing: -0.01em; }
-    .report h3 { font-size: 17px; font-weight: 700; margin: 32px 0 12px; }
-    .report p { font-size: 15px; line-height: 1.8; color: #222; margin-bottom: 16px; text-wrap: pretty; }
-    .report ul, .report ol { margin: 16px 0 20px 20px; }
-    .report li { font-size: 15px; line-height: 1.8; color: #222; margin-bottom: 6px; }
-    .report figure { margin: 32px 0; }
-    .report figure img { width: 100%; border: 1px solid var(--border); }
-    .report figcaption { font-size: 12px; color: var(--gray); text-align: center; margin-top: 8px; letter-spacing: 0.05em; }
-    .report .callout { border: 1px solid var(--border); background: var(--paper); padding: 20px 24px; margin: 32px 0; }
-    .report .callout .label { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); margin-bottom: 8px; }
-    .gated { border: 1px dashed var(--gray-soft); background: var(--paper); padding: 24px 28px; margin: 32px 0; text-align: left; }
-    .gated .gated-label { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--green); margin-bottom: 12px; font-weight: 700; }
-    .gated h3 { font-size: 18px; font-weight: 700; margin-bottom: 12px; line-height: 1.3; }
-    .gated p { font-size: 14px; color: #444; margin-bottom: 16px; line-height: 1.6; }
-    .gated a.btn { display: inline-block; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; padding: 12px 20px; border: 1px solid var(--black); background: var(--black); color: var(--white); }
-    .gated a.btn:hover { background: transparent; color: var(--black); }
-    .locked-preview { position: relative; margin: 8px 0 0; user-select: none; -webkit-user-select: none; }
-    .locked-text { font-size: 16px; line-height: 1.75; color: #222; margin: 0; max-height: 9.5em; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, #000 35%, transparent 100%); mask-image: linear-gradient(to bottom, #000 35%, transparent 100%); }
-    .locked-figs { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 12px; -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent 100%); mask-image: linear-gradient(to bottom, #000 60%, transparent 100%); }
-    .locked-figs.two { grid-template-columns: 1fr 1fr; }
-    .locked-fig { aspect-ratio: 16 / 10; overflow: hidden; border: 1px solid var(--border); background: var(--paper); }
-    .locked-fig img { width: 100%; height: 100%; object-fit: cover; display: block; filter: blur(5px) saturate(0.9); transform: scale(1.08); }
-    .gated.over { position: relative; margin-top: -28px; background: var(--white); border: 1px solid var(--black); box-shadow: 0 -24px 40px 8px var(--white); }
-    @media (max-width: 600px) { .locked-figs.two { grid-template-columns: 1fr; } .locked-figs.two .locked-fig + .locked-fig { display: none; } .gated.over { padding: 20px; } }
-    .cta-inline { margin: 56px 0; border: 1px solid var(--black); padding: 32px 28px; background: var(--white); }
-    .cta-inline .cta-kicker { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); margin-bottom: 12px; }
-    .cta-inline h3 { font-size: 22px; font-weight: 700; line-height: 1.3; margin-bottom: 12px; letter-spacing: -0.01em; }
-    .cta-inline p { font-size: 14px; color: #333; margin-bottom: 20px; line-height: 1.7; }
-    .cta-inline .cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
-    .cta-inline .btn-primary, .cta-inline .btn-secondary { display: inline-block; padding: 14px 22px; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; border: 1px solid var(--black); transition: background 0.2s, color 0.2s; }
-    .cta-inline .btn-primary { background: var(--black); color: var(--white); }
-    .cta-inline .btn-primary:hover { background: transparent; color: var(--black); }
-    .cta-inline .btn-secondary { background: transparent; color: var(--black); }
-    .cta-inline .btn-secondary:hover { background: var(--black); color: var(--white); }
-    .cta-final { max-width: 720px; margin: 40px auto 0; padding: 60px 40px; background: var(--paper); border-top: 1px solid var(--border); }
-    .cta-final .kicker { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); margin-bottom: 16px; }
-    .cta-final h2 { font-size: 28px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 16px; line-height: 1.2; }
-    .cta-final p.lead { font-size: 15px; color: #333; margin-bottom: 28px; line-height: 1.7; }
-    .cta-final .track { display: flex; gap: 24px; flex-wrap: wrap; font-size: 12px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
-    .cta-final .track strong { color: var(--black); font-weight: 700; display: block; font-size: 14px; margin-bottom: 4px; letter-spacing: 0.05em; }
-    .cta-final .paths { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 24px; }
-    .cta-final .path { border: 1px solid var(--border); padding: 24px 22px; background: var(--white); display: flex; flex-direction: column; }
-    .cta-final .path .path-label { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); margin-bottom: 10px; }
-    .cta-final .path h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; line-height: 1.3; }
-    .cta-final .path p { font-size: 13px; color: #333; line-height: 1.7; margin-bottom: 16px; flex: 1; }
-    .cta-final .path .btn { display: inline-block; text-align: center; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; padding: 14px 20px; border: 1px solid var(--black); }
-    .cta-final .path .btn-primary { background: var(--black); color: var(--white); }
-    .cta-final .path .btn-primary:hover { background: transparent; color: var(--black); }
-    .lead-form { display: flex; flex-direction: column; gap: 10px; }
-    .lead-form input[type="email"] { width: 100%; padding: 12px 14px; border: 1px solid var(--border); background: var(--white); font: inherit; font-size: 14px; }
-    .lead-form input[type="email"]:focus { outline: 2px solid var(--green); outline-offset: 1px; }
-    .lead-form .consent { display: flex; gap: 10px; align-items: flex-start; font-size: 12px; color: #444; line-height: 1.5; }
-    .lead-form .consent input { margin-top: 3px; flex-shrink: 0; }
-    .lead-form button { background: var(--black); color: var(--white); border: 1px solid var(--black); padding: 12px 20px; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; }
-    .lead-form button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .lead-form .form-msg { font-size: 12px; padding: 10px 12px; display: none; }
-    .lead-form .form-msg.show { display: block; }
-    .lead-form .form-msg.ok { background: var(--green-soft); color: var(--green); border: 1px solid var(--green); }
-    .lead-form .form-msg.err { background: #f5e3e3; color: var(--red); border: 1px solid var(--red); }
-    .lead-form .honeypot { position: absolute; left: -9999px; opacity: 0; }
-    .disclaimer-box { max-width: 720px; margin: 40px auto 40px; padding: 24px 32px; border: 1px solid var(--border); background: var(--paper); font-size: 12px; color: #444; line-height: 1.7; }
-    .disclaimer-box strong { color: var(--black); }
-    @media (max-width: 700px) { .sticky-banner { padding: 10px 20px; font-size: 11px; top: 56px; } .hero { padding: 40px 20px 30px; } .report { padding: 20px 20px 60px; } .cta-final { padding: 40px 20px; } .cta-final .paths { grid-template-columns: 1fr; } }
-  </style>`;
-}
-
-function indexPageStyles(): string {
-  return `<style>
-    .index-hero { max-width: 960px; margin: 0 auto; padding: 80px 40px 40px; }
-    .index-hero .kicker { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); margin-bottom: 24px; }
-    .index-hero h1 { font-size: clamp(36px, 5vw, 64px); font-weight: 700; line-height: 1.05; letter-spacing: -0.02em; margin-bottom: 24px; }
-    .index-hero p.lead { font-size: 17px; color: #333; line-height: 1.6; max-width: 640px; }
-    .cards { max-width: 960px; margin: 40px auto 100px; padding: 0 40px; display: grid; grid-template-columns: 1fr; gap: 0; border-top: 1px solid var(--border); }
-    .card { display: block; text-decoration: none; color: inherit; padding: 32px 0; border-bottom: 1px solid var(--border); transition: background 0.15s; }
-    .card:hover { background: var(--paper); padding-left: 12px; padding-right: 12px; margin-left: -12px; margin-right: -12px; }
-    .card .card-meta { display: flex; gap: 16px; flex-wrap: wrap; font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
-    .card .card-meta .tag { border: 1px solid var(--border); padding: 3px 8px; }
-    .card h2 { font-size: clamp(22px, 3vw, 30px); font-weight: 700; line-height: 1.2; letter-spacing: -0.01em; margin-bottom: 12px; text-wrap: balance; }
-    .card p.card-sub { font-size: 15px; color: #444; line-height: 1.6; max-width: 640px; }
-    .card .card-arrow { font-size: 12px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.15em; margin-top: 16px; }
-    .card:hover .card-arrow { color: var(--black); }
-    .card.has-cover { display: grid; grid-template-columns: 300px 1fr; gap: 32px; align-items: start; }
-    .card .card-cover { aspect-ratio: 16 / 9; overflow: hidden; border: 1px solid var(--border); background: var(--paper); }
-    .card .card-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    @media (max-width: 760px) { .card.has-cover { grid-template-columns: 1fr; gap: 16px; } }
-    .card[hidden] { display: none !important; }
-    .rs-bar { max-width: 960px; margin: 8px auto 0; padding: 0 40px; display: grid; grid-template-columns: 1fr 300px; gap: 16px 24px; align-items: center; }
-    .rs-bar[hidden] { display: none; }
-    .rs-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-    .rs-chip { font: inherit; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--black); background: transparent; border: 1px solid var(--border); padding: 7px 12px; cursor: pointer; transition: border-color .15s, background .15s, color .15s; }
-    .rs-chip:hover { border-color: var(--black); }
-    .rs-chip .rs-n { color: var(--gray); margin-left: 4px; }
-    .rs-chip.is-active { background: var(--black); color: var(--white); border-color: var(--black); }
-    .rs-chip.is-active .rs-n { color: #bdbdb5; }
-    .rs-chip:focus-visible, .rs-reset:focus-visible, .rs-clear:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
-    .rs-search { position: relative; display: flex; align-items: center; border-bottom: 1px solid var(--black); }
-    .rs-search svg { color: var(--gray); flex-shrink: 0; }
-    .rs-search input { flex: 1; min-width: 0; font: inherit; font-size: 14px; color: var(--black); background: transparent; border: 0; padding: 10px 28px 10px 10px; outline: none; -webkit-appearance: none; appearance: none; }
-    .rs-search input::-webkit-search-cancel-button { display: none; }
-    .rs-search input::placeholder { color: var(--gray-soft); }
-    .rs-search:focus-within { border-bottom-color: var(--green); box-shadow: 0 1px 0 var(--green); }
-    .rs-clear { position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; font: inherit; font-size: 18px; line-height: 1; color: var(--gray); background: none; border: 0; cursor: pointer; }
-    .rs-clear:hover { color: var(--black); }
-    .rs-clear[hidden] { display: none; }
-    .rs-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-    .rs-count { grid-column: 1 / -1; font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.1em; }
-    .rs-bar + .cards { margin-top: 16px; }
-    .rs-empty { max-width: 960px; margin: -60px auto 100px; padding: 40px; text-align: center; color: var(--gray); }
-    .rs-empty[hidden] { display: none; }
-    .rs-empty p { margin-bottom: 16px; font-size: 15px; }
-    .rs-reset { font: inherit; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; background: var(--black); color: var(--white); border: 1px solid var(--black); padding: 10px 18px; cursor: pointer; }
-    @media (max-width: 860px) { .rs-bar { grid-template-columns: 1fr; } }
-    @media (max-width: 700px) { .rs-bar { padding: 0 20px; } .rs-empty { padding: 20px; } }
-    .empty { padding: 80px 40px; text-align: center; color: var(--gray); font-size: 14px; max-width: 720px; margin: 0 auto; }
-    @media (max-width: 700px) { .index-hero { padding: 40px 20px 30px; } .cards { padding: 0 20px; margin-bottom: 60px; } .card:hover { padding-left: 0; padding-right: 0; margin-left: 0; margin-right: 0; } }
-  </style>`;
-}
-
-function navBar(lang: Lang, t: typeof T.ru): string {
-  const alt = altDomain(lang);
-  return `<nav>
-    <a href="/" class="nav-logo">BELFED_</a>
-    <ul class="nav-links">
-      <li><a href="/">${t.nav_home}</a></li>
-      <li><a href="/trades.html">${t.nav_track}</a></li>
-      <li><a href="/research/" class="current">${t.nav_research}</a></li>
-      <li><a href="/products.html">${t.nav_products}</a></li>
-      <li><a href="/about.html">${t.nav_about}</a></li>
-      <li><a href="https://${alt}/research/" target="_blank" rel="noopener">${t.nav_lang}</a></li>
-    </ul>
-    <a href="https://t.me/belfedbot?start=research_${lang}" class="nav-cta">${t.nav_cta}</a>
-  </nav>`;
-}
-
-function footerBar(lang: Lang, t: typeof T.ru): string {
-  const alt = altDomain(lang);
-  const terms = lang === "ru" ? "/oferta.html" : "/terms.html";
-  return `<footer>
-    <span>${t.footer_copyright}</span>
-    <div class="footer-links">
-      <a href="/research/">${t.footer_research}</a>
-      <a href="/disclaimer.html">${t.footer_disclaimer}</a>
-      <a href="/privacy.html">${t.footer_privacy}</a>
-      <a href="${terms}">${t.footer_terms}</a>
-      <a href="https://${alt}" target="_blank" rel="noopener">${t.footer_alt_site}</a>
-      <span>${t.footer_note}</span>
-    </div>
-  </footer>`;
-}
-
-// Covers come from our own Supabase storage. Anything else is ignored so a bad
-// value in the DB can never inject markup or pull third-party images.
+// Covers and charts come from our own Supabase storage. Anything else is ignored so
+// a bad value in the DB can never inject markup or pull third-party images.
 function safeImg(u: string | null | undefined): string | null {
   if (!u) return null;
   return /^https:\/\/obujqvqqmyfcfflhqvud\.supabase\.co\/storage\/v1\/object\/public\/[A-Za-z0-9._\/-]+\.(png|jpe?g|webp)$/i.test(u) ? u : null;
+}
+function coverOf(r: ReportRow, lang: Lang): string | null {
+  return safeImg((lang === "ru" ? r.cover_image_url_ru : r.cover_image_url_en) || r.cover_image_url);
 }
 
 // Gated teaser: a short excerpt and tiny thumbnails only. Full body, captions and
@@ -532,13 +374,102 @@ function reportClasses(r: ReportRow): string[] {
 }
 function searchText(r: ReportRow, lang: Lang, dateStr: string, classes: string[]): string {
   const t = T[lang];
-  return [reportTitle(r, lang), reportSubtitle(r, lang), dateStr, ...(r.asset_classes || []), ...(r.sectors || []), ...(r.tags || []), ...classes.map(c => t.cls[c] || c)]
+  return [reportTitle(r, lang), reportSubtitle(r, lang), dateStr, typeLabel(r, t), ...(r.asset_classes || []), ...(r.sectors || []), ...(r.tags || []).map(cleanTag), ...classes.map(c => t.cls[c] || c)]
     .filter(Boolean).join(" ").toLowerCase().replace(/ё/g, "е").replace(/\s+/g, " ");
 }
+function tagsHtml(r: ReportRow, t: Dict, nClasses: number): string {
+  const classes = reportClasses(r).slice(0, nClasses);
+  return `<div class="tags"><span class="tag type">${esc(typeLabel(r, t))}</span>${classes.map(c => `<span class="tag cls">${esc(t.cls[c])}</span>`).join("")}</div>`;
+}
+function minRead(r: ReportRow, lang: Lang, t: Dict): string {
+  const w = lang === "ru" ? r.words_ru : r.words_en;
+  return w ? tpl(t.min_read, { n: readMinutes(w, lang) }) : "";
+}
 
-// The static /research/ index can lag behind publishing (GitHub cron runs every few
-// hours). On load, compare it with research-list; if a newer public report exists,
-// swap in a fresh render from this function. One attempt per set of missing slugs.
+// ---------- head ----------
+const ORG_ID = "https://belfed.com/#organization";
+function orgNode(lang: Lang) {
+  return {
+    "@type": "Organization",
+    "@id": ORG_ID,
+    name: T[lang].brand,
+    url: `https://${domain(lang)}/`,
+    logo: `https://${domain(lang)}/logo-belfed-512.png`,
+    sameAs: [
+      "https://belfed.com/",
+      "https://belfed.ru/",
+      "https://t.me/BelFedFreeEN",
+      "https://t.me/BelFedFreeRU",
+      "https://x.com/art_the_trader",
+      "https://www.tradingview.com/u/BelFed_Analytics/",
+    ],
+  };
+}
+function altPair(path: string): string {
+  return `  <link rel="alternate" hreflang="ru" href="${attr(`https://belfed.ru${path}`)}" />
+  <link rel="alternate" hreflang="en" href="${attr(`https://belfed.com${path}`)}" />
+  <link rel="alternate" hreflang="x-default" href="${attr(`https://belfed.com${path}`)}" />`;
+}
+function jsonLdBlock(obj: unknown): string {
+  // JSON-LD must not be HTML-escaped, but "<" has to be neutralised so a stray
+  // tag inside a title cannot break out of the script element.
+  const raw = JSON.stringify(obj).replace(/</g, "\\u003c");
+  return `  <script type="application/ld+json">${raw}</script>`;
+}
+function jsonData(id: string, obj: unknown): string {
+  return `<script type="application/json" id="${id}">${JSON.stringify(obj).replace(/</g, "\\u003c")}</script>`;
+}
+
+// Theme before first paint: stored choice wins, otherwise the OS preference.
+const THEME_INIT = `<script>(function(){var t;try{t=localStorage.getItem('belfed-theme');}catch(e){}if(t!=='dark'&&t!=='light'){t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>`;
+const FONTS = `https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap`;
+
+function headBase(lang: Lang, opts: { title: string; description: string; canonical: string; ogTitle: string; ogDescription: string; ogImage: string; ogType?: "website" | "article"; altPath?: string; jsonLd?: unknown[]; robots?: string; preloadImg?: string | null; }): string {
+  return `<!DOCTYPE html>
+<html lang="${lang}" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  ${THEME_INIT}
+  <link rel="icon" type="image/png" href="/logo-belfed-512.png">
+  <title>${esc(opts.title)}</title>
+  <link rel="canonical" href="${attr(opts.canonical)}" />
+  <meta name="description" content="${attr(opts.description)}" />
+  <meta property="og:type" content="${opts.ogType || "website"}" />
+  <meta property="og:site_name" content="${T[lang].site}" />
+  <meta property="og:title" content="${attr(opts.ogTitle)}" />
+  <meta property="og:description" content="${attr(opts.ogDescription)}" />
+  <meta property="og:url" content="${attr(opts.canonical)}" />
+  <meta property="og:image" content="${attr(opts.ogImage)}" />
+  ${/og-belfed\.png$/.test(opts.ogImage) ? `<meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />` : `<meta property="og:image:alt" content="${attr(opts.ogTitle)}" />`}
+  <meta property="og:locale" content="${lang === "ru" ? "ru_RU" : "en_US"}" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="${attr(opts.ogTitle)}" />
+  <meta name="twitter:description" content="${attr(opts.ogDescription)}" />
+  <meta name="twitter:image" content="${attr(opts.ogImage)}" />
+${opts.robots ? `  <meta name="robots" content="${attr(opts.robots)}" />\n` : ""}${opts.altPath ? altPair(opts.altPath) + "\n" : ""}${(opts.jsonLd || []).map(jsonLdBlock).join("\n")}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="${FONTS}">
+${opts.preloadImg ? `  <link rel="preload" as="image" href="${attr(opts.preloadImg)}" fetchpriority="high">\n` : ""}  <style>${RS_CSS}</style>
+  <script src="/belfed-site-header.js" data-lang="${lang}" defer></script>
+  <script src="/belfed-site-footer.js" data-lang="${lang}" defer></script>`;
+}
+
+// Keeps sticky offsets in line with the shared header, whatever its height.
+const HDR_JS = String.raw`(function(){function s(){var h=document.querySelector('#bf-site-header .bf-bar')||document.getElementById('bf-site-header');if(h&&h.offsetHeight)document.documentElement.style.setProperty('--hdr',h.offsetHeight+'px');}document.addEventListener('DOMContentLoaded',s);window.addEventListener('load',s);window.addEventListener('resize',s);setTimeout(s,400);})();`;
+
+const ICON = {
+  link: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>`,
+  lock: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`,
+  search: `<svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+};
+
+// The static /research/ index can lag behind publishing (GitHub cron). On load,
+// compare it with research-list; if a newer public report with a cover exists, swap
+// in a fresh render from this function. One attempt per set of missing slugs.
 function freshScript(lang: Lang): string {
   return `<script>
 (function(){
@@ -546,7 +477,7 @@ function freshScript(lang: Lang): string {
     var F=${JSON.stringify(SUPABASE_URL + "/functions/v1/")}, L=${JSON.stringify(lang)};
     var have={}; [].forEach.call(document.querySelectorAll('a.card'),function(a){have[a.getAttribute('href')]=1;});
     fetch(F+'research-list?lang='+L,{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){
-      var items=(j&&j.items)||[]; var miss=items.filter(function(it){return it&&it.slug&&!have['/research/'+it.slug+'/'];}).map(function(it){return it.slug;});
+      var items=(j&&j.items)||[]; var miss=items.filter(function(it){return it&&it.slug&&(it['cover_image_url_'+L]||it.cover_image_url)&&!have['/research/'+it.slug+'/'];}).map(function(it){return it.slug;});
       if(!miss.length) return;
       var k='rs_fresh_'+L+'_'+miss.join(','); if(sessionStorage.getItem(k)) return; sessionStorage.setItem(k,'1');
       return fetch(F+'research-render?lang='+L+'&v='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.text():null;}).then(function(h){
@@ -558,40 +489,72 @@ function freshScript(lang: Lang): string {
 </script>`;
 }
 
-function renderCard(r: ReportRow, lang: Lang, t: typeof T.ru): string {
-  const title = reportTitle(r, lang);
-  const sub = reportSubtitle(r, lang);
-  const date = r.report_date || r.published_at;
-  const dateStr = date ? t.report_date_fmt(date) : "";
-  const tags = (r.tags || []).slice(0, 3);
-  const sectors = (r.sectors || []).slice(0, 2);
-  const seen = new Set<string>();
-  const chips = [...sectors, ...tags].filter(Boolean).filter(c => { const k = String(c).trim().toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 4);
-  const cover = safeImg(r[`cover_image_url_${lang}`] || r.cover_image_url);
+// ---------- index ----------
+const INDEX_JS = String.raw`(function(){
+  var bar=document.getElementById('rsBar'); if(!bar) return;
+  var cfg=JSON.parse(document.getElementById('rsCfg').textContent);
+  bar.hidden=false;
+  var cards=[].slice.call(document.querySelectorAll('#rsCards a.card'));
+  var months=[].slice.call(document.querySelectorAll('#rsCards .month'));
+  var chips=[].slice.call(bar.querySelectorAll('.rs-chip'));
+  var q=document.getElementById('rsQ'), clr=document.getElementById('rsClear'), cnt=document.getElementById('rsCount'), empty=document.getElementById('rsEmpty');
+  var top=document.getElementById('rsTop'), title=document.getElementById('rsListTitle'), head=document.getElementById('rsListHead');
+  var cls='';
+  function norm(s){return (s||'').toLowerCase().replace(/ё/g,'е').trim();}
+  function fmt(n,t){return (n===t?cfg.all:cfg.some).replace('{n}',n).replace('{t}',t);}
+  function apply(push){
+    var terms=norm(q.value).split(/\s+/).filter(Boolean), shown=0;
+    cards.forEach(function(c){
+      var okC=!cls||(' '+c.getAttribute('data-classes')+' ').indexOf(' '+cls+' ')>-1;
+      var hay=c.getAttribute('data-search')||'';
+      var ok=okC&&terms.every(function(w){return hay.indexOf(w)>-1;});
+      c.hidden=!ok; if(ok) shown++;
+    });
+    months.forEach(function(m){m.hidden=!m.querySelector('a.card:not([hidden])');});
+    var active=!!(cls||terms.length);
+    if(top) top.hidden=active;
+    if(title) title.textContent=active?cfg.results:cfg.archive;
+    if(head) head.hidden=shown===0;
+    chips.forEach(function(b){var a=b.getAttribute('data-class')===cls; b.classList.toggle('is-active',a); b.setAttribute('aria-pressed',a?'true':'false');});
+    clr.hidden=!q.value; cnt.textContent=fmt(shown,cards.length); empty.hidden=shown>0;
+    if(push){try{var u=new URL(location.href); if(cls)u.searchParams.set('class',cls); else u.searchParams.delete('class'); if(q.value.trim())u.searchParams.set('q',q.value.trim()); else u.searchParams.delete('q'); history.replaceState(null,'',u.pathname+u.search+u.hash);}catch(e){}}
+  }
+  chips.forEach(function(b){b.addEventListener('click',function(){var k=b.getAttribute('data-class'); cls=(cls===k&&k)?'':k; apply(true);});});
+  var tm; q.addEventListener('input',function(){clearTimeout(tm); tm=setTimeout(function(){apply(true);},120);});
+  q.addEventListener('keydown',function(e){if(e.key==='Escape'&&q.value){q.value='';apply(true);}});
+  clr.addEventListener('click',function(){q.value='';apply(true);q.focus();});
+  document.getElementById('rsReset').addEventListener('click',function(){q.value='';cls='';apply(true);q.focus();});
+  try{var p=new URLSearchParams(location.search); var pc=p.get('class')||''; if(chips.some(function(b){return b.getAttribute('data-class')===pc;})) cls=pc; q.value=p.get('q')||'';}catch(e){}
+  apply(false);
+})();`;
+
+function rowCard(r: ReportRow, lang: Lang, t: Dict): string {
+  const title = reportTitle(r, lang), sub = reportSubtitle(r, lang);
+  const iso = isoDay(r.report_date || r.published_at);
+  const dateStr = fmtDate(lang, iso);
+  const cover = coverOf(r, lang)!;
   const classes = reportClasses(r);
-  return `<a href="/research/${esc(r.slug)}/" class="card${cover ? " has-cover" : ""}" data-classes="${attr(classes.join(" "))}" data-search="${attr(searchText(r, lang, dateStr, classes))}">
-    ${cover ? `<div class="card-cover"><img src="${attr(cover)}" alt="" loading="lazy" decoding="async" width="1672" height="941" /></div>` : ""}
-    <div class="card-body">
-    <div class="card-meta">
-      ${dateStr ? `<span>${esc(dateStr)}</span>` : ""}
-      ${chips.map(c => `<span class="tag">${esc(c)}</span>`).join("")}
-    </div>
-    <h2>${esc(title)}</h2>
-    ${sub ? `<p class="card-sub">${esc(sub)}</p>` : ""}
-    <div class="card-arrow">${lang === "ru" ? "Читать →" : "Read →"}</div>
-    </div>
-  </a>`;
+  const mr = minRead(r, lang, t);
+  return `<a href="/research/${esc(r.slug)}/" class="card row-card" data-classes="${attr(classes.join(" "))}" data-search="${attr(searchText(r, lang, dateStr, classes))}">
+        <div class="cover"><img src="${attr(cover)}" alt="" loading="lazy" decoding="async" width="1672" height="941"></div>
+        <div>${tagsHtml(r, t, 2)}
+          <h3>${esc(title)}</h3>
+          ${sub ? `<p class="sum">${esc(sub)}</p>` : ""}
+          <div class="meta">${iso ? `<time datetime="${iso}">${esc(dateStr)}</time>` : ""}${mr ? `<span>${esc(mr)}</span>` : ""}</div>
+        </div>
+      </a>`;
 }
 
-function renderIndex(lang: Lang, reports: ReportRow[]): string {
+function renderIndex(lang: Lang, all: ReportRow[]): string {
   const t = T[lang];
   const dom = domain(lang);
   const canonical = `https://${dom}/research/`;
-  const ogImage = `https://${dom}/og-belfed.png`;
+  const reports = all.filter(r => coverOf(r, lang));
   const head = headBase(lang, {
     title: t.index_meta_title, description: t.index_meta_desc, canonical,
-    ogTitle: t.index_meta_title, ogDescription: t.index_meta_desc, ogImage, ogType: "website",
+    ogTitle: t.index_meta_title, ogDescription: t.index_meta_desc, ogImage: `https://${dom}/og-belfed.png`, ogType: "website",
     altPath: "/research/",
+    preloadImg: reports[0] ? coverOf(reports[0], lang) : null,
     jsonLd: [
       orgNode(lang),
       {
@@ -602,7 +565,7 @@ function renderIndex(lang: Lang, reports: ReportRow[]): string {
         name: t.index_meta_title,
         description: t.index_meta_desc,
         inLanguage: lang === "ru" ? "ru-RU" : "en-US",
-        isPartOf: { "@type": "WebSite", url: `https://${dom}/`, name: lang === "ru" ? "BelFed" : "Belfed" },
+        isPartOf: { "@type": "WebSite", url: `https://${dom}/`, name: t.site },
         publisher: { "@id": ORG_ID },
         hasPart: reports.slice(0, 50).map(r => ({
           "@type": "Article",
@@ -613,131 +576,348 @@ function renderIndex(lang: Lang, reports: ReportRow[]): string {
       },
     ],
   });
-  const counts: Record<string, number> = {};
-  for (const r of reports) for (const c of reportClasses(r)) counts[c] = (counts[c] || 0) + 1;
-  const chipBtn = (key: string, label: string, n: number, active: boolean) =>
-    `<button type="button" class="rs-chip${active ? " is-active" : ""}" data-class="${key}" aria-pressed="${active}">${esc(label)} <span class="rs-n">${n}</span></button>`;
-  const filters = reports.length < 2 ? "" : `<div class="rs-bar" id="rsBar" hidden>
+
+  let content: string;
+  if (reports.length === 0) {
+    content = `<div class="rs-wrap"><div class="empty"><div class="kicker">// 0</div><p>${esc(t.index_empty)}</p></div></div>`;
+  } else {
+    const counts: Record<string, number> = {};
+    for (const r of reports) for (const c of reportClasses(r)) counts[c] = (counts[c] || 0) + 1;
+    const chip = (key: string, label: string, n: number, active: boolean) =>
+      `<button type="button" class="rs-chip${active ? " is-active" : ""}" data-class="${key}" aria-pressed="${active}">${esc(label)} <span class="rs-n">${n}</span></button>`;
+    const bar = `<div class="rs-bar" id="rsBar" hidden>
+    <div class="rs-wrap row">
       <div class="rs-chips" role="group" aria-label="${attr(t.f_group)}">
-        ${chipBtn("", t.f_all, reports.length, true)}
-        ${CLASS_ORDER.filter(c => counts[c]).map(c => chipBtn(c, t.cls[c], counts[c], false)).join("\n        ")}
+        ${chip("", t.f_all, reports.length, true)}
+        ${CLASS_ORDER.filter(c => counts[c]).map(c => chip(c, t.cls[c], counts[c], false)).join("\n        ")}
       </div>
       <div class="rs-search" role="search">
         <label for="rsQ" class="rs-sr">${esc(t.f_search_label)}</label>
-        <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        ${ICON.search}
         <input type="search" id="rsQ" placeholder="${attr(t.f_search_ph)}" autocomplete="off" spellcheck="false" enterkeyhint="search">
         <button type="button" class="rs-clear" id="rsClear" aria-label="${attr(t.f_clear)}" hidden>×</button>
       </div>
-      <div class="rs-count" id="rsCount" aria-live="polite">${esc(t.f_count(reports.length, reports.length))}</div>
-    </div>`;
-  const filterScript = !filters ? "" : `<script>
-(function(){
-  var bar=document.getElementById('rsBar'); if(!bar) return; bar.hidden=false;
-  var cards=[].slice.call(document.querySelectorAll('.cards .card'));
-  var chips=[].slice.call(bar.querySelectorAll('.rs-chip'));
-  var q=document.getElementById('rsQ'), clr=document.getElementById('rsClear'), cnt=document.getElementById('rsCount'), empty=document.getElementById('rsEmpty');
-  var fmt=${lang === "ru" ? "function(n,t){return n===t?'Отчётов: '+t:'Найдено: '+n+' из '+t;}" : "function(n,t){return n===t?t+' reports':n+' of '+t+' reports';}"};
-  var cls='';
-  function norm(s){return (s||'').toLowerCase().replace(/ё/g,'е').trim();}
-  function apply(push){
-    var terms=norm(q.value).split(/\\s+/).filter(Boolean), shown=0;
-    cards.forEach(function(c){
-      var okC=!cls||(' '+c.getAttribute('data-classes')+' ').indexOf(' '+cls+' ')>-1;
-      var hay=c.getAttribute('data-search')||'';
-      var okQ=terms.every(function(w){return hay.indexOf(w)>-1;});
-      var ok=okC&&okQ; c.hidden=!ok; if(ok) shown++;
-    });
-    chips.forEach(function(b){var a=b.getAttribute('data-class')===cls; b.classList.toggle('is-active',a); b.setAttribute('aria-pressed',a);});
-    clr.hidden=!q.value; cnt.textContent=fmt(shown,cards.length); empty.hidden=shown>0;
-    if(push){try{var u=new URL(location.href); cls?u.searchParams.set('class',cls):u.searchParams.delete('class'); q.value.trim()?u.searchParams.set('q',q.value.trim()):u.searchParams.delete('q'); history.replaceState(null,'',u.pathname+u.search+u.hash);}catch(e){}}
+      <div class="rs-count" id="rsCount" aria-live="polite">${esc(tpl(t.f_count_all, { t: reports.length, n: reports.length }))}</div>
+    </div>
+  </div>`;
+
+    const f = reports[0];
+    const fIso = isoDay(f.report_date || f.published_at);
+    const fMr = minRead(f, lang, t);
+    const featured = `<section class="featured" aria-label="${attr(reportTitle(f, lang))}"><a href="/research/${esc(f.slug)}/">
+        <div class="cover"><img src="${attr(coverOf(f, lang)!)}" alt="" width="1672" height="941" fetchpriority="high" decoding="async"></div>
+        ${tagsHtml(f, t, 2)}
+        <h2>${esc(reportTitle(f, lang))}</h2>
+        ${reportSubtitle(f, lang) ? `<p class="sum">${esc(reportSubtitle(f, lang))}</p>` : ""}
+        <div class="meta">${fIso ? `<time datetime="${fIso}">${esc(fmtDate(lang, fIso))}</time>` : ""}${fMr ? `<span>${esc(fMr)}</span>` : ""}<span class="go">${esc(t.read)} →</span></div>
+      </a></section>`;
+    const latestItems = reports.slice(1, 5);
+    const latest = `<aside class="latest" aria-labelledby="rsLatestH">
+        ${latestItems.length ? `<h2 id="rsLatestH">${esc(t.latest)}</h2><ol>${latestItems.map(r => {
+          const iso = isoDay(r.report_date || r.published_at), mr = minRead(r, lang, t);
+          return `<li><a href="/research/${esc(r.slug)}/">${tagsHtml(r, t, 1)}<span class="t">${esc(reportTitle(r, lang))}</span><span class="meta">${iso ? `<time datetime="${iso}">${esc(fmtDate(lang, iso))}</time>` : ""}${mr ? `<span>${esc(mr)}</span>` : ""}</span></a></li>`;
+        }).join("")}</ol>` : `<h2 id="rsLatestH" class="rs-sr">${esc(t.latest)}</h2>`}
+        <div class="briefings"><div class="kicker gold">${esc(t.brief_kicker)}</div><h3>${esc(t.brief_title)}</h3><p>${esc(t.brief_text)}</p>
+          <div class="acts"><a class="btn sm primary" href="${TG_FREE[lang]}" rel="noopener">${esc(t.brief_tg)}</a></div></div>
+      </aside>`;
+
+    const groups: { key: string; items: ReportRow[] }[] = [];
+    for (const r of reports) {
+      const k = monthKey(r.report_date || r.published_at) || "0000-00";
+      const g = groups[groups.length - 1];
+      if (g && g.key === k) g.items.push(r); else groups.push({ key: k, items: [r] });
+    }
+    const archive = groups.map(g => `<section class="month" aria-label="${attr(monthLabel(lang, g.key))}"><div class="m">${esc(monthLabel(lang, g.key))}</div><div class="rows">
+      ${g.items.map(r => rowCard(r, lang, t)).join("\n      ")}
+    </div></section>`).join("\n    ");
+
+    content = `${bar}
+  <div class="rs-wrap">
+    <div class="top" id="rsTop">${featured}${latest}</div>
+    <div class="list-head" id="rsListHead"><h2 id="rsListTitle">${esc(t.archive)}</h2><span class="label">${esc(t.by_date)}</span></div>
+    <div class="cards" id="rsCards">
+    ${archive}
+    </div>
+    <div class="empty" id="rsEmpty" hidden><div class="kicker">// 0</div><h3>${esc(t.empty_title)}</h3><p>${esc(t.empty_text)}</p><button type="button" class="btn" id="rsReset">${esc(t.f_reset)}</button></div>
+  </div>`;
   }
-  chips.forEach(function(b){b.addEventListener('click',function(){var k=b.getAttribute('data-class'); cls=(cls===k&&k)?'':k; apply(true);});});
-  var tm; q.addEventListener('input',function(){clearTimeout(tm); tm=setTimeout(function(){apply(true);},120);});
-  q.addEventListener('keydown',function(e){if(e.key==='Escape'&&q.value){q.value='';apply(true);}});
-  clr.addEventListener('click',function(){q.value='';apply(true);q.focus();});
-  document.getElementById('rsReset').addEventListener('click',function(){q.value='';cls='';apply(true);});
-  try{var p=new URLSearchParams(location.search); var pc=p.get('class')||''; if(chips.some(function(b){return b.getAttribute('data-class')===pc;})) cls=pc; q.value=p.get('q')||'';}catch(e){}
-  apply(false);
-})();
-</script>`;
-  const cards = reports.length === 0
-    ? `<div class="empty">${t.index_empty}</div>`
-    : `${filters}<section class="cards">${reports.map(r => renderCard(r, lang, t)).join("\n")}</section>
-    <div class="rs-empty" id="rsEmpty" hidden><p>${esc(t.f_none)}</p><button type="button" id="rsReset" class="rs-reset">${esc(t.f_reset)}</button></div>`;
+
   return `${head}
-${sharedStyles()}
-${indexPageStyles()}
 </head>
 <body>
-  <a class="skip-link" href="#main-content">${t.skip}</a>
-  ${navBar(lang, t)}
-  <main id="main-content">
-    <section class="index-hero">
-      <div class="kicker">${t.index_kicker}</div>
-      <h1>${t.index_title}</h1>
-      <p class="lead">${esc(t.index_subtitle)}</p>
-    </section>
-    ${cards}
+  <a class="rs-skip" href="#main-content">${esc(t.skip)}</a>
+  <main id="main-content" class="rs-main">
+  <section class="index-hero"><div class="rs-wrap">
+    <div class="kicker">${esc(t.index_kicker)}</div>
+    <h1>${esc(t.index_title)}</h1>
+    <p class="lead">${esc(t.index_lead)}</p>
+  </div></section>
+  ${content}
+  <div class="rs-wrap"><section class="nl" aria-labelledby="rsNlH">
+    <div><div class="kicker gold">${esc(t.nl_kicker)}</div><h2 id="rsNlH">${esc(t.nl_title)}</h2><p>${esc(t.nl_text)}</p></div>
+    <div class="acts"><a class="btn primary" href="${BOT}?start=research_index_${lang}" rel="noopener">${esc(t.nl_trial)}</a><a class="btn ghost" href="/trades.html">${esc(t.nl_track)}</a></div>
+  </section></div>
   </main>
-  ${footerBar(lang, t)}
-  ${filterScript}
+  ${jsonData("rsCfg", { all: t.f_count_all, some: t.f_count_some, archive: t.archive, results: t.results })}
+  <script>${HDR_JS}</script>
+  <script>${INDEX_JS}</script>
   ${freshScript(lang)}
   <script src="/belfed-analytics.js"></script>
 </body>
 </html>`;
 }
 
-function renderSection(s: SectionRow, lang: Lang, t: typeof T.ru, startPayload: string): string {
-  const label = lang === "ru" ? s.section_label_ru : s.section_label_en;
-  const num = String(s.position).padStart(2, "0");
-  const heading = label && /^\s*\d+\s*$/.test(label) ? label.trim().padStart(2, "0") : (label ? `${num} · ${label}` : num);
-  if (s.is_public === false) {
-    const gh = lang === "ru" ? s.headline_ru : s.headline_en;
-    const tx = lang === "ru" ? s.teaser_ru : s.teaser_en;
-    const imgs = (s.teaser_imgs || []).slice(0, 2);
-    const preview = (tx || imgs.length) ? `<div class="locked-preview">
-      ${tx ? `<p class="locked-text">${esc(tx)}</p>` : ""}
-      ${imgs.length ? `<div class="locked-figs${imgs.length > 1 ? " two" : ""}" aria-hidden="true">${imgs.map(u => `<div class="locked-fig"><img src="${attr(u)}" alt="" loading="lazy" decoding="async"></div>`).join("")}</div>` : ""}
-    </div>` : "";
-    return `<section class="sec-locked"><h2>${esc(heading)}</h2>${gh && gh !== label ? `<h3>${esc(gh)}</h3>` : ""}${preview}<div class="gated${preview ? " over" : ""}"><div class="gated-label">${t.gated_label}</div>${preview ? "" : `<h3>${esc(label || (lang === "ru" ? "Секция" : "Section"))}</h3>`}<p>${esc(t.gated_body)}</p><a href="https://t.me/belfedbot?start=${startPayload}_gated" class="btn">${t.gated_btn}</a></div></section>`;
+
+// ---------- chart dimensions ----------
+// Charts load lazily; without width/height the page jumps while they arrive and
+// TOC links land in the wrong place. Read the size from the image header with a
+// small range request and keep it in memory for the life of the isolate.
+const DIM_CACHE = new Map<string, [number, number] | null>();
+function parseDims(b: Uint8Array): [number, number] | null {
+  const u32 = (i: number) => ((b[i] << 24) | (b[i + 1] << 16) | (b[i + 2] << 8) | b[i + 3]) >>> 0;
+  if (b.length > 24 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return [u32(16), u32(20)];
+  if (b.length > 4 && b[0] === 0xff && b[1] === 0xd8) {
+    let i = 2;
+    while (i + 9 < b.length) {
+      if (b[i] !== 0xff) { i++; continue; }
+      const m = b[i + 1];
+      if (m === 0xd8 || m === 0x01 || (m >= 0xd0 && m <= 0xd7) || m === 0xff) { i += m === 0xff ? 1 : 2; continue; }
+      const len = (b[i + 2] << 8) | b[i + 3];
+      if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) return [(b[i + 7] << 8) | b[i + 8], (b[i + 5] << 8) | b[i + 6]];
+      i += 2 + len;
+    }
+    return null;
   }
-  const headline = lang === "ru" ? s.headline_ru : s.headline_en;
-  const body = lang === "ru" ? s.body_ru : s.body_en;
-  let chartsHtml = "";
-  if (Array.isArray(s.chart_images) && s.chart_images.length > 0) {
-    chartsHtml = s.chart_images.map(c => {
-      const cap = lang === "ru" ? c.caption_ru : c.caption_en;
-      const src = lang === "en" && c.url_en ? c.url_en : c.url;
-      return `<figure><img src="${attr(src)}" alt="${attr(cap || (headline || label || ""))}">${cap ? `<figcaption>${esc(cap)}</figcaption>` : ""}</figure>`;
-    }).join("\n");
-  } else if (s.chart_image_url) {
-    const cap = lang === "ru" ? s.chart_caption_ru : s.chart_caption_en;
-    chartsHtml = `<figure><img src="${attr(s.chart_image_url)}" alt="${attr(cap || (headline || label || ""))}">${cap ? `<figcaption>${esc(cap)}</figcaption>` : ""}</figure>`;
+  if (b.length > 30 && b[0] === 0x52 && b[1] === 0x49 && b[8] === 0x57 && b[9] === 0x45) {
+    const tag = String.fromCharCode(b[12], b[13], b[14], b[15]);
+    if (tag === "VP8X") return [1 + (b[24] | (b[25] << 8) | (b[26] << 16)), 1 + (b[27] | (b[28] << 8) | (b[29] << 16))];
+    if (tag === "VP8L") { const v = b[21] | (b[22] << 8) | (b[23] << 16) | (b[24] << 24); return [1 + (v & 0x3fff), 1 + ((v >> 14) & 0x3fff)]; }
+    if (tag === "VP8 ") return [(b[26] | (b[27] << 8)) & 0x3fff, (b[28] | (b[29] << 8)) & 0x3fff];
   }
-  return `<section><h2>${esc(heading)}</h2>${headline && headline !== label ? `<h3>${esc(headline)}</h3>` : ""}${renderBody(body)}${chartsHtml}</section>`;
+  return null;
+}
+async function fetchDims(url: string): Promise<[number, number] | null> {
+  if (DIM_CACHE.has(url)) return DIM_CACHE.get(url)!;
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 2500);
+    const r = await fetch(url, { headers: { Range: "bytes=0-65535" }, signal: ctrl.signal });
+    const buf = new Uint8Array(await r.arrayBuffer());
+    clearTimeout(timer);
+    const d = r.ok ? parseDims(buf) : null;
+    const ok = d && d[0] > 0 && d[1] > 0 ? d : null;
+    if (ok || r.ok) DIM_CACHE.set(url, ok);
+    return ok;
+  } catch { return null; }
+}
+async function chartDims(urls: string[]): Promise<Record<string, [number, number]>> {
+  const out: Record<string, [number, number]> = {};
+  const uniq = [...new Set(urls)];
+  for (let i = 0; i < uniq.length; i += 8) {
+    const part = uniq.slice(i, i + 8);
+    const res = await Promise.all(part.map(fetchDims));
+    part.forEach((u, k) => { const d = res[k]; if (d) out[u] = d; });
+  }
+  return out;
 }
 
-function renderReport(lang: Lang, r: ReportRow, sections: SectionRow[]): string {
+// ---------- report ----------
+function labelText(label: string | null | undefined): string {
+  return String(label || "").replace(/^\s*\d+\s*[·.:\-]?\s*/, "").trim();
+}
+function splitCaption(c: string | null | undefined): { text: string; source: string } {
+  let s = String(c || "").trim().replace(/^\/\/\s*(chart|график)\s*:\s*/i, "");
+  let source = "";
+  const m = s.match(/\s*\((?:source|источник)\s*:\s*([^)]*)\)?\s*$/i);
+  if (m && m.index !== undefined) { source = m[1].trim(); s = s.slice(0, m.index).trim(); }
+  return { text: s, source };
+}
+interface Fig { src: string; cap: string }
+let DIMS: Record<string, [number, number]> = {};
+function sectionCharts(s: SectionRow, lang: Lang): Fig[] {
+  const out: Fig[] = [];
+  if (Array.isArray(s.chart_images) && s.chart_images.length > 0) {
+    for (const c of s.chart_images) {
+      const src = safeImg(lang === "en" && c.url_en ? c.url_en : c.url);
+      if (src) out.push({ src, cap: (lang === "ru" ? c.caption_ru : c.caption_en) || "" });
+    }
+  } else if (s.chart_image_url) {
+    const src = safeImg(s.chart_image_url);
+    if (src) out.push({ src, cap: (lang === "ru" ? s.chart_caption_ru : s.chart_caption_en) || "" });
+  }
+  return out;
+}
+function figHtml(f: Fig, alt: string, t: Dict): string {
+  const { text, source } = splitCaption(f.cap);
+  const capFull = [text, source ? `(${t.source}: ${source})` : ""].filter(Boolean).join(" ");
+  return `<figure class="chart"><button type="button" data-enlarge data-caption="${attr(capFull)}" aria-label="${attr(t.enlarge_aria + (text ? ": " + text : ""))}"><img src="${attr(f.src)}" alt="${attr(text || alt)}"${DIMS[f.src] ? ` width="${DIMS[f.src][0]}" height="${DIMS[f.src][1]}"` : ""} loading="lazy" decoding="async"><span class="hint" aria-hidden="true">${esc(t.enlarge)}</span></button>${text || source ? `<figcaption class="cap"><span class="cap-k">// ${esc(t.chart)}:</span> ${esc(text)}${source ? ` <span class="cap-src">(${esc(t.source)}: ${esc(source)})</span>` : ""}</figcaption>` : ""}</figure>`;
+}
+
+interface Prepared { s: SectionRow; id: string; num: string; heading: string; kicker: string; locked: boolean }
+
+function prepareSections(sections: SectionRow[], lang: Lang, t: Dict): Prepared[] {
+  const hasContent = (s: SectionRow) => {
+    if (s.is_public === false) return true;
+    const h = lang === "ru" ? s.headline_ru : s.headline_en;
+    const b = lang === "ru" ? s.body_ru : s.body_en;
+    const imgs = Array.isArray(s.chart_images) && s.chart_images.length > 0;
+    return Boolean((h && String(h).trim()) || (b && String(b).trim()) || imgs || s.chart_image_url);
+  };
+  return sections.filter(hasContent).map((s, i) => {
+    const num = String(i + 1).padStart(2, "0");
+    const lbl = labelText(lang === "ru" ? s.section_label_ru : s.section_label_en);
+    const hl = String((lang === "ru" ? s.headline_ru : s.headline_en) || "").trim();
+    const heading = hl || lbl || `${t.section} ${num}`;
+    const kicker = lbl && lbl.toLowerCase() !== heading.toLowerCase() ? lbl : "";
+    return { s, id: `sec-${num}`, num, heading, kicker, locked: s.is_public === false };
+  });
+}
+
+function renderSectionHtml(p: Prepared, lang: Lang, t: Dict, startPayload: string, first: boolean): string {
+  const { s } = p;
+  const top = `<div class="sec-num"><span>${p.num}</span>${p.kicker ? `<span class="sec-lbl">${esc(p.kicker)}</span>` : ""}${p.locked ? `<span class="tag type">${ICON.lock} ${esc(t.locked_label)}</span>` : ""}</div><h2>${esc(p.heading)}</h2>`;
+  if (p.locked) {
+    const tx = lang === "ru" ? s.teaser_ru : s.teaser_en;
+    const imgs = (s.teaser_imgs || []).slice(0, 2);
+    const hw = lang === "ru" ? (s.hidden_words_ru || 0) : (s.hidden_words_en || 0);
+    const words = hw >= 30 ? t.locked_words(Math.round(hw / 10) * 10) : "";
+    const charts = s.hidden_charts ? t.locked_charts(s.hidden_charts) : "";
+    return `<section class="rp-sec locked${first ? " first" : ""}" id="${p.id}" aria-labelledby="${p.id}-h">
+        ${top.replace("<h2>", `<h2 id="${p.id}-h">`)}
+        ${tx ? `<div class="fade"><p>${esc(tx)}</p></div>` : ""}
+        ${imgs.length ? `<div class="figs" aria-hidden="true">${imgs.map(u => `<div class="fig"><img src="${attr(u)}" alt="" loading="lazy" decoding="async" width="64" height="40"><span>${ICON.lock} ${esc(t.chart_locked)}</span></div>`).join("")}</div>` : ""}
+        <div class="gate"><span class="k">${ICON.lock} ${esc(t.locked_label)}</span><h3>${esc(t.locked_title)}</h3><p>${esc(tpl(t.locked_text, { w: words, c: charts }))}</p>
+          <div class="row"><a class="btn primary" href="${BOT}?start=${startPayload}_gated" rel="noopener">${esc(t.locked_cta)}</a><a class="rs-alt" href="/members.html">${esc(t.locked_login)} →</a></div>
+          <span class="fine">${esc(t.locked_fine)}</span></div>
+      </section>`;
+  }
+  const body = lang === "ru" ? s.body_ru : s.body_en;
+  const charts = sectionCharts(s, lang).map(f => figHtml(f, p.heading, t)).join("\n");
+  return `<section class="rp-sec${first ? " first" : ""}" id="${p.id}" aria-labelledby="${p.id}-h">
+        ${top.replace("<h2>", `<h2 id="${p.id}-h">`)}
+        ${renderBody(body)}
+        ${charts}
+      </section>`;
+}
+
+function takeawaysFor(prepared: Prepared[], lang: Lang): string[] {
+  const pub = prepared.filter(p => !p.locked);
+  const body = (p: Prepared) => lang === "ru" ? p.s.body_ru : p.s.body_en;
+  const concl = pub.find(p => p.s.is_conclusion && wordCount(body(p)) > 20);
+  let items: string[];
+  if (concl) items = sentences(body(concl)).slice(0, 4);
+  else items = pub.filter(p => !p.s.is_conclusion).map(p => sentences(body(p))[0] || "").filter(Boolean).slice(0, 5);
+  items = items.map(x => clip(x));
+  return items.length >= 2 ? items : [];
+}
+
+function tocHtml(prepared: Prepared[], t: Dict, idSuffix: string): string {
+  return `<nav class="toc" aria-label="${attr(t.toc)}${idSuffix}"><p class="toc-h">${esc(t.toc)}</p><ol>${prepared.map(p =>
+    `<li><a href="#${p.id}"><span class="n">${p.num}</span><span>${esc(p.heading)}${p.locked ? `<span class="lk" title="${attr(t.locked_label)}">${ICON.lock}</span>` : ""}</span></a></li>`).join("")}</ol></nav>`;
+}
+
+const REPORT_JS = String.raw`(function(){
+  var C=JSON.parse(document.getElementById('rpCfg').textContent);
+  // copy link
+  [].forEach.call(document.querySelectorAll('[data-copy]'),function(b){
+    b.addEventListener('click',function(){
+      var url=C.url; var lbl=b.querySelector('span');
+      function done(){var old=lbl.textContent; lbl.textContent=C.copied; b.setAttribute('data-done',''); setTimeout(function(){lbl.textContent=old; b.removeAttribute('data-done');},1800);}
+      function fallback(){try{var ta=document.createElement('textarea'); ta.value=url; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);}catch(e){} done();}
+      if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done,fallback); else fallback();
+    });
+  });
+  // lightbox
+  var dlg=document.getElementById('rsLb');
+  if(dlg&&dlg.showModal){
+    var lbImg=dlg.querySelector('img'), lbCap=dlg.querySelector('figcaption span'), opener=null;
+    [].forEach.call(document.querySelectorAll('[data-enlarge]'),function(btn){
+      btn.addEventListener('click',function(){var img=btn.querySelector('img'); lbImg.src=img.currentSrc||img.src; lbImg.alt=img.alt; lbCap.textContent=btn.getAttribute('data-caption')||''; opener=btn; dlg.showModal();});
+    });
+    dlg.querySelector('.lb-close').addEventListener('click',function(){dlg.close();});
+    dlg.addEventListener('click',function(e){if(e.target===dlg) dlg.close();});
+    dlg.addEventListener('close',function(){lbImg.removeAttribute('src'); if(opener) opener.focus();});
+  } else {
+    [].forEach.call(document.querySelectorAll('[data-enlarge]'),function(btn){btn.addEventListener('click',function(){window.open(btn.querySelector('img').src,'_blank','noopener');});});
+  }
+  // reading progress
+  var bar=document.getElementById('rsProgress'), wrap=bar&&bar.parentNode, body=document.querySelector('.rp-body'), raf=0;
+  function prog(){raf=0; if(!body||!bar) return; var r=body.getBoundingClientRect(); var total=r.height-window.innerHeight*0.6; var p=Math.min(1,Math.max(0,(-r.top+window.innerHeight*0.2)/Math.max(1,total))); bar.style.transform='scaleX('+p.toFixed(4)+')'; wrap.setAttribute('aria-valuenow',Math.round(p*100));}
+  window.addEventListener('scroll',function(){if(!raf) raf=requestAnimationFrame(prog);},{passive:true}); window.addEventListener('resize',prog); prog();
+  // scroll-spy (desktop + mobile TOC)
+  var links=[].slice.call(document.querySelectorAll('.toc a[href^="#"]')), map={};
+  links.forEach(function(a){var id=a.getAttribute('href').slice(1); (map[id]=map[id]||[]).push(a);});
+  var secs=Object.keys(map).map(function(id){return document.getElementById(id);}).filter(Boolean), curId='', sraf=0;
+  function spy(){sraf=0; var line=window.innerHeight*0.3, id=secs.length?secs[0].id:'';
+    for(var i=0;i<secs.length;i++){ if(secs[i].getBoundingClientRect().top<=line) id=secs[i].id; else break; }
+    if(id!==curId){curId=id; links.forEach(function(a){a.removeAttribute('aria-current');}); (map[id]||[]).forEach(function(a){a.setAttribute('aria-current','location');});}
+  }
+  if(secs.length){window.addEventListener('scroll',function(){if(!sraf) sraf=requestAnimationFrame(spy);},{passive:true}); window.addEventListener('resize',spy); spy();}
+  [].forEach.call(document.querySelectorAll('details.toc-mobile a'),function(a){a.addEventListener('click',function(){a.closest('details').open=false;});});
+  // one dismissible sticky banner
+  var ban=document.getElementById('rsBanner');
+  if(ban){
+    var dismissed=false; try{dismissed=sessionStorage.getItem('bf_research_banner_dismissed')==='1';}catch(e){}
+    if(!dismissed){
+      var onS=function(){var h=document.documentElement; var s=(h.scrollTop||document.body.scrollTop)/Math.max(1,h.scrollHeight-h.clientHeight); if(s>0.25){ban.hidden=false; window.removeEventListener('scroll',onS);}};
+      window.addEventListener('scroll',onS,{passive:true});
+      ban.querySelector('button').addEventListener('click',function(){ban.hidden=true; try{sessionStorage.setItem('bf_research_banner_dismissed','1');}catch(e){}});
+    }
+  }
+  // email lead form (landing-lead-create)
+  var form=document.getElementById('leadForm');
+  if(form){
+    var ok=document.getElementById('leadOk'), err=document.getElementById('leadErr');
+    form.addEventListener('submit',function(e){
+      e.preventDefault();
+      var btn=document.getElementById('leadSubmit');
+      var email=(document.getElementById('leadEmail').value||'').trim().toLowerCase();
+      var consent=document.getElementById('leadConsent').checked;
+      var hp=document.getElementById('leadHoneypot').value||'';
+      if(!email) return;
+      ok.hidden=true; err.hidden=true;
+      if(!consent){err.textContent=C.noConsent; err.hidden=false; return;}
+      var label=btn.textContent; btn.disabled=true; btn.textContent='…';
+      var payload={email:email,ticker:C.leadTicker,asset_class:null,timeframe:null,note:C.leadNote,consent:consent,lang:C.lang,source:C.leadSource,website:hp};
+      if(window.BelfedAnalytics&&window.BelfedAnalytics.utmFields){var u=window.BelfedAnalytics.utmFields(); for(var k in u) if(Object.prototype.hasOwnProperty.call(u,k)) payload[k]=u[k];}
+      fetch(C.supaUrl+'/functions/v1/landing-lead-create',{method:'POST',headers:{'Content-Type':'application/json','apikey':C.supaKey,'Authorization':'Bearer '+C.supaKey},body:JSON.stringify(payload)})
+        .then(function(r){return r.json().then(function(d){return {status:r.status,body:d};});})
+        .then(function(res){
+          btn.disabled=false; btn.textContent=label;
+          if(res.body&&(res.body.ok||res.body.reason==='dup')){ if(window.belfedTrack) window.belfedTrack('research_lead_submitted',{report:C.leadNote}); form.reset(); ok.hidden=false; }
+          else { err.textContent=C.err; err.hidden=false; }
+        })
+        .catch(function(){btn.disabled=false; btn.textContent=label; err.textContent=C.err; err.hidden=false;});
+    });
+  }
+})();`;
+
+function miniCard(r: ReportRow, lang: Lang, t: Dict): string {
+  const iso = isoDay(r.report_date || r.published_at), mr = minRead(r, lang, t);
+  return `<a class="rc" href="/research/${esc(r.slug)}/"><div class="cover"><img src="${attr(coverOf(r, lang)!)}" alt="" loading="lazy" decoding="async" width="1672" height="941"></div><div><div class="meta">${iso ? `<time datetime="${iso}">${esc(fmtDate(lang, iso))}</time>` : ""}${mr ? `<span>${esc(mr)}</span>` : ""}</div></div><h3>${esc(reportTitle(r, lang))}</h3></a>`;
+}
+
+function renderReport(lang: Lang, r: ReportRow, sections: SectionRow[], others: ReportRow[]): string {
   const t = T[lang];
   const dom = domain(lang);
-  const alt = altDomain(lang);
   const title = reportTitle(r, lang);
   const sub = reportSubtitle(r, lang);
   const canonical = `https://${dom}/research/${r.slug}/`;
-  const altUrl = `https://${alt}/research/${r.slug}/`;
-  const heroCover = safeImg(r[`cover_image_url_${lang}`] || r.cover_image_url);
+  const heroCover = coverOf(r, lang);
   const ogImage = heroCover || `https://${dom}/og-belfed.png`;
   const dateISO = r.report_date || r.published_at;
-  const dateStr = dateISO ? t.report_date_fmt(dateISO) : "";
-  const coverage = [...new Map([...(r.asset_classes || []), ...(r.sectors || [])].filter(Boolean).map(c => [String(c).trim().toLowerCase(), c])).values()].join(" · ");
-  const slugAd = slugSuffix(r.slug);
+  const day = isoDay(dateISO);
+  const dateStr = fmtDate(lang, dateISO);
+  const slugAd = r.slug.replace(/-/g, "_");
   const startPayload = `research_${slugAd}_${lang}`;
   const metaTitle = `${title}${lang === "ru" ? " | Исследование BelFed" : " | Belfed Research"}`;
   const metaDesc = sub || title;
+  const classes = reportClasses(r);
   const head = headBase(lang, {
     title: metaTitle, description: metaDesc, canonical,
     ogTitle: title, ogDescription: sub || metaDesc, ogImage, ogType: "article",
     altPath: `/research/${r.slug}/`,
+    preloadImg: heroCover,
     jsonLd: [
       orgNode(lang),
       {
@@ -753,7 +933,7 @@ function renderReport(lang: Lang, r: ReportRow, sections: SectionRow[]): string 
         dateModified: r.published_public_at || r.published_at || dateISO || undefined,
         author: { "@id": ORG_ID },
         publisher: { "@id": ORG_ID },
-        keywords: [...(r.asset_classes || []), ...(r.sectors || []), ...(r.tags || [])].filter(Boolean).join(", ") || undefined,
+        keywords: [...(r.asset_classes || []), ...(r.sectors || []), ...(r.tags || []).map(cleanTag)].filter(Boolean).join(", ") || undefined,
         isAccessibleForFree: true,
       },
       {
@@ -761,169 +941,160 @@ function renderReport(lang: Lang, r: ReportRow, sections: SectionRow[]): string 
         "@type": "BreadcrumbList",
         itemListElement: [
           { "@type": "ListItem", position: 1, name: lang === "ru" ? "Главная" : "Home", item: `https://${dom}/` },
-          { "@type": "ListItem", position: 2, name: lang === "ru" ? "Исследования" : "Research", item: `https://${dom}/research/` },
+          { "@type": "ListItem", position: 2, name: t.index_title, item: `https://${dom}/research/` },
           { "@type": "ListItem", position: 3, name: title, item: canonical },
         ],
       },
     ],
   });
-  const hasContent = (s: SectionRow) => {
-    if (s.is_public === false) return true;
-    const h = lang === "ru" ? s.headline_ru : s.headline_en;
-    const b = lang === "ru" ? s.body_ru : s.body_en;
-    const imgs = Array.isArray(s.chart_images) && s.chart_images.length > 0;
-    return Boolean((h && String(h).trim()) || (b && String(b).trim()) || imgs || s.chart_image_url);
-  };
-  const sectionsHtml = sections.filter(hasContent).map(s => renderSection(s, lang, t, startPayload)).join("\n");
-  const leadTicker = (r.tags && r.tags[0]) ? r.tags[0].toUpperCase().replace(/[^A-Z0-9]/g, "_") : slugAd.toUpperCase();
+
+  const prepared = prepareSections(sections, lang, t);
+  const words = prepared.filter(p => !p.locked).reduce((n, p) => n + wordCount(lang === "ru" ? p.s.body_ru : p.s.body_en), 0) + wordCount(sub);
+  const minutes = readMinutes(words, lang);
+  const takeaways = takeawaysFor(prepared, lang);
+
+  // Mid CTA after roughly half of the public sections (only on longer reports).
+  const publicIdx = prepared.map((p, i) => p.locked ? -1 : i).filter(i => i >= 0);
+  const midAfter = publicIdx.length >= 3 ? publicIdx[Math.floor(publicIdx.length / 2) - 1] : -1;
+  const midCta = `<aside class="cta-mid" aria-labelledby="rsMidH"><div><div class="kicker gold">${esc(t.mid_kicker)}</div><h3 id="rsMidH">${esc(t.mid_title)}</h3><p>${esc(t.mid_text)}</p></div><div class="col"><a class="btn primary" href="${TG_FREE[lang]}" rel="noopener">${esc(t.mid_btn)}</a><a class="rs-alt" href="/trades.html">${esc(t.mid_alt)} →</a></div></aside>`;
+  const sectionsHtml = prepared.map((p, i) => renderSectionHtml(p, lang, t, startPayload, i === 0) + (i === midAfter ? "\n      " + midCta : "")).join("\n      ");
+
+  // Kicker: report kicker plus asset classes.
+  const kicker = [t.report_kicker, ...classes.slice(0, 2).map(c => t.cls[c])].join(" · ");
+  const seen = new Set<string>();
+  const topicTags = [...(r.sectors || []), ...(r.tags || [])].map(cleanTag).filter(Boolean)
+    .filter(x => { const k = x.toLowerCase(); if (seen.has(k) || classes.some(c => t.cls[c].toLowerCase() === k)) return false; seen.add(k); return true; }).slice(0, 5);
+
+  // Custom per-report CTA (written by the author) takes the final block.
+  const customH = (lang === "ru" ? r.cta_headline_ru : r.cta_headline_en) || "";
+  const customB = (lang === "ru" ? r.cta_body_ru : r.cta_body_en) || "";
+  const hasCustom = Boolean(customH.trim());
+  const finalBody = hasCustom && customB.trim()
+    ? customB.split(/\n\s*\n/).map(x => x.trim()).filter(Boolean).map(x => `<p>${esc(x)}</p>`).join("")
+    : `<p>${esc(t.final_text)}</p>`;
+  const trialBtn = `<a class="btn ${hasCustom ? "primary" : "ghost"}" href="${BOT}?start=${startPayload}_final" rel="noopener">${esc(t.final_trial)}</a>`;
+  const tgBtn = `<a class="btn ${hasCustom ? "ghost" : "primary"}" href="${TG_FREE[lang]}" rel="noopener">${esc(t.final_tg)}</a>`;
+
+  const leadTicker = (r.tags && r.tags[0]) ? cleanTag(r.tags[0]).toUpperCase().replace(/[^A-Z0-9]/g, "_") : slugAd.toUpperCase();
   const leadNote = `research_${slugAd}`;
-  const leadSource = `research_${slugAd}`;
+
+  // Prev (older) / next (newer) and related by asset class.
+  const list = others.filter(o => coverOf(o, lang));
+  const idx = list.findIndex(o => o.slug === r.slug);
+  const older = idx >= 0 ? list[idx + 1] : list.find(o => (o.report_date || "") < (r.report_date || ""));
+  const newer = idx > 0 ? list[idx - 1] : undefined;
+  const pool = list.filter(o => o.slug !== r.slug);
+  const score = (o: ReportRow) => reportClasses(o).filter(c => classes.includes(c)).length;
+  const related = pool.filter(o => score(o) > 0).sort((a, b) => score(b) - score(a) || String(b.report_date).localeCompare(String(a.report_date))).slice(0, 3);
+  for (const o of pool) { if (related.length >= 3) break; if (!related.includes(o)) related.push(o); }
+
+  const shareUrl = encodeURIComponent(canonical), shareText = encodeURIComponent(title);
+  const meta = [
+    day ? `<span><time datetime="${day}">${esc(dateStr)}</time></span>` : "",
+    `<span>${esc(t.brand)}</span>`,
+    `<span>${esc(tpl(t.min_read, { n: minutes }))}</span>`,
+    `<span>${esc(typeLabel(r, t))}</span>`,
+  ].filter(Boolean).join(`<span class="sep" aria-hidden="true">·</span>`);
 
   return `${head}
-${sharedStyles()}
-${reportPageStyles()}
 </head>
 <body>
-  <a class="skip-link" href="#main-content">${t.skip}</a>
-  <nav>
-    <a href="/" class="nav-logo">BELFED_</a>
-    <ul class="nav-links">
-      <li><a href="/">${t.nav_home}</a></li>
-      <li><a href="/trades.html">${t.nav_track}</a></li>
-      <li><a href="/research/">${t.nav_research}</a></li>
-      <li><a href="/products.html">${t.nav_products}</a></li>
-      <li><a href="/about.html">${t.nav_about}</a></li>
-      <li><a href="${altUrl}" target="_blank" rel="noopener">${t.nav_lang}</a></li>
-    </ul>
-    <a href="https://t.me/belfedbot?start=${startPayload}" class="nav-cta">${t.nav_cta}</a>
-  </nav>
-  <div class="sticky-banner" id="stickyBanner">
-    <span>${esc(t.sticky_body)} <a href="https://t.me/belfedbot?start=${startPayload}_banner">${t.sticky_link}</a></span>
-    <button class="close" id="stickyClose" aria-label="${attr(t.sticky_close)}">×</button>
-  </div>
-  <main id="main-content">
-    <section class="hero">
-      <div class="kicker">${t.report_kicker_prefix}${esc(dateStr)}</div>
-      <h1>${esc(title)}</h1>
-      ${sub ? `<p class="subhead">${esc(sub)}</p>` : ""}
-      <div class="meta">
-        <span><strong>${t.report_author}</strong> · ${esc(t.author_name)}</span>
-        ${coverage ? `<span><strong>${t.report_coverage}</strong> · ${esc(coverage)}</span>` : ""}
-      </div>
-      ${heroCover ? `<figure class="hero-cover"><img src="${attr(heroCover)}" alt="${attr(title)}" width="1672" height="941" fetchpriority="high" decoding="async" /></figure>` : ""}
-    </section>
-    <article class="report">
-${sectionsHtml}
-      <div class="cta-inline">
-        <div class="cta-kicker">${t.cta_kicker}</div>
-        <h3>${esc(ctaHeadline(r, lang, t))}</h3>
-        <p>${esc(ctaBody(r, lang, t))}</p>
-        <div class="cta-row">
-          <a href="https://t.me/belfedbot?start=${startPayload}_mid" class="btn-primary">${t.cta_start_trial}</a>
-          <a href="#stay-in-loop" class="btn-secondary">${t.cta_notify_email}</a>
+  <a class="rs-skip" href="#main-content">${esc(t.skip)}</a>
+  <div class="rs-progress" role="progressbar" aria-label="${attr(t.progress)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="rsProgress"></div></div>
+  <main id="main-content" class="rs-main">
+    <div class="rs-wrap rp-crumb"><a href="/research/">← ${esc(t.crumb)}</a></div>
+    <header class="rp-hero"><div class="rs-wrap">
+      <div class="inner">
+        <div class="kicker">${esc(kicker)}</div>
+        <h1>${esc(title)}</h1>
+        ${sub ? `<p class="sub">${esc(sub)}</p>` : ""}
+        <div class="meta">${meta}</div>
+        <div class="tags"><span class="tag type">${esc(typeLabel(r, t))}</span>${classes.map(c => `<span class="tag cls">${esc(t.cls[c])}</span>`).join("")}${topicTags.map(x => `<span class="tag">${esc(x)}</span>`).join("")}</div>
+        <div class="actions" role="group" aria-label="${attr(t.share)}">
+          <button type="button" class="btn sm" data-copy>${ICON.link} <span>${esc(t.copy)}</span></button>
+          <a class="btn sm ghost" href="https://t.me/share/url?url=${shareUrl}&amp;text=${shareText}" target="_blank" rel="noopener">${esc(t.share_tg)}</a>
+          <a class="btn sm ghost" href="https://x.com/intent/post?url=${shareUrl}&amp;text=${shareText}" target="_blank" rel="noopener">${esc(t.share_x)}</a>
         </div>
+        <p class="disc-line"><span>${esc(t.disc_short)} <a href="/disclaimer.html">${esc(t.disc_link)} →</a></span></p>
       </div>
-    </article>
-    <section class="cta-final" id="stay-in-loop">
-      <div class="kicker">${t.final_kicker}</div>
-      <h2>${esc(t.final_title)}</h2>
-      <p class="lead">${esc(t.final_lead)}</p>
-      <div class="track">
-        <div><strong>+93.54R</strong>${t.track_ytd_label}</div>
-        <div><strong>+70.33R</strong>${t.track_2025_label}</div>
-        <div><strong>${lang === "ru" ? "Каждая сделка" : "Every trade"}</strong>${lang === "ru" ? "публично" : "logged publicly"}</div>
-      </div>
-      <div class="paths">
-        <div class="path">
-          <div class="path-label">${t.path_1_label}</div>
-          <h3>${t.path_1_title}</h3>
-          <p>${esc(t.path_1_body)}</p>
-          <a href="https://t.me/belfedbot?start=${startPayload}_final" class="btn btn-primary">${t.path_1_cta}</a>
-        </div>
-        <div class="path">
-          <div class="path-label">${t.path_2_label}</div>
-          <h3>${t.path_2_title}</h3>
-          <p>${esc(t.path_2_body)}</p>
-          <form class="lead-form" id="leadForm">
-            <input type="email" id="leadEmail" placeholder="${attr(t.lead_email_placeholder)}" required autocomplete="email">
-            <label class="consent">
-              <input type="checkbox" id="leadConsent">
-              <span>${esc(t.lead_consent)}</span>
-            </label>
-            <div class="honeypot"><input type="text" id="leadHoneypot" tabindex="-1" autocomplete="off"></div>
-            <button type="submit" id="leadSubmit">${t.lead_submit}</button>
-            <div class="form-msg ok" id="leadOk">${esc(t.lead_ok)}</div>
-            <div class="form-msg err" id="leadErr">${esc(t.lead_err)}</div>
-          </form>
-        </div>
-      </div>
-    </section>
-    <div class="disclaimer-box">
-      <strong>${t.disclaimer_label}</strong> ${t.disclaimer_body}
+      ${heroCover ? `<figure class="rp-cover"><img src="${attr(heroCover)}" alt="${attr(title)}" width="1672" height="941" fetchpriority="high" decoding="async"></figure>` : ""}
+    </div></header>
+    <div class="rs-wrap rp-layout">
+      <article class="rp-body" aria-labelledby="rpTitle">
+        <h2 id="rpTitle" class="rs-sr">${esc(title)}</h2>
+        ${prepared.length > 1 ? `<details class="toc-mobile"><summary>${esc(t.toc)}</summary>${tocHtml(prepared, t, "")}</details>` : ""}
+        ${takeaways.length ? `<section class="takeaways" aria-labelledby="rsTk"><div class="head"><span class="kicker" id="rsTk">// ${esc(t.takeaways)}</span><span class="label">${takeaways.length}</span></div><ol>${takeaways.map(x => `<li><span>${esc(x)}</span></li>`).join("")}</ol></section>` : ""}
+      ${sectionsHtml}
+        <section class="cta-final" id="stay-in-loop" aria-labelledby="rsFinalH">
+          <div class="kicker gold">${esc(t.final_kicker)}</div>
+          <h2 id="rsFinalH">${esc(hasCustom ? customH : t.final_title)}</h2>
+          ${finalBody}
+          <div class="acts">${hasCustom ? trialBtn + tgBtn : tgBtn + trialBtn}</div>
+          <div class="lead">
+            <div class="kicker">${esc(t.lead_kicker)}</div>
+            <h3>${esc(t.lead_title)}</h3>
+            <p>${esc(t.lead_text)}</p>
+            <form id="leadForm" novalidate>
+              <div class="field"><label for="leadEmail" class="rs-sr">${esc(t.lead_email_label)}</label><input type="email" id="leadEmail" placeholder="${attr(t.lead_email_placeholder)}" required autocomplete="email" inputmode="email"><button type="submit" class="submit" id="leadSubmit">${esc(t.lead_submit)} →</button></div>
+              <label class="consent"><input type="checkbox" id="leadConsent"><span>${esc(t.lead_consent)}</span></label>
+              <div class="hp" aria-hidden="true"><input type="text" id="leadHoneypot" tabindex="-1" autocomplete="off"></div>
+              <div class="msg ok" id="leadOk" role="status" hidden>${esc(t.lead_ok)}</div>
+              <div class="msg err" id="leadErr" role="alert" hidden>${esc(t.lead_err)}</div>
+            </form>
+          </div>
+        </section>
+        <section class="trust" aria-label="${attr(t.author)}">
+          <div><span class="k">${esc(t.author)}</span><strong>${esc(t.brand)}</strong>${day ? `<br>${esc(t.published)} <time datetime="${day}">${esc(dateStr)}</time>` : ""}</div>
+          <div><span class="k">${esc(t.trust_track)}</span>${esc(t.trust_track_text)} <a href="/trades.html">${esc(t.trust_track_link)} →</a></div>
+          <div class="disc"><strong>${esc(t.disclaimer_label)}</strong> ${t.disclaimer_body}</div>
+        </section>
+      </article>
+      ${prepared.length > 1 ? `<aside class="rp-aside">${tocHtml(prepared, t, " ")}<p class="toc-cta">${esc(t.banner_text)} <a href="${TG_FREE[lang]}" rel="noopener">${esc(t.banner_btn)} →</a></p></aside>` : ""}
+    </div>
+    <div class="rs-wrap">
+      ${older || newer ? `<nav class="pn" aria-label="${attr(t.prev + " / " + t.next)}">
+        ${older ? `<a class="pv" href="/research/${esc(older.slug)}/" rel="prev"><span class="k">← ${esc(t.prev)}</span><span class="t">${esc(reportTitle(older, lang))}</span><span class="d">${esc(fmtDate(lang, older.report_date || older.published_at))}</span></a>` : ""}
+        ${newer ? `<a class="nx" href="/research/${esc(newer.slug)}/" rel="next"><span class="k">${esc(t.next)} →</span><span class="t">${esc(reportTitle(newer, lang))}</span><span class="d">${esc(fmtDate(lang, newer.report_date || newer.published_at))}</span></a>` : ""}
+      </nav>` : ""}
+      ${related.length ? `<section class="related" aria-labelledby="rsRelH"><div class="list-head"><h2 id="rsRelH">${esc(t.related)}</h2><span class="label">${esc(t.related_sub)}</span></div><div class="grid">${related.map(o => miniCard(o, lang, t)).join("")}</div></section>` : ""}
     </div>
   </main>
-  ${footerBar(lang, t)}
+  <div class="rs-banner" id="rsBanner" role="region" aria-label="${attr(t.banner_text)}" hidden>
+    <span>${esc(t.banner_text)} <a href="${TG_FREE[lang]}" rel="noopener">${esc(t.banner_btn)}</a></span>
+    <button type="button">${esc(t.banner_close)}</button>
+  </div>
+  <dialog class="rs-lb" id="rsLb" aria-label="${attr(t.chart)}"><figure><img alt=""><figcaption><span></span><button type="button" class="lb-close">${esc(t.close)}</button></figcaption></figure></dialog>
+  ${jsonData("rpCfg", { url: canonical, copied: t.copied, noConsent: t.lead_no_consent, err: t.lead_err, supaUrl: SUPABASE_URL, supaKey: SUPABASE_ANON_KEY, leadTicker, leadNote, leadSource: leadNote, lang })}
+  <script>${HDR_JS}</script>
+  <script>${REPORT_JS}</script>
   <script src="/belfed-analytics.js"></script>
-  <script>
-    (function () {
-      var banner = document.getElementById('stickyBanner');
-      var close = document.getElementById('stickyClose');
-      var dismissed = false;
-      try { dismissed = sessionStorage.getItem('bf_research_banner_dismissed') === '1'; } catch (e) {}
-      if (dismissed) return;
-      window.addEventListener('scroll', function () {
-        var h = document.documentElement;
-        var scrolled = (h.scrollTop || document.body.scrollTop) / (h.scrollHeight - h.clientHeight);
-        if (scrolled > 0.3) banner.classList.add('show');
-      }, { passive: true });
-      close.addEventListener('click', function () {
-        banner.classList.remove('show');
-        try { sessionStorage.setItem('bf_research_banner_dismissed', '1'); } catch (e) {}
-      });
-    })();
-    (function () {
-      var SUPA_URL = ${JSON.stringify(SUPABASE_URL)};
-      var SUPA_KEY = ${JSON.stringify(SUPABASE_ANON_KEY)};
-      var form = document.getElementById('leadForm');
-      var okMsg = document.getElementById('leadOk');
-      var errMsg = document.getElementById('leadErr');
-      var LEAD_TICKER = ${JSON.stringify(leadTicker)};
-      var LEAD_NOTE = ${JSON.stringify(leadNote)};
-      var LEAD_SOURCE = ${JSON.stringify(leadSource)};
-      var LEAD_LANG = ${JSON.stringify(lang)};
-      var NO_CONSENT_MSG = ${JSON.stringify(t.lead_no_consent)};
-      form.addEventListener('submit', function (e) {
-        e.preventDefault();
-        var btn = document.getElementById('leadSubmit');
-        var email = (document.getElementById('leadEmail').value || '').trim().toLowerCase();
-        var consent = document.getElementById('leadConsent').checked;
-        var honeypot = document.getElementById('leadHoneypot').value || '';
-        if (!email) return;
-        if (!consent) { errMsg.textContent = NO_CONSENT_MSG; errMsg.classList.add('show'); return; }
-        okMsg.classList.remove('show'); errMsg.classList.remove('show');
-        var origLabel = btn.innerHTML;
-        btn.disabled = true; btn.innerHTML = '…';
-        var payload = { email: email, ticker: LEAD_TICKER, asset_class: null, timeframe: null, note: LEAD_NOTE, consent: consent, lang: LEAD_LANG, source: LEAD_SOURCE, website: honeypot };
-        if (window.BelfedAnalytics) { var _utm = window.BelfedAnalytics.utmFields(); for (var k in _utm) if (_utm.hasOwnProperty(k)) payload[k] = _utm[k]; }
-        fetch(SUPA_URL + '/functions/v1/landing-lead-create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
-          body: JSON.stringify(payload)
-        }).then(function (r) { return r.json().then(function (d) { return { status: r.status, body: d }; }); })
-          .then(function (res) {
-            btn.disabled = false; btn.innerHTML = origLabel;
-            if (res.body && (res.body.ok || res.body.reason === 'dup')) {
-              if (window.belfedTrack) window.belfedTrack('research_lead_submitted', { report: LEAD_NOTE });
-              form.reset();
-              okMsg.classList.add('show');
-            } else {
-              errMsg.classList.add('show');
-            }
-          })
-          .catch(function () { btn.disabled = false; btn.innerHTML = origLabel; errMsg.classList.add('show'); });
-      });
-    })();
-  </script>
+</body>
+</html>`;
+}
+
+function notFoundPage(lang: Lang): string {
+  const t = T[lang];
+  const dom = domain(lang);
+  const head = headBase(lang, {
+    title: `${t.nf_title} | ${t.brand}`,
+    description: t.index_meta_desc,
+    canonical: `https://${dom}/research/`,
+    ogTitle: t.nf_title,
+    ogDescription: t.index_meta_desc,
+    ogImage: `https://${dom}/og-belfed.png`,
+    robots: "noindex, follow",
+  });
+  return `${head}
+</head>
+<body>
+  <a class="rs-skip" href="#main-content">${esc(t.skip)}</a>
+  <main id="main-content" class="rs-main"><div class="rs-wrap"><section class="nf">
+    <div class="kicker">// 404</div>
+    <h1>${esc(t.nf_title)}</h1>
+    <p>${esc(t.nf_text)}</p>
+    <a class="btn primary" href="/research/">${esc(t.nf_back)} →</a>
+  </section></div></main>
+  <script>${HDR_JS}</script>
 </body>
 </html>`;
 }
@@ -950,39 +1121,34 @@ function htmlResponse(body: string, status: number, extraHeaders: Record<string,
 
 function parseLang(v: string | null): Lang { return v === "ru" ? "ru" : "en"; }
 
-function notFoundPage(lang: Lang): string {
-  const t = T[lang];
-  const dom = domain(lang);
-  const head = headBase(lang, {
-    title: (lang === "ru" ? "Отчёт не найден" : "Report not found") + " | " + t.author_name,
-    description: t.index_meta_desc,
-    canonical: `https://${dom}/research/`,
-    ogTitle: (lang === "ru" ? "Отчёт не найден" : "Report not found"),
-    ogDescription: t.index_meta_desc,
-    ogImage: `https://${dom}/og-belfed.png`,
-    robots: "noindex, follow",
-  });
-  return `${head}
-${sharedStyles()}
-<style>
-  .nf { max-width: 720px; margin: 0 auto; padding: 100px 40px; text-align: center; }
-  .nf h1 { font-size: clamp(28px, 4vw, 44px); font-weight: 700; margin-bottom: 24px; letter-spacing: -0.01em; }
-  .nf p { font-size: 15px; color: #444; line-height: 1.6; margin-bottom: 24px; }
-  .nf a { display: inline-block; background: var(--black); color: var(--white); padding: 14px 22px; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; border: 1px solid var(--black); }
-</style>
-</head>
-<body>
-  ${navBar(lang, t)}
-  <main>
-    <section class="nf">
-      <h1>${lang === "ru" ? "Отчёт не найден" : "Report not found"}</h1>
-      <p>${lang === "ru" ? "Возможно, отчёт был снят с публикации или ссылка устарела." : "The report may have been unpublished or the link is out of date."}</p>
-      <a href="/research/">${lang === "ru" ? "К списку исследований →" : "Back to research →"}</a>
-    </section>
-  </main>
-  ${footerBar(lang, t)}
-</body>
-</html>`;
+async function listCards(): Promise<ReportRow[]> {
+  const { data, error } = await supa
+    .from("analytics_reports").select(CARD_COLUMNS)
+    .eq("is_public", true).eq("status", "published")
+    .order("report_date", { ascending: false })
+    .order("published_at", { ascending: false, nullsFirst: false })
+    .limit(50);
+  if (error) throw new Error(error.message);
+  const reports = (data || []) as unknown as ReportRow[];
+  // Reading time per report: public section text only.
+  const ids = reports.map(r => r.id);
+  if (ids.length) {
+    const { data: secs, error: sErr } = await supa
+      .from("analytics_sections").select("report_id, is_public, body_ru, body_en").in("report_id", ids);
+    if (!sErr && secs) {
+      const w: Record<string, { ru: number; en: number }> = {};
+      for (const s of secs as Array<{ report_id: string; is_public: boolean; body_ru: string | null; body_en: string | null }>) {
+        if (s.is_public === false) continue;
+        const o = w[s.report_id] || (w[s.report_id] = { ru: 0, en: 0 });
+        o.ru += wordCount(s.body_ru); o.en += wordCount(s.body_en);
+      }
+      for (const r of reports) {
+        const o = w[r.id];
+        if (o) { r.words_ru = o.ru + wordCount(r.subtitle_ru); r.words_en = o.en + wordCount(r.subtitle_en); }
+      }
+    }
+  }
+  return reports;
 }
 
 Deno.serve(async (req) => {
@@ -997,38 +1163,39 @@ Deno.serve(async (req) => {
   const slug = (url.searchParams.get("slug") || "").trim();
   try {
     if (!slug) {
-      const { data: reports, error } = await supa
-        .from("analytics_reports").select(CARD_COLUMNS)
-        .eq("is_public", true).eq("status", "published")
-        .order("report_date", { ascending: false })
-        .order("published_at", { ascending: false, nullsFirst: false })
-        .limit(50);
-      if (error) return htmlResponse(`<h1>Server error</h1><pre>${esc(error.message)}</pre>`, 500, { "cache-control": "no-store" });
-      return htmlResponse(renderIndex(lang, (reports || []) as ReportRow[]), 200);
+      return htmlResponse(renderIndex(lang, await listCards()), 200);
     }
     const { data: reports, error: rErr } = await supa
       .from("analytics_reports").select(REPORT_COLUMNS)
       .eq("slug", slug).eq("is_public", true).eq("status", "published").limit(1);
     if (rErr) return htmlResponse(`<h1>Server error</h1><pre>${esc(rErr.message)}</pre>`, 500, { "cache-control": "no-store" });
-    const report = (reports ?? [])[0] as ReportRow | undefined;
+    const report = ((reports ?? []) as unknown as ReportRow[])[0];
     if (!report) return htmlResponse(notFoundPage(lang), 404, { "cache-control": "public, max-age=60" });
-    const { data: sections, error: sErr } = await supa
-      .from("analytics_sections").select(SECTION_PUBLIC_COLUMNS)
-      .eq("report_id", report.id).order("position", { ascending: true });
+    const [{ data: sections, error: sErr }, others] = await Promise.all([
+      supa.from("analytics_sections").select(SECTION_PUBLIC_COLUMNS).eq("report_id", report.id).order("position", { ascending: true }),
+      listCards().catch(() => [] as ReportRow[]),
+    ]);
     if (sErr) return htmlResponse(`<h1>Server error</h1><pre>${esc(sErr.message)}</pre>`, 500, { "cache-control": "no-store" });
-    const secs = (sections || []).map((s: Record<string, unknown>) => {
+    const secs = ((sections || []) as unknown as Record<string, unknown>[]).map((s) => {
       if (s.is_public === false) {
         const ci = Array.isArray(s.chart_images) ? (s.chart_images as Array<{ url?: string; url_en?: string }>).map(c => c && (lang === "en" && c.url_en ? c.url_en : c.url)) : [];
-        const urls = (ci.length ? ci : [s.chart_image_url as string | null]).map(u => teaserThumb(u as string | null)).filter(Boolean) as string[];
+        const full = (ci.length ? ci : [s.chart_image_url as string | null]).filter(Boolean) as string[];
+        const urls = full.map(u => teaserThumb(u)).filter(Boolean) as string[];
+        const tRu = teaserText(s.body_ru as string), tEn = teaserText(s.body_en as string);
+        // Only derived numbers and the short teaser leave this function.
         return { id: s.id, position: s.position, is_conclusion: s.is_conclusion, is_public: false,
           section_label_ru: s.section_label_ru, section_label_en: s.section_label_en,
           headline_ru: s.headline_ru, headline_en: s.headline_en,
-          teaser_ru: teaserText(s.body_ru as string), teaser_en: teaserText(s.body_en as string),
-          teaser_imgs: urls } as SectionRow;
+          teaser_ru: tRu, teaser_en: tEn, teaser_imgs: urls,
+          hidden_words_ru: Math.max(0, wordCount(s.body_ru as string) - wordCount(tRu)),
+          hidden_words_en: Math.max(0, wordCount(s.body_en as string) - wordCount(tEn)),
+          hidden_charts: full.length } as SectionRow;
       }
       return s as unknown as SectionRow;
     });
-    return htmlResponse(renderReport(lang, report, secs), 200);
+    const figUrls = secs.filter(x => x.is_public !== false).flatMap(x => sectionCharts(x, lang).map(f => f.src));
+    DIMS = await chartDims(figUrls).catch(() => ({}));
+    return htmlResponse(renderReport(lang, report, secs, others), 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return htmlResponse(`<h1>Server error</h1><pre>${esc(msg)}</pre>`, 500, { "cache-control": "no-store" });
