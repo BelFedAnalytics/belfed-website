@@ -1,3 +1,6 @@
+// analytics-republish-section v17 (2026-10-30): same automatic format choice as analytics-publish v45
+// (photo caption up to 1024, plain message up to 4096 without charts, otherwise one article with
+// the charts inline). Falls back to the previous caption + reply delivery if the article fails.
 // analytics-republish-section v16 (2026-10-29): after a successful send, the navigator message
 // is re-edited with links to every section (reports without linked sections; relink_nav=false to skip).
 // analytics-republish-section v15 (2026-10-29): honour Telegram retry_after up to 45 s, 4 attempts,
@@ -126,6 +129,17 @@ async function tgSendMessage(chatId: number, threadId: number | null, text: stri
   return { msg_id: (r.result?.message_id ?? null) as number | null, error: null as string | null };
 }
 
+// v17: one rich message (article). Charts are embedded in the html, so nothing is attached.
+async function tgSendRichMessage(chatId: number, threadId: number | null, html: string, replyTo: number | null, silent = false) {
+  const body: any = { chat_id: chatId, rich_message: { html } };
+  if (threadId != null) body.message_thread_id = threadId;
+  if (replyTo != null) body.reply_parameters = { message_id: replyTo, allow_sending_without_reply: true };
+  if (silent) body.disable_notification = true;
+  const r = await tgFetch("sendRichMessage", body);
+  if (!r.ok) return { msg_id: null as number | null, error: r.error };
+  return { msg_id: (r.result?.message_id ?? null) as number | null, error: null as string | null };
+}
+
 async function tgSendPhotoMultipart(chatId: number, threadId: number | null, photoUrl: string, caption: string, replyTo: number | null, silent = false) {
   let buf: ArrayBuffer;
   let ct = "image/png";
@@ -212,6 +226,87 @@ function fmtDate(d: string, lang: string) {
   return `${parseInt(day,10)} ${months[parseInt(m,10)-1]} ${y}`;
 }
 
+// ===== TG_SECTION_FORMAT:BEGIN =====
+// v45 (2026-10-30): automatic Telegram format per report section. This block is kept
+// byte-identical in analytics-publish, analytics-republish-section and analytics-edit-tg
+// (tests/report-section-format.test.cjs enforces it) and mirrored in admin-analytics.html.
+//   - section has charts and its message text fits 1024 visible chars -> "photo" (caption)
+//   - section has charts and the text is longer                      -> "article" (rich message)
+//   - section has no charts and the text fits 4096 visible chars      -> "text" (plain message)
+//   - section has no charts and the text is longer                   -> "article" (rich message)
+// Telegram counts message/caption length AFTER entity parsing, so HTML tags and entities
+// do not count: the decision is made on the visible text.
+const TG_FMT_CAPTION_LIMIT = 1024;
+const TG_FMT_TEXT_LIMIT = 4096;
+const TG_FMT_RICH_LIMIT = 32768;
+const TG_FMT_RICH_MAX_BLOCKS = 500;
+const RICH_GAP = "<p>&nbsp;</p>";
+
+function tgVisibleLength(html: string): number {
+  const plain = String(html ?? "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, "\"")
+    .replace(/&amp;/g, "&");
+  return plain.length;
+}
+
+function chooseSectionFormat(captionHtml: string, chartCount: number): { format: "photo" | "text" | "article"; len: number; limit: number } {
+  const len = tgVisibleLength(captionHtml);
+  if (chartCount > 0) {
+    return len <= TG_FMT_CAPTION_LIMIT
+      ? { format: "photo", len, limit: TG_FMT_CAPTION_LIMIT }
+      : { format: "article", len, limit: TG_FMT_RICH_LIMIT };
+  }
+  return len <= TG_FMT_TEXT_LIMIT
+    ? { format: "text", len, limit: TG_FMT_TEXT_LIMIT }
+    : { format: "article", len, limit: TG_FMT_RICH_LIMIT };
+}
+
+// Plain text with blank-line separated paragraphs -> <p> blocks with an empty paragraph
+// between them, so Telegram renders a visible gap (owner-approved layout "B2").
+function richParas(text: string): string {
+  return String(text ?? "")
+    .split(/\n{2,}/)
+    .map((b) => b.trim())
+    .filter(Boolean)
+    .map((b) => `<p>${escapeHtml(b).split("\n").join("<br>")}</p>`)
+    .join(RICH_GAP);
+}
+
+// Article (rich message) for one section: label, heading, body, charts inline, footer.
+// `parts` comes from buildSectionCaptions(...).parts so the article and the classic
+// message are always derived from the same label / headline / footer logic.
+function buildSectionArticleHtml(parts: any, charts: any[], lang: string, report: any): string {
+  const out: string[] = [];
+  if (parts.headline) {
+    if (parts.label) out.push(`<p>// ${escapeHtml(parts.label)}</p>`);
+    out.push(`<h3>${escapeHtml(parts.headline)}</h3>`);
+  } else if (parts.label) {
+    out.push(`<h3>// ${escapeHtml(parts.label)}</h3>`);
+  }
+  if (String(parts.body ?? "").trim()) out.push(richParas(parts.body));
+  if (parts.extraHtml) out.push(RICH_GAP + `<p>${parts.extraHtml}</p>`);
+  const figures = charts.map((c: any) => `<figure><img src="${escapeHtml(c.url)}"/></figure>`);
+  if (figures.length) out.push(RICH_GAP + figures.join(RICH_GAP));
+  const bot = `<a href="https://t.me/${BOT_USERNAME}">@${BOT_USERNAME}</a>`;
+  const footer = parts.isConclusion
+    ? `· ${parts.partsLabel}<br>· BELFED ANALYTICS · ${fmtDate(report.report_date, lang)} · ${bot} · ${lang === "ru" ? "belfed.ru" : "belfed.com"}`
+    : `· ${parts.partsLabel}  ${bot}`;
+  out.push(RICH_GAP + `<footer>${footer}</footer>`);
+  return out.join("");
+}
+
+// Telegram limits for a rich message: 32768 characters of text and 500 blocks.
+function richFits(html: string): { ok: boolean; reason: string | null; len: number; blocks: number } {
+  const len = tgVisibleLength(html);
+  const blocks = (html.match(/<(p|h[1-6]|figure|footer|blockquote)[\s>]/g) ?? []).length;
+  if (len > TG_FMT_RICH_LIMIT) return { ok: false, reason: `too_long:${len}/${TG_FMT_RICH_LIMIT}`, len, blocks };
+  if (blocks > TG_FMT_RICH_MAX_BLOCKS) return { ok: false, reason: `too_many_blocks:${blocks}/${TG_FMT_RICH_MAX_BLOCKS}`, len, blocks };
+  return { ok: true, reason: null, len, blocks };
+}
+// ===== TG_SECTION_FORMAT:END =====
+
 function buildFullFooter(report: any, lang: string) {
   const date = fmtDate(report.report_date, lang);
   const domain = lang === "ru" ? "belfed.ru" : "belfed.com";
@@ -268,6 +363,8 @@ function buildSectionCaptions(section: any, idx: number, total: number, lang: st
     minimal:       compose({ includeLabel: true,  includeChartCap: false, includeFullFooter: false }),
     ultraMinimal:  compose({ includeLabel: false, includeChartCap: false, includeFullFooter: false }),
     chartCap,
+    // v17: raw pieces for the article (rich message) layout.
+    parts: { label, headline, body, extraHtml: (section.extra_html ?? "") as string, partsLabel, isConclusion: !!isConclusion },
   };
 }
 
@@ -293,6 +390,23 @@ async function publishOneSection(
   let mode = "unknown";
   let lastError: string | null = null;
 
+  // v17: automatic format (see TG_SECTION_FORMAT block).
+  const fmt = chooseSectionFormat(caps.full, charts.length);
+  let fallbackReason: string | null = null;
+  if (fmt.format === "article") {
+    const articleHtml = buildSectionArticleHtml(caps.parts, charts, lang, report);
+    const fit = richFits(articleHtml);
+    if (!fit.ok) {
+      fallbackReason = `article_${fit.reason}`;
+    } else {
+      const r = await tgSendRichMessage(chatId, threadId, articleHtml, coverMsgId, silent);
+      if (r.msg_id) {
+        return { ok: true, photo_msg_id: r.msg_id, body_msg_id: null, charts: charts.length, mode: "article", format: "article", visible_len: fmt.len, error: null };
+      }
+      fallbackReason = `article_send_failed:${r.error}`;
+    }
+  }
+
   const candidates: [string, string][] = [
     [caps.full,         "full"],
     [caps.compact,      "compact"],
@@ -302,8 +416,11 @@ async function publishOneSection(
   let chosen: string | null = null;
   let chosenVariant = "ultra_minimal";
   for (const [text, m] of candidates) {
-    if (text.length <= TG_CAPTION_LIMIT) { chosen = text; chosenVariant = m; break; }
+    if (tgVisibleLength(text) <= TG_CAPTION_LIMIT) { chosen = text; chosenVariant = m; break; }
   }
+  const splitForLimit = (text: string, limit: number) =>
+    tgVisibleLength(text) <= limit ? { caption: text, tail: null as string | null } : trimCaption(text, limit);
+  let usedFormat = "photo";
 
   if (charts.length >= 2) {
     await sleep(DELAY_BEFORE_MEDIA_GROUP_MS);
@@ -330,7 +447,7 @@ async function publishOneSection(
       }
     }
   } else if (charts.length === 1) {
-    const { caption, tail } = trimCaption(caps.full);
+    const { caption, tail } = splitForLimit(caps.full, TG_CAPTION_LIMIT);
     const r = await tgSendPhotoMultipart(chatId, threadId, charts[0].url, caption, coverMsgId, silent);
     photoMsgId = r.msg_id; lastError = r.error;
     mode = photoMsgId ? "single_photo_caption" : "single_photo_caption_failed";
@@ -340,7 +457,9 @@ async function publishOneSection(
       bodyMsgId = rTxt.msg_id;
     }
   } else {
-    const { caption, tail } = trimCaption(caps.full);
+    // v17: no charts -> a plain message holds 4096 characters, not 1024.
+    usedFormat = "text";
+    const { caption, tail } = splitForLimit(caps.full, TG_TEXT_LIMIT);
     const r = await tgSendMessage(chatId, threadId, caption, coverMsgId, silent);
     photoMsgId = r.msg_id; lastError = r.error;
     mode = photoMsgId ? "no_photo_text_only" : "no_photo_text_only_failed";
@@ -357,6 +476,9 @@ async function publishOneSection(
     body_msg_id: bodyMsgId,
     charts: charts.length,
     mode,
+    format: usedFormat,
+    visible_len: fmt.len,
+    fallback_reason: fallbackReason,
     error: lastError,
   };
 }
@@ -437,6 +559,7 @@ Deno.serve(async (req) => {
         body_msg_id: out.body_msg_id,
         charts: out.charts,
         mode: out.mode,
+        format: out.format,
       };
       const oldSections = Array.isArray(tg.sections) ? tg.sections : [];
       const newSections = oldSections.map((s: any) =>

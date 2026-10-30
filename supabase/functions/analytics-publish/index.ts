@@ -1,4 +1,15 @@
-// analytics-publish v44
+// analytics-publish v45
+// v45 (2026-10-30): Automatic Telegram format per report section.
+//   - Incident: the editor blocked any section body over 900 characters, and the publisher cut
+//     text-only sections at 1024 and sent the rest as a reply, although a message without a
+//     picture may hold 4096 characters.
+//   - A section now goes out in the format that fits it: charts + text up to 1024 visible chars
+//     = photo/album caption (as before); no charts + text up to 4096 = one plain message;
+//     charts + longer text, or no charts + text over 4096 = ONE article (sendRichMessage, up to
+//     32768 chars) with the charts inline. If the article cannot be sent (too large, Telegram
+//     error) the previous behaviour (caption plus reply with the tail) is used as a fallback.
+//   - Telegram counts length after entity parsing, so tags/entities no longer count.
+//   - Section results now store format (photo | text | article) next to mode.
 // v44 (2026-10-29): Telegram flood control.
 //   - Incident: in the 12-section crypto report of 2026-10-29, section 011 was dropped in RU
 //     and EN. Telegram answered 429 retry_after=34 s after ~20 messages in a minute; the
@@ -101,6 +112,7 @@ const MAX_RETRIES = 4;
 const MAX_RETRY_WAIT_MS = 45_000;
 
 function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
+
 
 // Localized charts: an item may carry url_en; EN publishing uses it, RU and fallback use url.
 function getCharts(section: any, lang = "ru") {
@@ -222,6 +234,17 @@ async function tgEditMessageText(chatId: number, messageId: number, text: string
   return { ok: r.ok, error: r.error ?? null };
 }
 
+// v45: one rich message (article). Charts are embedded in the html, so nothing is attached.
+async function tgSendRichMessage(chatId: number, threadId: number | null, html: string, replyTo: number | null, silent = false) {
+  const body: any = { chat_id: chatId, rich_message: { html } };
+  if (threadId != null) body.message_thread_id = threadId;
+  if (replyTo != null) body.reply_parameters = { message_id: replyTo, allow_sending_without_reply: true };
+  if (silent) body.disable_notification = true;
+  const r = await tgFetch("sendRichMessage", body);
+  if (!r.ok) return { msg_id: null as number | null, error: r.error };
+  return { msg_id: (r.result?.message_id ?? null) as number | null, error: null as string | null };
+}
+
 async function tgSendPhotoUrl(chatId: number, threadId: number | null, photoUrl: string, caption: string, replyTo: number | null, replyMarkup: any = null, silent = false) {
   const body: any = { chat_id: chatId, photo: photoUrl, caption, parse_mode: "HTML" };
   if (threadId != null) body.message_thread_id = threadId;
@@ -308,6 +331,87 @@ function fmtDate(d: string, lang: string) {
   const months = lang === "ru" ? monthsRu : monthsEn;
   return `${parseInt(day,10)} ${months[parseInt(m,10)-1]} ${y}`;
 }
+
+// ===== TG_SECTION_FORMAT:BEGIN =====
+// v45 (2026-10-30): automatic Telegram format per report section. This block is kept
+// byte-identical in analytics-publish, analytics-republish-section and analytics-edit-tg
+// (tests/report-section-format.test.cjs enforces it) and mirrored in admin-analytics.html.
+//   - section has charts and its message text fits 1024 visible chars -> "photo" (caption)
+//   - section has charts and the text is longer                      -> "article" (rich message)
+//   - section has no charts and the text fits 4096 visible chars      -> "text" (plain message)
+//   - section has no charts and the text is longer                   -> "article" (rich message)
+// Telegram counts message/caption length AFTER entity parsing, so HTML tags and entities
+// do not count: the decision is made on the visible text.
+const TG_FMT_CAPTION_LIMIT = 1024;
+const TG_FMT_TEXT_LIMIT = 4096;
+const TG_FMT_RICH_LIMIT = 32768;
+const TG_FMT_RICH_MAX_BLOCKS = 500;
+const RICH_GAP = "<p>&nbsp;</p>";
+
+function tgVisibleLength(html: string): number {
+  const plain = String(html ?? "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, "\"")
+    .replace(/&amp;/g, "&");
+  return plain.length;
+}
+
+function chooseSectionFormat(captionHtml: string, chartCount: number): { format: "photo" | "text" | "article"; len: number; limit: number } {
+  const len = tgVisibleLength(captionHtml);
+  if (chartCount > 0) {
+    return len <= TG_FMT_CAPTION_LIMIT
+      ? { format: "photo", len, limit: TG_FMT_CAPTION_LIMIT }
+      : { format: "article", len, limit: TG_FMT_RICH_LIMIT };
+  }
+  return len <= TG_FMT_TEXT_LIMIT
+    ? { format: "text", len, limit: TG_FMT_TEXT_LIMIT }
+    : { format: "article", len, limit: TG_FMT_RICH_LIMIT };
+}
+
+// Plain text with blank-line separated paragraphs -> <p> blocks with an empty paragraph
+// between them, so Telegram renders a visible gap (owner-approved layout "B2").
+function richParas(text: string): string {
+  return String(text ?? "")
+    .split(/\n{2,}/)
+    .map((b) => b.trim())
+    .filter(Boolean)
+    .map((b) => `<p>${escapeHtml(b).split("\n").join("<br>")}</p>`)
+    .join(RICH_GAP);
+}
+
+// Article (rich message) for one section: label, heading, body, charts inline, footer.
+// `parts` comes from buildSectionCaptions(...).parts so the article and the classic
+// message are always derived from the same label / headline / footer logic.
+function buildSectionArticleHtml(parts: any, charts: any[], lang: string, report: any): string {
+  const out: string[] = [];
+  if (parts.headline) {
+    if (parts.label) out.push(`<p>// ${escapeHtml(parts.label)}</p>`);
+    out.push(`<h3>${escapeHtml(parts.headline)}</h3>`);
+  } else if (parts.label) {
+    out.push(`<h3>// ${escapeHtml(parts.label)}</h3>`);
+  }
+  if (String(parts.body ?? "").trim()) out.push(richParas(parts.body));
+  if (parts.extraHtml) out.push(RICH_GAP + `<p>${parts.extraHtml}</p>`);
+  const figures = charts.map((c: any) => `<figure><img src="${escapeHtml(c.url)}"/></figure>`);
+  if (figures.length) out.push(RICH_GAP + figures.join(RICH_GAP));
+  const bot = `<a href="https://t.me/${BOT_USERNAME}">@${BOT_USERNAME}</a>`;
+  const footer = parts.isConclusion
+    ? `· ${parts.partsLabel}<br>· BELFED ANALYTICS · ${fmtDate(report.report_date, lang)} · ${bot} · ${lang === "ru" ? "belfed.ru" : "belfed.com"}`
+    : `· ${parts.partsLabel}  ${bot}`;
+  out.push(RICH_GAP + `<footer>${footer}</footer>`);
+  return out.join("");
+}
+
+// Telegram limits for a rich message: 32768 characters of text and 500 blocks.
+function richFits(html: string): { ok: boolean; reason: string | null; len: number; blocks: number } {
+  const len = tgVisibleLength(html);
+  const blocks = (html.match(/<(p|h[1-6]|figure|footer|blockquote)[\s>]/g) ?? []).length;
+  if (len > TG_FMT_RICH_LIMIT) return { ok: false, reason: `too_long:${len}/${TG_FMT_RICH_LIMIT}`, len, blocks };
+  if (blocks > TG_FMT_RICH_MAX_BLOCKS) return { ok: false, reason: `too_many_blocks:${blocks}/${TG_FMT_RICH_MAX_BLOCKS}`, len, blocks };
+  return { ok: true, reason: null, len, blocks };
+}
+// ===== TG_SECTION_FORMAT:END =====
 
 function buildFullFooter(report: any, lang: string) {
   const date = fmtDate(report.report_date, lang);
@@ -576,12 +680,21 @@ function buildSectionCaptions(section: any, standardIdx: number, standardTotal: 
     compact:       compose({ includeLabel: true,  includeChartCap: false, includeFullFooter: showFullFooter }),
     minimal:       compose({ includeLabel: true,  includeChartCap: false, includeFullFooter: false }),
     ultraMinimal:  compose({ includeLabel: false, includeChartCap: false, includeFullFooter: false }),
+    // v45: raw pieces for the article (rich message) layout.
+    parts: { label, headline, body, extraHtml, partsLabel, isConclusion: !!isConclusion },
   };
 }
 
-async function publishSection(
+// v45: classic delivery (photo / album caption / plain message, with a reply for any tail).
+// Used for every section that fits its format and as the fallback when an article fails.
+function splitForLimit(text: string, limit: number): { caption: string; tail: string | null } {
+  if (tgVisibleLength(text) <= limit) return { caption: text, tail: null };
+  return trimCaption(text, limit);
+}
+
+async function publishSectionClassic(
   chatId: number, threadId: number | null, charts: any[], caps: any, coverMsgId: number, silent: boolean,
-): Promise<{ photo_msg_id: number | null; body_msg_id: number | null; mode: string; error: string | null }> {
+): Promise<{ photo_msg_id: number | null; body_msg_id: number | null; mode: string; format: string; error: string | null }> {
   let photoMsgId: number | null = null; let bodyMsgId: number | null = null;
   let mode = "unknown"; let lastError: string | null = null;
   const candidates: [string, string][] = [
@@ -589,7 +702,7 @@ async function publishSection(
   ];
   let chosen: string | null = null; let chosenVariant = "ultra_minimal";
   for (const [text, m] of candidates) {
-    if (text.length <= TG_CAPTION_LIMIT) { chosen = text; chosenVariant = m; break; }
+    if (tgVisibleLength(text) <= TG_CAPTION_LIMIT) { chosen = text; chosenVariant = m; break; }
   }
 
   if (charts.length >= 2) {
@@ -614,8 +727,11 @@ async function publishSection(
         if (!bodyMsgId) lastError = `${lastError ?? ""};reply_text_failed:${rTxt.error}`;
       }
     }
-  } else if (charts.length === 1) {
-    const { caption, tail } = trimCaption(caps.full);
+    return { photo_msg_id: photoMsgId, body_msg_id: bodyMsgId, mode, format: "photo", error: lastError };
+  }
+
+  if (charts.length === 1) {
+    const { caption, tail } = splitForLimit(caps.full, TG_CAPTION_LIMIT);
     const r = await tgSendPhotoMultipart(chatId, threadId, charts[0].url, caption, coverMsgId, silent);
     photoMsgId = r.msg_id; lastError = r.error;
     mode = photoMsgId ? "single_photo_caption" : "single_photo_caption_failed";
@@ -625,19 +741,43 @@ async function publishSection(
       bodyMsgId = rTxt.msg_id;
       if (!bodyMsgId) lastError = `${lastError ?? ""};reply_text_failed:${rTxt.error}`;
     }
-  } else {
-    const { caption, tail } = trimCaption(caps.full);
-    const r = await tgSendMessage(chatId, threadId, caption, coverMsgId, null, silent);
-    photoMsgId = r.msg_id; lastError = r.error;
-    mode = photoMsgId ? "no_photo_text_only" : "no_photo_text_only_failed";
-    if (tail && photoMsgId) {
-      await sleep(400);
-      const rTxt = await tgSendMessage(chatId, threadId, tail.slice(0, TG_TEXT_LIMIT), photoMsgId, null, silent);
-      bodyMsgId = rTxt.msg_id;
-      if (!bodyMsgId) lastError = `${lastError ?? ""};reply_text_failed:${rTxt.error}`;
+    return { photo_msg_id: photoMsgId, body_msg_id: bodyMsgId, mode, format: "photo", error: lastError };
+  }
+
+  // v45: no charts -> a plain message holds 4096 characters, not 1024.
+  const { caption, tail } = splitForLimit(caps.full, TG_TEXT_LIMIT);
+  const r = await tgSendMessage(chatId, threadId, caption, coverMsgId, null, silent);
+  photoMsgId = r.msg_id; lastError = r.error;
+  mode = photoMsgId ? "no_photo_text_only" : "no_photo_text_only_failed";
+  if (tail && photoMsgId) {
+    await sleep(400);
+    const rTxt = await tgSendMessage(chatId, threadId, tail.slice(0, TG_TEXT_LIMIT), photoMsgId, null, silent);
+    bodyMsgId = rTxt.msg_id;
+    if (!bodyMsgId) lastError = `${lastError ?? ""};reply_text_failed:${rTxt.error}`;
+  }
+  return { photo_msg_id: photoMsgId, body_msg_id: bodyMsgId, mode, format: "text", error: lastError };
+}
+
+// v45: picks the delivery for a section. `fmt` comes from chooseSectionFormat(caps.full, charts).
+async function publishSection(
+  chatId: number, threadId: number | null, charts: any[], caps: any, coverMsgId: number, silent: boolean,
+  fmt: { format: string }, articleHtml: string | null,
+): Promise<{ photo_msg_id: number | null; body_msg_id: number | null; mode: string; format: string; error: string | null; fallback_reason: string | null }> {
+  let fallbackReason: string | null = null;
+  if (fmt.format === "article" && articleHtml) {
+    const fit = richFits(articleHtml);
+    if (!fit.ok) {
+      fallbackReason = `article_${fit.reason}`;
+      console.warn(`[analytics-publish v45] article does not fit (${fit.reason}); using classic delivery`);
+    } else {
+      const r = await tgSendRichMessage(chatId, threadId, articleHtml, coverMsgId, silent);
+      if (r.msg_id) return { photo_msg_id: r.msg_id, body_msg_id: null, mode: "article", format: "article", error: null, fallback_reason: null };
+      fallbackReason = `article_send_failed:${r.error}`;
+      console.warn(`[analytics-publish v45] article send failed (${r.error}); using classic delivery`);
     }
   }
-  return { photo_msg_id: photoMsgId, body_msg_id: bodyMsgId, mode, error: lastError };
+  const out = await publishSectionClassic(chatId, threadId, charts, caps, coverMsgId, silent);
+  return { ...out, fallback_reason: fallbackReason };
 }
 
 Deno.serve(async (req) => {
@@ -776,13 +916,18 @@ Deno.serve(async (req) => {
         total_sections_count: totalSections,
         section_previews: orderedSections.map((s: any, i: number) => {
           const caps = buildSectionCaptions(s, i, totalSections, lang, !!s.is_conclusion, report);
+          const secCharts = getCharts(s, lang);
+          const fmt = chooseSectionFormat(caps.full, secCharts.length);
+          const art = fmt.format === "article" ? buildSectionArticleHtml(caps.parts, secCharts, lang, report) : null;
           return {
             position: s.position,
             linked: !!s.linked_post_id,
             preview: caps.full,
             full_len: caps.full.length, compact_len: caps.compact.length,
             minimal_len: caps.minimal.length, ultra_minimal_len: caps.ultraMinimal.length,
-            chart_count: getCharts(s, lang).length,
+            chart_count: secCharts.length,
+            format: fmt.format, visible_len: fmt.len, format_limit: fmt.limit,
+            article_preview: art, article_fit: art ? richFits(art) : null,
           };
         }),
       };
@@ -826,13 +971,17 @@ Deno.serve(async (req) => {
       const section = orderedSections[i];
       const charts = getCharts(section, lang);
       const caps = buildSectionCaptions(section, i, totalSections, lang, !!section.is_conclusion, report);
-      const out = await publishSection(topic.chat_id, topic.thread_id, charts, caps, coverMsgId, silent);
+      // v45: format is chosen from the visible length of the message and the chart count.
+      const fmt = chooseSectionFormat(caps.full, charts.length);
+      const articleHtml = fmt.format === "article" ? buildSectionArticleHtml(caps.parts, charts, lang, report) : null;
+      const out = await publishSection(topic.chat_id, topic.thread_id, charts, caps, coverMsgId, silent, fmt, articleHtml);
       const sectionResult: any = {
         section_id: section.id, position: section.position,
         linked: !!section.linked_post_id,
         photo_msg_id: out.photo_msg_id, body_msg_id: out.body_msg_id,
-        charts: charts.length, mode: out.mode,
+        charts: charts.length, mode: out.mode, format: out.format, visible_len: fmt.len,
       };
+      if (out.fallback_reason) sectionResult.fallback_reason = out.fallback_reason;
       if (out.error) sectionResult.error = out.error;
       sectionResults.push(sectionResult);
       sectionMsgIds.push(out.photo_msg_id ?? out.body_msg_id ?? null);

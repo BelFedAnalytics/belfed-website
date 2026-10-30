@@ -187,6 +187,7 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 .char-counter{font-size:10px;letter-spacing:1px;opacity:0.6;text-align:right;margin-top:2px}
 .char-counter.warn{color:#e6a800}
 .char-counter.over{color:#c50000;font-weight:bold}
+.char-counter.info{color:#0b6b3a;opacity:1}
 
 .msg{padding:10px 12px;font-size:11px;letter-spacing:1px;border:1px solid #000;margin:10px 0}
 .msg.ok{background:#1a7a1a;color:#fff;border-color:#1a7a1a}
@@ -430,6 +431,7 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
           <div class="field">
             <label>ТЕКСТ · RU</label>
             <textarea id="conc-body-ru" rows="5"></textarea>
+            <div class="char-counter" data-conc-counter="ru"></div>
           </div>
         </div>
         <div class="lang-pane" data-lang="en">
@@ -440,6 +442,7 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
           <div class="field">
             <label>BODY · EN</label>
             <textarea id="conc-body-en" rows="5"></textarea>
+            <div class="char-counter" data-conc-counter="en"></div>
           </div>
         </div>
       </div>
@@ -1105,6 +1108,7 @@ async function loadReport(id) {
   document.getElementById('conc-headline-en').value = state.conclusion.headline_en;
   document.getElementById('conc-body-ru').value     = state.conclusion.body_ru;
   document.getElementById('conc-body-en').value     = state.conclusion.body_en;
+  updateConcCounters();
 
   document.getElementById('page-title').textContent = `— РЕДАКТИРОВАНИЕ: ${rep.title_ru || rep.title_en || '(без названия)'} —`;
 }
@@ -1323,6 +1327,7 @@ function renderSections() {
     sec.position = i;
     host.appendChild(renderSectionBlock(sec, i));
   });
+  updateConcCounters();
 }
 
 function renderSectionBlock(sec, idx) {
@@ -1366,7 +1371,7 @@ function renderSectionBlock(sec, idx) {
       </div>
       <div class="field"><label>ТЕКСТ · RU</label>
         <textarea data-bind="body_ru" rows="4">${escapeHtml(sec.body_ru||'')}</textarea>
-        <div class="char-counter" data-counter="body_ru">0 / 900</div>
+        <div class="char-counter" data-counter="body_ru"></div>
       </div>
     </div>
 
@@ -1379,12 +1384,12 @@ function renderSectionBlock(sec, idx) {
       </div>
       <div class="field"><label>BODY · EN</label>
         <textarea data-bind="body_en" rows="4">${escapeHtml(sec.body_en||'')}</textarea>
-        <div class="char-counter" data-counter="body_en">0 / 900</div>
+        <div class="char-counter" data-counter="body_en"></div>
       </div>
     </div>
 
     <div class="field">
-      <label>// ГРАФИКИ (до 5, опционально) · CHARTS · в TG отправятся как альбом</label>
+      <label>// ГРАФИКИ (до 5, опционально) · CHARTS · в TG: короткий текст уходит подписью под графиками, длинный — статьёй с графиками внутри</label>
       <label class="toggle-block charts-split-toggle"><input type="checkbox" data-charts-split ${sec.charts_split ? 'checked' : ''}> РАЗНЫЕ ГРАФИКИ ДЛЯ RU И EN</label>
       <div class="charts-split-hint" data-charts-split-hint ${sec.charts_split ? '' : 'hidden'}>RU-график идёт в belfed.ru и RU-канал, EN-график в belfed.com и EN-канал. Если EN не загружен, используется RU.</div>
       <div class="charts-list" data-charts></div>
@@ -1532,6 +1537,7 @@ function renderChartsList(sectionDiv, sec) {
   const host = sectionDiv.querySelector('[data-charts]');
   const addBtn = sectionDiv.querySelector('[data-add-chart]');
   host.innerHTML = '';
+  updateCounters(sectionDiv, sec); // v45: число графиков меняет формат TG (подпись или статья)
   sec.chart_images.forEach((ci, i) => {
     host.appendChild(renderChartItem(sec, ci, i));
   });
@@ -1678,40 +1684,167 @@ function renderChartItem(sec, ci, idx) {
   return item;
 }
 
-// v18: TG_BODY_LIMIT — безопасный лимит для body, чтобы caption под альбомом
-// влез в Telegram caption limit (1024). Учитывает headline + part_label + @BelfedBot.
-const TG_BODY_LIMIT = 900;
-const TG_BODY_WARN  = 800;
+// v45: автоматический формат секции в Telegram (зеркалит analytics-publish v45).
+// Лимиты Telegram считаются по видимому тексту (теги и сущности не считаются):
+//   график(и) + текст до 1024 знаков  -> подпись под фото/альбомом
+//   без графика + текст до 4096       -> обычное сообщение
+//   график(и) + текст больше 1024, либо без графика и текст больше 4096
+//                                     -> одна статья (rich message, до 32768 знаков), графики внутри текста
+// Считается всё сообщение целиком: метка, заголовок, текст и подвал «Часть N/M · @BelfedBot».
+// TG_FMT:BEGIN
+const TG_FMT_CAPTION_LIMIT = 1024;
+const TG_FMT_TEXT_LIMIT = 4096;
+const TG_FMT_RICH_LIMIT = 32768;
+const TG_FMT_BOT = 'BelfedBot';
+
+function tgFmtDate(iso, lang) {
+  const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return '';
+  const months = lang === 'ru'
+    ? ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек']
+    : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${parseInt(m[3], 10)} ${months[parseInt(m[2], 10) - 1]} ${m[1]}`;
+}
+
+function tgFmtLabelTail(label) {
+  return String(label || '').replace(/^[\s·•\-—]*\d+[.)\s]*\s*/u, '').trim();
+}
+
+// Видимый текст сообщения секции (то же, что buildSectionCaptions(...).full на сервере, без HTML).
+function tgSectionText(f) {
+  const lang = f.lang;
+  const label = String(f.label || '').trim();
+  const headlineRaw = f.headline || '';
+  const body = f.body || '';
+  const partsLabel = f.isConclusion
+    ? (lang === 'ru' ? 'ГЛАВНЫЙ ВЫВОД' : 'KEY TAKEAWAY')
+    : (lang === 'ru' ? `Часть ${f.idx + 2}/${f.total + 1}` : `Part ${f.idx + 2}/${f.total + 1}`);
+  const labelClean = tgFmtLabelTail(label).toLocaleLowerCase();
+  const headlineClean = headlineRaw.trim().toLocaleLowerCase();
+  const headline = (headlineClean && headlineClean !== labelClean) ? headlineRaw : '';
+  const lines = [];
+  if (label) lines.push(`// ${label}`);
+  if (headline) lines.push(headline);
+  if (lines.length) lines.push('');
+  if (body) lines.push(body);
+  lines.push('');
+  if (f.isConclusion) {
+    const domain = lang === 'ru' ? 'belfed.ru' : 'belfed.com';
+    lines.push(`· ${partsLabel}`, `· BELFED ANALYTICS · ${tgFmtDate(f.date, lang)} · @${TG_FMT_BOT} · ${domain}`);
+  } else {
+    lines.push(`· ${partsLabel}  @${TG_FMT_BOT}`);
+  }
+  return lines.join('\n');
+}
+
+function tgChooseFormat(textLen, chartCount) {
+  if (chartCount > 0) {
+    return textLen <= TG_FMT_CAPTION_LIMIT
+      ? { format: 'photo', len: textLen, limit: TG_FMT_CAPTION_LIMIT }
+      : { format: 'article', len: textLen, limit: TG_FMT_RICH_LIMIT };
+  }
+  return textLen <= TG_FMT_TEXT_LIMIT
+    ? { format: 'text', len: textLen, limit: TG_FMT_TEXT_LIMIT }
+    : { format: 'article', len: textLen, limit: TG_FMT_RICH_LIMIT };
+}
+// TG_FMT:END
+
+function tgTotalSections() {
+  return (state.sections || []).length + (state.conclusion && state.conclusion.enabled ? 1 : 0);
+}
+
+function tgDateValue() {
+  const el = document.getElementById('f-date');
+  return el ? el.value : '';
+}
+
+// Формат для обычной секции (по индексу) или для главного вывода (conclusion=true).
+function tgFormatForSection(sec, idx, lang, conclusion) {
+  const L = lang === 'en' ? 'en' : 'ru';
+  const charts = (sec.chart_images || []).filter(c => c && c.url).length;
+  const text = tgSectionText({
+    lang: L, idx, total: tgTotalSections(), isConclusion: !!conclusion, date: tgDateValue(),
+    label: conclusion ? (L === 'ru' ? 'ГЛАВНЫЙ ВЫВОД' : 'KEY TAKEAWAY') : (sec['section_label_' + L] || `0${idx + 1}`),
+    headline: sec['headline_' + L], body: sec['body_' + L],
+  });
+  return Object.assign(tgChooseFormat(text.length, charts), { charts });
+}
+
+function tgFormatCounter(fmt) {
+  if (fmt.format === 'photo') {
+    return { text: `${fmt.len} / ${TG_FMT_CAPTION_LIMIT} · подпись под графиком (длиннее: статья до ${TG_FMT_RICH_LIMIT})`, cls: fmt.len > 900 ? ' warn' : '' };
+  }
+  if (fmt.format === 'text') {
+    return { text: `${fmt.len} / ${TG_FMT_TEXT_LIMIT} · обычное сообщение`, cls: fmt.len > 3800 ? ' warn' : '' };
+  }
+  return {
+    text: `${fmt.len} / ${TG_FMT_RICH_LIMIT} · СТАТЬЯ: ${fmt.charts ? 'текст и графики одним постом' : 'длинный текст одним постом'}`,
+    cls: fmt.len > TG_FMT_RICH_LIMIT ? ' over' : ' info',
+  };
+}
 
 function updateCounters(el, sec) {
+  const idx = state.sections.indexOf(sec);
   el.querySelectorAll('[data-counter]').forEach(cnt => {
-    const k = cnt.dataset.counter;
-    const len = (sec[k]||'').length;
-    cnt.textContent = `${len} / ${TG_BODY_LIMIT} символов (TG caption)`;
-    cnt.className = 'char-counter' + (len > TG_BODY_LIMIT ? ' over' : (len > TG_BODY_WARN ? ' warn' : ''));
+    const lang = cnt.dataset.counter === 'body_en' ? 'en' : 'ru';
+    const c = tgFormatCounter(tgFormatForSection(sec, idx < 0 ? 0 : idx, lang, false));
+    cnt.textContent = c.text;
+    cnt.className = 'char-counter' + c.cls;
   });
 }
 
-// v18: проверка длины body перед сохранением/публикацией.
+function concSectionFromForm() {
+  return {
+    chart_images: (state.conclusion && state.conclusion.chart_images) || [],
+    headline_ru: document.getElementById('conc-headline-ru').value, headline_en: document.getElementById('conc-headline-en').value,
+    body_ru: document.getElementById('conc-body-ru').value, body_en: document.getElementById('conc-body-en').value,
+  };
+}
+
+function updateConcCounters() {
+  if (!state.conclusion) return;
+  const sec = concSectionFromForm();
+  ['ru', 'en'].forEach(lang => {
+    const cnt = document.querySelector(`[data-conc-counter="${lang}"]`);
+    if (!cnt) return;
+    const r = tgFormatCounter(tgFormatForSection(sec, state.sections.length, lang, true));
+    cnt.textContent = r.text;
+    cnt.className = 'char-counter' + r.cls;
+  });
+}
+
+// Блокирует публикацию в TG только если текст не помещается даже в статью (32768).
 // v19: принимает langs (по умолчанию ['ru','en']) — проверяет только выбранные языки.
 // Возвращает массив с описанием превышений, либо пустой массив.
 function findBodyOverflows(langs) {
   const checkRu = !langs || langs.includes('ru');
   const checkEn = !langs || langs.includes('en');
   const overflows = [];
-  state.sections.forEach((sec, i) => {
-    const ruLen = (sec.body_ru||'').length;
-    const enLen = (sec.body_en||'').length;
-    if (checkRu && ruLen > TG_BODY_LIMIT) overflows.push(`Секция ${i+1} (RU): ${ruLen}/${TG_BODY_LIMIT}`);
-    if (checkEn && enLen > TG_BODY_LIMIT) overflows.push(`Секция ${i+1} (EN): ${enLen}/${TG_BODY_LIMIT}`);
-  });
-  if (state.conclusion && state.conclusion.enabled) {
-    const cRuLen = (state.conclusion.body_ru||'').length;
-    const cEnLen = (state.conclusion.body_en||'').length;
-    if (checkRu && cRuLen > TG_BODY_LIMIT) overflows.push(`Главный вывод (RU): ${cRuLen}/${TG_BODY_LIMIT}`);
-    if (checkEn && cEnLen > TG_BODY_LIMIT) overflows.push(`Главный вывод (EN): ${cEnLen}/${TG_BODY_LIMIT}`);
-  }
+  const check = (sec, idx, conclusion, title) => {
+    [['ru', checkRu], ['en', checkEn]].forEach(([lang, on]) => {
+      if (!on) return;
+      const f = tgFormatForSection(sec, idx, lang, conclusion);
+      if (f.format === 'article' && f.len > TG_FMT_RICH_LIMIT) overflows.push(`${title} (${lang.toUpperCase()}): ${f.len}/${TG_FMT_RICH_LIMIT}`);
+    });
+  };
+  state.sections.forEach((sec, i) => { if (!sec.linked_post_id) check(sec, i, false, `Секция ${i+1}`); });
+  if (state.conclusion && state.conclusion.enabled) check(concSectionFromForm(), state.sections.length, true, 'Главный вывод');
   return overflows;
+}
+
+// Какие секции уйдут в Telegram статьёй (для окна подтверждения публикации).
+function describeTgArticles(langs) {
+  const parts = [];
+  (langs || ['ru', 'en']).forEach(lang => {
+    const nums = [];
+    state.sections.forEach((sec, i) => {
+      if (sec.linked_post_id) return;
+      if (tgFormatForSection(sec, i, lang, false).format === 'article') nums.push(i + 1);
+    });
+    if (state.conclusion && state.conclusion.enabled && tgFormatForSection(concSectionFromForm(), state.sections.length, lang, true).format === 'article') nums.push('вывод');
+    if (nums.length) parts.push(lang.toUpperCase() + ': ' + nums.join(', '));
+  });
+  return parts.length ? 'Статьёй уйдут секции ' + parts.join(' · ') : '';
 }
 
 function moveSection(i, dir) {
@@ -2494,7 +2627,7 @@ async function onPublishRun() {
   if (!skipTg) {
     const overflows = findBodyOverflows(langs);
     if (overflows.length) {
-      alert('Текст превышает безопасный лимит ' + TG_BODY_LIMIT + ' символов в:\n\n' + overflows.join('\n') + '\n\nСократите текст или включите «SKIP TG».');
+      alert('Текст не помещается даже в статью Telegram (' + TG_FMT_RICH_LIMIT + ' символов) в:\n\n' + overflows.join('\n') + '\n\nСократите текст или включите «SKIP TG».');
       return;
     }
   }
@@ -2503,7 +2636,8 @@ async function onPublishRun() {
   const tgPart = skipTg
     ? 'TG отправка пропущена'
     : 'Серия ' + langs.map(l => l.toUpperCase()).join('+') + ' уйдёт в TG' + (test ? ' (test)' : ' (PROD)');
-  if (!confirm('Опубликовать отчёт?\n• Статус сменится на published\n• ' + tgPart)) return;
+  const articleNote = skipTg ? '' : describeTgArticles(langs);
+  if (!confirm('Опубликовать отчёт?\n• Статус сменится на published\n• ' + tgPart + (articleNote ? '\n• ' + articleNote : ''))) return;
 
   document.getElementById('btn-publish').disabled = true;
   showTopMsg('Сохранение…', 'info');
@@ -2705,6 +2839,12 @@ function setupConclusionToggle() {
     state.conclusion.enabled = cb.checked;
     body.classList.toggle('on', cb.checked);
     renderStatus();
+    updateConcCounters();
+    state.sections.forEach((sec, i) => { const el = document.getElementById('sections-host').children[i]; if (el && !sec.linked_post_id) updateCounters(el, sec); });
+  });
+  ['conc-headline-ru','conc-headline-en','conc-body-ru','conc-body-en','f-date'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', updateConcCounters);
   });
 }
 
