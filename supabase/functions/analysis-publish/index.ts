@@ -1,7 +1,9 @@
 // =====================================================================
 // analysis-publish — BelFed Asset Analysis & Requests publisher
 // v27 — Related post links + larger article galleries (2026-10-30):
-//      - New column analysis_posts.related_links jsonb [{url,title_ru,title_en}]
+//      - New column analysis_posts.related_links jsonb
+//        [{url_ru,url_en,title_ru,title_en}] (separate links per language;
+//        legacy single "url" is still honoured for both)
 //        (max 10, http/https only). Rendered as a "Связанные посты / Related
 //        posts" block before the referral footer in both the regular message
 //        and the article. Does not change the web version here.
@@ -133,7 +135,9 @@ interface AnalysisPost {
 
 // One element of analysis_posts.related_links.
 interface RelatedLink {
-  url?: string | null;
+  url_ru?: string | null;
+  url_en?: string | null;
+  url?: string | null; // legacy: same link for both languages
   title_ru?: string | null;
   title_en?: string | null;
 }
@@ -210,7 +214,7 @@ function relatedItems(p: AnalysisPost, lang: Lang): Array<{ url: string; title: 
   const raw = Array.isArray(p.related_links) ? p.related_links : [];
   const out: Array<{ url: string; title: string }> = [];
   for (const r of raw) {
-    const url = String(r?.url ?? "").trim();
+    const url = String((lang === "ru" ? r?.url_ru : r?.url_en) ?? r?.url ?? "").trim();
     if (!/^https?:\/\/\S+$/i.test(url)) continue;
     const t = String((lang === "ru" ? r?.title_ru : r?.title_en) ?? "").trim();
     out.push({ url, title: t });

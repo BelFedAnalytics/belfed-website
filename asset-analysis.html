@@ -474,7 +474,7 @@ function relatedHtml(p) {
   var out = [];
   for (var i = 0; i < list.length && out.length < 10; i++) {
     var r = list[i] || {};
-    var u = String(r.url || '').trim();
+    var u = String(r.url_ru || r.url || '').trim();
     if (!/^https?:\/\/\S+$/i.test(u)) continue;
     var t = String((r.title_ru) || '').trim() || 'Пост ' + (out.length + 1);
     out.push('<a href="' + escapeHtml(u) + '" target="_blank" rel="noopener">' + escapeHtml(t) + '</a>');

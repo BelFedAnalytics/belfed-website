@@ -71,7 +71,7 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 .thumb .ix{position:absolute;left:4px;bottom:4px;background:#000;color:#f5f2eb;padding:1px 6px;font-size:10px;letter-spacing:1px}
 .thumb .x{position:absolute;top:4px;right:4px;background:#c50000;color:#fff;border:none;width:20px;height:20px;cursor:pointer;font-size:11px;font-family:'Courier New',monospace;line-height:1}
 .thumb-card{display:flex;flex-direction:column;gap:6px;width:240px}
-.rel-row{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center}
+.rel-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center}
 .rel-row input{font-family:'Courier New',monospace;width:100%;padding:6px 8px;font-size:11px;border:1px solid #000;background:#f5f2eb;outline:none;box-sizing:border-box}
 .rel-row .x{background:#000;color:#fff;border:0;width:26px;height:26px;cursor:pointer;font-size:14px}
 @media(max-width:700px){.rel-row{grid-template-columns:1fr}}
@@ -777,8 +777,8 @@ function render(){
   const tvHtml = tv ? `<div class="body-text" style="margin-top:10px">${chartLabel}: <a href="${escapeHtml(tv)}" target="_blank">${escapeHtml(tv)}</a></div>` : '';
   const tagsHtml = tags ? `<div class="hashtags">${escapeHtml(tags)}</div>` : '';
   const relRaw = relatedCaption(lang);
-  const relItems = relatedClean().filter(r => validRelatedUrl(r.url));
-  const relHtml = relItems.length ? `<div class="body-text" style="margin-top:10px">${lang==='ru'?'Связанные посты':'Related posts'}:` + relItems.map((r,i)=>`<br>• <a href="${escapeHtml(r.url)}" target="_blank">${escapeHtml((lang==='ru'?r.title_ru:r.title_en) || (lang==='ru'?'Пост ':'Post ')+(i+1))}</a>`).join('') + '</div>' : '';
+  const relItems = relatedClean().filter(r => validRelatedUrl(lang==='ru' ? r.url_ru : r.url_en));
+  const relHtml = relItems.length ? `<div class="body-text" style="margin-top:10px">${lang==='ru'?'Связанные посты':'Related posts'}:` + relItems.map((r,i)=>`<br>• <a href="${escapeHtml(lang==='ru'?r.url_ru:r.url_en)}" target="_blank">${escapeHtml((lang==='ru'?r.title_ru:r.title_en) || (lang==='ru'?'Пост ':'Post ')+(i+1))}</a>`).join('') + '</div>' : '';
   const footerRaw = footerText(lang);
   const footerHtml = footerRaw ? `<div class="body-text" style="margin-top:10px;opacity:0.85">${linkify(footerRaw)}</div>` : '';
   const time = new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
@@ -917,13 +917,14 @@ function updateReplyVisibility(){ els.replytoBlock.style.display = els.type.valu
 function validRelatedUrl(u){ return /^https?:\/\/\S+$/i.test(String(u||'').trim()); }
 function relatedClean(){
   return (state.related||[]).map(r => ({
-    url: String(r.url||'').trim(),
+    url_ru: String(r.url_ru||'').trim(),
+    url_en: String(r.url_en||'').trim(),
     title_ru: String(r.title_ru||'').trim(),
     title_en: String(r.title_en||'').trim()
-  })).filter(r => r.url || r.title_ru || r.title_en);
+  })).filter(r => r.url_ru || r.url_en || r.title_ru || r.title_en);
 }
 function relatedCaption(lang){
-  const items = relatedClean().filter(r => validRelatedUrl(r.url)).slice(0, MAX_RELATED);
+  const items = relatedClean().filter(r => validRelatedUrl(lang==='ru' ? r.url_ru : r.url_en)).slice(0, MAX_RELATED);
   if (!items.length) return '';
   const lines = items.map((r,i) => '• ' + ((lang==='ru' ? r.title_ru : r.title_en) || (lang==='ru' ? 'Пост ' : 'Post ') + (i+1)));
   return (lang==='ru' ? 'Связанные посты' : 'Related posts') + ':\n' + lines.join('\n');
@@ -933,7 +934,8 @@ function renderRelated(){
   if (!host) return;
   host.innerHTML = state.related.map((r,i)=>`
     <div class="rel-row">
-      <input type="text" data-ri="${i}" data-rk="url" value="${escAttr(r.url)}" placeholder="https://t.me/c/…  или  https://belfed.ru/analysis/…">
+      <input type="text" data-ri="${i}" data-rk="url_ru" value="${escAttr(r.url_ru)}" placeholder="Ссылка RU (пост на русском)">
+      <input type="text" data-ri="${i}" data-rk="url_en" value="${escAttr(r.url_en)}" placeholder="Ссылка EN (пост на английском)">
       <input type="text" data-ri="${i}" data-rk="title_ru" value="${escAttr(r.title_ru)}" placeholder="Название RU (необязательно)">
       <input type="text" data-ri="${i}" data-rk="title_en" value="${escAttr(r.title_en)}" placeholder="Название EN (необязательно)">
       <button class="x" type="button" data-rdel="${i}" title="Удалить">×</button>
@@ -950,14 +952,14 @@ function renderRelated(){
 }
 function addRelated(){
   if (state.related.length >= MAX_RELATED) return;
-  state.related.push({ url:'', title_ru:'', title_en:'' });
+  state.related.push({ url_ru:'', url_en:'', title_ru:'', title_en:'' });
   renderRelated();
   const last = document.querySelector('#related-list .rel-row:last-child input');
   if (last) last.focus();
 }
 function setRelated(list){
   state.related = (Array.isArray(list) ? list : []).map(r => ({
-    url: r && r.url || '', title_ru: r && r.title_ru || '', title_en: r && r.title_en || ''
+    url_ru: r && (r.url_ru || r.url) || '', url_en: r && (r.url_en || r.url) || '', title_ru: r && r.title_ru || '', title_en: r && r.title_en || ''
   }));
   renderRelated();
 }
@@ -1096,7 +1098,7 @@ function collectFormData(){
 function validate(d){
   if (d.tg_format !== 'article' && state.images.length > MAX_POST_IMAGES) return 'В обычном посте не больше 4 графиков: удалите лишние или выберите формат СТАТЬЯ';
   if (state.images.length > MAX_ARTICLE_IMAGES) return 'В статье не больше 50 графиков';
-  if ((d.related_links||[]).some(r => !validRelatedUrl(r.url))) return 'в «Связанных постах» ссылка должна начинаться с http:// или https://';
+  if ((d.related_links||[]).some(r => (r.url_ru && !validRelatedUrl(r.url_ru)) || (r.url_en && !validRelatedUrl(r.url_en)))) return 'в «Связанных постах» ссылка должна начинаться с http:// или https://';
   if (!d.ticker) return 'ТИКЕР обязателен';
   if (!d.publish_to_ru && !d.publish_to_en) return 'выберите хотя бы один канал';
   if (d.publish_to_ru && !d.body_ru) return 'RU тело пусто';
