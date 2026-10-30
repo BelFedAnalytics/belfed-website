@@ -1,5 +1,8 @@
 // research-render v20: SSR HTML for the public /research/ index and /research/<slug>/ pages
 //
+// v21 (2026-10-30): the index sidebar box is now a free email subscription
+//   (double opt-in via research-subscribe) with TradingView, Telegram and X links.
+//
 // v20 (2026-10-30): Direction 2 redesign "Mono Header + Readable Text".
 //   - Shared site header/footer (belfed-site-header.js / belfed-site-footer.js) are
 //     emitted by the renderer itself, so prerendered pages, the 404 fresh render and
@@ -113,9 +116,18 @@ const T = {
     type_default: "Отчёт",
     latest: "Новое", archive: "Архив", results: "Результаты", by_date: "по дате", read: "Читать",
     min_read: "{n} мин чтения",
-    brief_kicker: "// Бесплатный доступ", brief_title: "Исследования в вашем Telegram",
-    brief_text: "Публичные отчёты выходят в бесплатном канале BelFed в момент публикации. Без расписания и лишнего шума.",
-    brief_tg: "Открыть бесплатный канал",
+    sub_kicker: "// Бесплатно на почту", sub_title: "Бесплатные отчёты на почту",
+    sub_text: "Исследования BelFed Analytics приходят прямо на вашу почту. Бесплатно, без спама, отписка в один клик.",
+    sub_email: "Ваш email", sub_btn: "Подписаться",
+    sub_consent: "Я согласен получать на email бесплатные исследования BelFed Analytics. Отписаться можно в один клик в любом письме.",
+    sub_privacy: "Политика конфиденциальности",
+    sub_pending: "Почти готово. Мы отправили письмо со ссылкой для подтверждения. Откройте его, чтобы начать получать отчёты.",
+    sub_confirming: "Подтверждаем подписку…",
+    sub_confirmed: "Подписка подтверждена. Новые бесплатные отчёты будут приходить на вашу почту.",
+    sub_expired: "Ссылка для подтверждения устарела. Подпишитесь ещё раз, и мы пришлём новую.",
+    sub_invalid: "Проверьте адрес email.", sub_no_consent: "Отметьте согласие, чтобы подписаться.",
+    sub_rate: "Слишком много попыток. Попробуйте через час.", sub_err: "Не получилось подписаться. Попробуйте, пожалуйста, ещё раз через минуту.",
+    soc_kicker: "// Бесплатные каналы", soc_label: "BelFed в соцсетях", new_tab: "откроется в новой вкладке",
     nl_kicker: "// Для участников", nl_title: "От исследований к сделкам",
     nl_text: "Участники получают входы, стопы и цели по этим темам в Telegram и на дашборде. Каждая закрытая сделка попадает в публичную историю сделок.",
     nl_trial: "14 дней бесплатно", nl_track: "История сделок",
@@ -175,9 +187,18 @@ const T = {
     type_default: "Report",
     latest: "The latest", archive: "Archive", results: "Results", by_date: "by date", read: "Read",
     min_read: "{n} min read",
-    brief_kicker: "// Free access", brief_title: "Research in your Telegram",
-    brief_text: "Public reports go to the free Belfed channel when they are published. No schedule and no noise.",
-    brief_tg: "Open free channel",
+    sub_kicker: "// Free by email", sub_title: "Free reports in your inbox",
+    sub_text: "Belfed Analytics research delivered straight to your email. Free, no spam, unsubscribe in one click.",
+    sub_email: "Your email", sub_btn: "Subscribe",
+    sub_consent: "I agree to receive free Belfed Analytics research by email. I can unsubscribe in one click from any email.",
+    sub_privacy: "Privacy policy",
+    sub_pending: "Almost done. We sent you an email with a confirmation link. Open it to start receiving reports.",
+    sub_confirming: "Confirming your subscription…",
+    sub_confirmed: "Subscription confirmed. New free reports will arrive in your inbox.",
+    sub_expired: "This confirmation link has expired. Subscribe again and we will send a new one.",
+    sub_invalid: "Please check your email address.", sub_no_consent: "Please tick the consent box to subscribe.",
+    sub_rate: "Too many attempts. Please try again in an hour.", sub_err: "Could not subscribe. Please try again in a minute.",
+    soc_kicker: "// Free channels", soc_label: "Belfed on social media", new_tab: "opens in a new tab",
     nl_kicker: "// For members", nl_title: "From research to trades",
     nl_text: "Members get entries, stops and targets on these themes in Telegram and on the dashboard. Every closed trade is logged in the public track record.",
     nl_trial: "14-day free access", nl_track: "Track record",
@@ -489,6 +510,71 @@ function freshScript(lang: Lang): string {
 </script>`;
 }
 
+
+// ---------- free email subscription + social channels ----------
+const SOCIAL_SVG = {
+  tradingview: `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path fill="currentColor" d="M15.8654 8.2789c0 1.3541-1.0978 2.4519-2.452 2.4519-1.354 0-2.4519-1.0978-2.4519-2.452 0-1.354 1.0978-2.4518 2.452-2.4518 1.3541 0 2.4519 1.0977 2.4519 2.4519zM9.75 6H0v4.9038h4.8462v7.2692H9.75Zm8.5962 0H24l-5.1058 12.173h-5.6538z"/></svg>`,
+  telegram: `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path fill="currentColor" d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>`,
+  x: `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z"/></svg>`,
+};
+function socialLinks(lang: Lang, t: Dict): string {
+  const items = [
+    { k: "tradingview", name: "TradingView", handle: "BelFed_Analytics", href: "https://www.tradingview.com/u/BelFed_Analytics/" },
+    { k: "telegram", name: "Telegram", handle: lang === "ru" ? "@BelFedFreeRU" : "@BelFedFreeEN", href: TG_FREE[lang] },
+    { k: "x", name: "X", handle: "@art_the_trader", href: "https://x.com/art_the_trader" },
+  ] as const;
+  return `<div class="soc"><div class="kicker">${esc(t.soc_kicker)}</div><ul aria-label="${attr(t.soc_label)}">${items.map(i =>
+    `<li><a class="soc-a soc-${i.k}" href="${i.href}" target="_blank" rel="noopener" title="${attr(i.name + " · " + i.handle)}"><span class="ic">${SOCIAL_SVG[i.k]}</span><span class="nm">${esc(i.name)}</span><span class="rs-sr"> ${esc(i.handle)}, ${esc(t.new_tab)}</span></a></li>`).join("")}</ul></div>`;
+}
+function subscribeBox(lang: Lang, t: Dict): string {
+  return `<section class="sub" id="rsSub" aria-labelledby="rsSubH">
+          <div class="kicker gold">${esc(t.sub_kicker)}</div>
+          <h3 id="rsSubH">${esc(t.sub_title)}</h3>
+          <p>${esc(t.sub_text)}</p>
+          <form id="subForm" novalidate>
+            <label for="subEmail" class="rs-sr">${esc(t.sub_email)}</label>
+            <div class="sub-field"><input type="email" id="subEmail" name="email" placeholder="you@example.com" required autocomplete="email" inputmode="email" spellcheck="false"><button type="submit" class="btn sm primary" id="subBtn">${esc(t.sub_btn)}</button></div>
+            <label class="consent"><input type="checkbox" id="subConsent"><span>${esc(t.sub_consent)} <a href="/privacy.html">${esc(t.sub_privacy)}</a></span></label>
+            <div class="hp" aria-hidden="true"><input type="text" id="subHp" tabindex="-1" autocomplete="off"></div>
+            <div class="msg ok" id="subOk" role="status" hidden></div>
+            <div class="msg err" id="subErr" role="alert" hidden></div>
+          </form>
+          ${socialLinks(lang, t)}
+        </section>`;
+}
+const SUB_JS = String.raw`(function(){
+  var form=document.getElementById('subForm'); if(!form) return;
+  var C=JSON.parse(document.getElementById('subCfg').textContent);
+  var ok=document.getElementById('subOk'), err=document.getElementById('subErr'), btn=document.getElementById('subBtn');
+  var api=C.supaUrl+'/functions/v1/research-subscribe';
+  function show(el,msg){ok.hidden=true; err.hidden=true; if(el){el.textContent=msg; el.hidden=false;}}
+  function post(body){return fetch(api,{method:'POST',headers:{'Content-Type':'application/json','apikey':C.supaKey,'Authorization':'Bearer '+C.supaKey},body:JSON.stringify(body)}).then(function(r){return r.json().catch(function(){return {ok:false,error:'server_error'};}).then(function(j){j._s=r.status; return j;});});}
+  function errMsg(j){return j.error==='invalid_email'?C.invalid:j.error==='consent_required'?C.noConsent:j.error==='rate_limited'?C.rate:j.error==='expired'?C.expired:C.err;}
+  // confirmation link from the email: ?confirm=<token>
+  try{
+    var u=new URL(location.href), tok=u.searchParams.get('confirm');
+    if(tok){
+      u.searchParams.delete('confirm'); history.replaceState(null,'',u.pathname+u.search+'#rsSub');
+      show(ok,C.confirming);
+      var box=document.getElementById('rsSub'); if(box&&box.scrollIntoView) box.scrollIntoView({block:'center'});
+      post({action:'confirm',token:tok}).then(function(j){ if(j.ok){show(ok,C.confirmed); form.querySelector('.sub-field').hidden=true; form.querySelector('.consent').hidden=true; if(window.belfedTrack) window.belfedTrack('research_subscribe_confirmed',{});} else show(err,errMsg(j)); }).catch(function(){show(err,C.err);});
+    }
+  }catch(e){}
+  form.addEventListener('submit',function(e){
+    e.preventDefault();
+    var email=(document.getElementById('subEmail').value||'').trim();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){show(err,C.invalid); document.getElementById('subEmail').focus(); return;}
+    if(!document.getElementById('subConsent').checked){show(err,C.noConsent); document.getElementById('subConsent').focus(); return;}
+    var label=btn.textContent; btn.disabled=true; btn.textContent='…';
+    var payload={email:email,lang:C.lang,consent:true,page:location.pathname,website:document.getElementById('subHp').value||''};
+    post(payload).then(function(j){
+      btn.disabled=false; btn.textContent=label;
+      if(j.ok){show(ok,C.pending); form.reset(); if(window.belfedTrack) window.belfedTrack('research_subscribe_requested',{});}
+      else show(err,errMsg(j));
+    }).catch(function(){btn.disabled=false; btn.textContent=label; show(err,C.err);});
+  });
+})();`;
+
 // ---------- index ----------
 const INDEX_JS = String.raw`(function(){
   var bar=document.getElementById('rsBar'); if(!bar) return;
@@ -617,8 +703,7 @@ function renderIndex(lang: Lang, all: ReportRow[]): string {
           const iso = isoDay(r.report_date || r.published_at), mr = minRead(r, lang, t);
           return `<li><a href="/research/${esc(r.slug)}/">${tagsHtml(r, t, 1)}<span class="t">${esc(reportTitle(r, lang))}</span><span class="meta">${iso ? `<time datetime="${iso}">${esc(fmtDate(lang, iso))}</time>` : ""}${mr ? `<span>${esc(mr)}</span>` : ""}</span></a></li>`;
         }).join("")}</ol>` : `<h2 id="rsLatestH" class="rs-sr">${esc(t.latest)}</h2>`}
-        <div class="briefings"><div class="kicker gold">${esc(t.brief_kicker)}</div><h3>${esc(t.brief_title)}</h3><p>${esc(t.brief_text)}</p>
-          <div class="acts"><a class="btn sm primary" href="${TG_FREE[lang]}" rel="noopener">${esc(t.brief_tg)}</a></div></div>
+        ${subscribeBox(lang, t)}
       </aside>`;
 
     const groups: { key: string; items: ReportRow[] }[] = [];
@@ -659,8 +744,10 @@ function renderIndex(lang: Lang, all: ReportRow[]): string {
   </section></div>
   </main>
   ${jsonData("rsCfg", { all: t.f_count_all, some: t.f_count_some, archive: t.archive, results: t.results })}
+  ${jsonData("subCfg", { lang, supaUrl: SUPABASE_URL, supaKey: SUPABASE_ANON_KEY, pending: t.sub_pending, confirming: t.sub_confirming, confirmed: t.sub_confirmed, expired: t.sub_expired, invalid: t.sub_invalid, noConsent: t.sub_no_consent, rate: t.sub_rate, err: t.sub_err })}
   <script>${HDR_JS}</script>
   <script>${INDEX_JS}</script>
+  <script>${SUB_JS}</script>
   ${freshScript(lang)}
   <script src="/belfed-analytics.js"></script>
 </body>
