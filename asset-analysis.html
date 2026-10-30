@@ -82,6 +82,9 @@ header h1{font-size:18px;letter-spacing:3px;font-weight:bold}
 
 .card-footer{padding:12px 20px;border-top:1px dashed #ccc;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
 .hashtags{display:flex;gap:8px;flex-wrap:wrap}
+.related-posts{margin-top:10px;font-size:12px;line-height:1.7}
+.related-posts .rp-label{letter-spacing:1px;opacity:0.6;font-size:10px}
+.related-posts a{color:inherit;text-decoration:underline}
 .hashtag{font-size:11px;color:#666;letter-spacing:1px}
 .actions{display:flex;gap:8px;flex-wrap:wrap}
 .action-btn{font-family:'Courier New',monospace;font-size:11px;letter-spacing:2px;padding:6px 12px;border:1px solid #000;background:#fff;color:#000;cursor:pointer;text-decoration:none;text-transform:uppercase}
@@ -465,6 +468,21 @@ function renderThreadUpdate(p) {
   '</div>';
 }
 
+// Related post links (http/https only), titled per site language.
+function relatedHtml(p) {
+  var list = Array.isArray(p.related_links) ? p.related_links : [];
+  var out = [];
+  for (var i = 0; i < list.length && out.length < 10; i++) {
+    var r = list[i] || {};
+    var u = String(r.url || '').trim();
+    if (!/^https?:\/\/\S+$/i.test(u)) continue;
+    var t = String((r.title_ru) || '').trim() || 'Пост ' + (out.length + 1);
+    out.push('<a href="' + escapeHtml(u) + '" target="_blank" rel="noopener">' + escapeHtml(t) + '</a>');
+  }
+  if (!out.length) return '';
+  return '<div class="related-posts"><span class="rp-label">СВЯЗАННЫЕ ПОСТЫ:</span> ' + out.join(' &middot; ') + '</div>';
+}
+
 function renderCard(p) {
   // p is the latest post in a thread; p._chain contains earlier posts (oldest→newest, EXCLUDING p)
   var chain = p._chain || [];
@@ -503,6 +521,7 @@ function renderCard(p) {
 
   var greeting = (p.greeting_ru || p.greeting_en) ? '<div class="greeting">' + escapeHtml(p.greeting_ru || p.greeting_en) + '</div>' : '';
   var body = (p.body_ru || p.body_en) ? '<div class="body-text">' + bodyToHtml(p.body_ru || p.body_en) + '</div>' : '';
+  body += relatedHtml(p);
 
   var tagHtml = '';
   if (p.hashtags) {
@@ -787,7 +806,7 @@ async function loadPosts() {
   errorBox.style.display = 'none';
   try {
     var res = await supaClient.from('analysis_posts')
-      .select('id,ticker,company_name,asset_class,post_type,reply_name,reply_text,greeting_ru,greeting_en,body_ru,body_en,tradingview_url,hashtags,image_paths,published_at,created_at,message_id_ru,message_id_en,parent_post_id,slug')
+      .select('id,ticker,company_name,asset_class,post_type,reply_name,reply_text,greeting_ru,greeting_en,body_ru,body_en,tradingview_url,hashtags,image_paths,related_links,published_at,created_at,message_id_ru,message_id_en,parent_post_id,slug')
       .eq('status', 'published')
       .eq('destination', 'asset')
       .order('published_at', { ascending: false, nullsLast: true })

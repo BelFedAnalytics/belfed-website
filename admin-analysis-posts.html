@@ -71,6 +71,10 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 .thumb .ix{position:absolute;left:4px;bottom:4px;background:#000;color:#f5f2eb;padding:1px 6px;font-size:10px;letter-spacing:1px}
 .thumb .x{position:absolute;top:4px;right:4px;background:#c50000;color:#fff;border:none;width:20px;height:20px;cursor:pointer;font-size:11px;font-family:'Courier New',monospace;line-height:1}
 .thumb-card{display:flex;flex-direction:column;gap:6px;width:240px}
+.rel-row{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center}
+.rel-row input{font-family:'Courier New',monospace;width:100%;padding:6px 8px;font-size:11px;border:1px solid #000;background:#f5f2eb;outline:none;box-sizing:border-box}
+.rel-row .x{background:#000;color:#fff;border:0;width:26px;height:26px;cursor:pointer;font-size:14px}
+@media(max-width:700px){.rel-row{grid-template-columns:1fr}}
 .img-meta{display:flex;flex-direction:column;gap:4px}
 .img-meta label{font-size:9px;letter-spacing:1px;opacity:0.6}
 .img-meta input{font-family:'Courier New',monospace;width:100%;padding:5px 7px;font-size:11px;border:1px solid #000;background:#f5f2eb;outline:none}
@@ -334,7 +338,7 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
       </div>
 
       <div class="field">
-        <label>// ГРАФИКИ <span class="hint">1–4 файла</span></label>
+        <label>// ГРАФИКИ <span class="hint" id="img-limit-hint">1–4 файла</span></label>
         <div class="dropzone" id="dropzone">
           <div class="dz-icon">⬆</div>
           <div class="dz-text">DRAG &amp; DROP ИЛИ КЛИК</div>
@@ -343,6 +347,12 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
         </div>
         <div class="thumbs" id="thumbs"></div>
         <div class="tg-mode-note" id="tg-mode-note" style="display:none"></div>
+      </div>
+
+      <div class="field">
+        <label>// СВЯЗАННЫЕ ПОСТЫ <span class="hint">ссылки на другие посты, до 10</span></label>
+        <div id="related-list"></div>
+        <button class="btn" id="btn-related-add" type="button">[ + ДОБАВИТЬ ССЫЛКУ ]</button>
       </div>
 
     </div>
@@ -412,7 +422,8 @@ const $ = (s)=>document.querySelector(s);
 const els = {};
 let editingId = null; // currently loaded post for editing
 let parentPostId = null; // when set, this post is a reply/update to parent
-const state = { previewLang:'ru', images:[] }; // images: {file?, url, path?, isUploaded}
+const state = { previewLang:'ru', images:[], related:[] };
+const MAX_RELATED = 10, MAX_POST_IMAGES = 4, MAX_ARTICLE_IMAGES = 50; // images: {file?, url, path?, isUploaded}
 
 // hashtag set for asset class
 const ASSET_CLASS_TAG = { stocks:'#equities', crypto:'#crypto', commodities:'#commodities', fx:'#fx' };
@@ -541,7 +552,16 @@ function initEditor(){
   ['ticker','company','replyName','replyText','greetRu','greetEn','bodyRu','bodyEn','tv','tags','footerRu','footerEn']
     .forEach(k => els[k] && els[k].addEventListener('input', ()=>{ updateCounters(); render(); }));
   els.type.addEventListener('change', ()=>{ updateReplyVisibility(); render(); });
-  if (els.tgFormat) els.tgFormat.addEventListener('change', ()=>{ updateCounters(); render(); });
+  if (els.tgFormat) els.tgFormat.addEventListener('change', ()=>{
+    if (tgFormat() === 'post' && state.images.length > MAX_POST_IMAGES){
+      els.tgFormat.value = 'article';
+      flash('err', 'Лишних графиков больше лимита обычного поста (4). Удалите лишние или оставьте формат СТАТЬЯ.');
+    }
+    updateCounters(); render();
+  });
+  const relAdd = document.getElementById('btn-related-add');
+  if (relAdd) relAdd.addEventListener('click', addRelated);
+  renderRelated();
 
   // hashtag automation: asset class change → swap class tag
   els.assetClass.addEventListener('change', ()=>{ syncAssetClassTag(); render(); });
@@ -756,6 +776,9 @@ function render(){
   const chartLabel = lang==='ru' ? 'График' : 'Chart';
   const tvHtml = tv ? `<div class="body-text" style="margin-top:10px">${chartLabel}: <a href="${escapeHtml(tv)}" target="_blank">${escapeHtml(tv)}</a></div>` : '';
   const tagsHtml = tags ? `<div class="hashtags">${escapeHtml(tags)}</div>` : '';
+  const relRaw = relatedCaption(lang);
+  const relItems = relatedClean().filter(r => validRelatedUrl(r.url));
+  const relHtml = relItems.length ? `<div class="body-text" style="margin-top:10px">${lang==='ru'?'Связанные посты':'Related posts'}:` + relItems.map((r,i)=>`<br>• <a href="${escapeHtml(r.url)}" target="_blank">${escapeHtml((lang==='ru'?r.title_ru:r.title_en) || (lang==='ru'?'Пост ':'Post ')+(i+1))}</a>`).join('') + '</div>' : '';
   const footerRaw = footerText(lang);
   const footerHtml = footerRaw ? `<div class="body-text" style="margin-top:10px;opacity:0.85">${linkify(footerRaw)}</div>` : '';
   const time = new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
@@ -774,6 +797,7 @@ function render(){
       ${(greet&&body) ? '<div style="height:8px"></div>' : ''}
       ${bodyHtml}
       ${tvHtml}
+      ${relHtml}
       ${footerHtml}
       ${tagsHtml}
       <div class="meta">${time} ✓✓</div>
@@ -814,12 +838,16 @@ function buildCaption(lang){
   if (greet){ lines.push(greet); lines.push(''); }
   if (body) { lines.push(body);  lines.push(''); }
   if (tv)   { lines.push(`${lang==='ru'?'График':'Chart'}: ${tv}`); lines.push(''); }
+  const relCap = relatedCaption(lang);
+  if (relCap) { lines.push(relCap); lines.push(''); }
   const footer = footerText(lang);
   if (footer) { lines.push(footer); lines.push(''); }
   if (tags) { lines.push(tags); }
   return lines.join('\n').replace(/\n{3,}/g,'\n\n').trim();
 }
 function updateCounters(){
+  const lh = document.getElementById('img-limit-hint');
+  if (lh) lh.textContent = '1–' + maxImages() + ' файлов';
   const hasImages = state.images.length > 0;
   const article = tgFormat() === 'article';
   const limit = article ? 32768 : (hasImages ? 1024 : 4096);
@@ -885,13 +913,66 @@ function tgTextOnlyCheck(){
 }
 function updateReplyVisibility(){ els.replytoBlock.style.display = els.type.value==='request' ? 'block' : 'none'; }
 
+// ---- Related posts ------------------------------------------------------
+function validRelatedUrl(u){ return /^https?:\/\/\S+$/i.test(String(u||'').trim()); }
+function relatedClean(){
+  return (state.related||[]).map(r => ({
+    url: String(r.url||'').trim(),
+    title_ru: String(r.title_ru||'').trim(),
+    title_en: String(r.title_en||'').trim()
+  })).filter(r => r.url || r.title_ru || r.title_en);
+}
+function relatedCaption(lang){
+  const items = relatedClean().filter(r => validRelatedUrl(r.url)).slice(0, MAX_RELATED);
+  if (!items.length) return '';
+  const lines = items.map((r,i) => '• ' + ((lang==='ru' ? r.title_ru : r.title_en) || (lang==='ru' ? 'Пост ' : 'Post ') + (i+1)));
+  return (lang==='ru' ? 'Связанные посты' : 'Related posts') + ':\n' + lines.join('\n');
+}
+function renderRelated(){
+  const host = document.getElementById('related-list');
+  if (!host) return;
+  host.innerHTML = state.related.map((r,i)=>`
+    <div class="rel-row">
+      <input type="text" data-ri="${i}" data-rk="url" value="${escAttr(r.url)}" placeholder="https://t.me/c/…  или  https://belfed.ru/analysis/…">
+      <input type="text" data-ri="${i}" data-rk="title_ru" value="${escAttr(r.title_ru)}" placeholder="Название RU (необязательно)">
+      <input type="text" data-ri="${i}" data-rk="title_en" value="${escAttr(r.title_en)}" placeholder="Название EN (необязательно)">
+      <button class="x" type="button" data-rdel="${i}" title="Удалить">×</button>
+    </div>`).join('');
+  host.querySelectorAll('input').forEach(inp => inp.addEventListener('input', ()=>{
+    const r = state.related[+inp.dataset.ri]; if (r) r[inp.dataset.rk] = inp.value;
+    updateCounters(); render();
+  }));
+  host.querySelectorAll('[data-rdel]').forEach(b => b.addEventListener('click', ()=>{
+    state.related.splice(+b.dataset.rdel, 1); renderRelated(); updateCounters(); render();
+  }));
+  const add = document.getElementById('btn-related-add');
+  if (add) add.disabled = state.related.length >= MAX_RELATED;
+}
+function addRelated(){
+  if (state.related.length >= MAX_RELATED) return;
+  state.related.push({ url:'', title_ru:'', title_en:'' });
+  renderRelated();
+  const last = document.querySelector('#related-list .rel-row:last-child input');
+  if (last) last.focus();
+}
+function setRelated(list){
+  state.related = (Array.isArray(list) ? list : []).map(r => ({
+    url: r && r.url || '', title_ru: r && r.title_ru || '', title_en: r && r.title_en || ''
+  }));
+  renderRelated();
+}
+
+function maxImages(){ return tgFormat() === 'article' ? MAX_ARTICLE_IMAGES : MAX_POST_IMAGES; }
+
 function addFiles(list){
+  let skipped = false;
   [...list].forEach(f => {
-    if (state.images.length >= 4) return;
+    if (state.images.length >= maxImages()) { skipped = true; return; }
     const url = URL.createObjectURL(f);
     state.images.push({ file:f, url, name:f.name, isUploaded:false, title_ru:'', title_en:'', tv_url:'' });
   });
   renderThumbs(); updateCounters(); render();
+  if (skipped) flash('err', `Достигнут лимит графиков: ${maxImages()}` + (tgFormat()==='post' ? '. В формате СТАТЬЯ можно до 50.' : '.'));
 }
 function renderThumbs(){
   // v8: each chart carries its own title (RU/EN) and its own web link. They are
@@ -962,7 +1043,7 @@ function clearForm(){
   els.chRu.checked = true; els.chEn.checked = true;
   const banner = document.getElementById('parent-banner');
   if (banner) banner.style.display='none';
-  state.images = []; renderThumbs(); updateCounters(); updateReplyVisibility(); render();
+  state.images = []; renderThumbs(); setRelated([]); updateCounters(); updateReplyVisibility(); render();
   history.replaceState(null,'', location.pathname);
 }
 
@@ -1007,11 +1088,15 @@ function collectFormData(){
     publish_to_ru: els.chRu.checked,
     publish_to_en: els.chEn.checked,
     tg_format: tgFormat(),
-    parent_post_id: parentPostId || null
+    parent_post_id: parentPostId || null,
+    related_links: relatedClean().slice(0, MAX_RELATED)
   };
 }
 
 function validate(d){
+  if (d.tg_format !== 'article' && state.images.length > MAX_POST_IMAGES) return 'В обычном посте не больше 4 графиков: удалите лишние или выберите формат СТАТЬЯ';
+  if (state.images.length > MAX_ARTICLE_IMAGES) return 'В статье не больше 50 графиков';
+  if ((d.related_links||[]).some(r => !validRelatedUrl(r.url))) return 'в «Связанных постах» ссылка должна начинаться с http:// или https://';
   if (!d.ticker) return 'ТИКЕР обязателен';
   if (!d.publish_to_ru && !d.publish_to_en) return 'выберите хотя бы один канал';
   if (d.publish_to_ru && !d.body_ru) return 'RU тело пусто';
@@ -1214,7 +1299,7 @@ async function publish(){
       history.replaceState(null,'', url.pathname + (url.search||''));
       const fb = document.getElementById('fulfill-banner');
       if (fb) fb.remove();
-      state.images=[]; renderThumbs(); updateCounters(); updateReplyVisibility(); render();
+      state.images=[]; renderThumbs(); setRelated([]); updateCounters(); updateReplyVisibility(); render();
     }
     loadHistory();
   } catch (e){
@@ -1362,6 +1447,7 @@ async function loadIntoEditor(id){
       tv_url:   m.tv_url   || ''
     };
   });
+  setRelated(data.related_links);
   // Handle parent if present
   if (parentPostId){
     const { data: parent } = await sb.from('analysis_posts').select('*').eq('id', parentPostId).maybeSingle();
@@ -1392,7 +1478,7 @@ async function startReplyTo(parentId){
   editingId = null;
   parentPostId = null;
   document.querySelectorAll('input[type=text],input[type=url],textarea').forEach(i => i.value='');
-  state.images=[]; renderThumbs();
+  state.images=[]; renderThumbs(); setRelated([]);
   els.chRu.checked = true; els.chEn.checked = true;
   // Navigate (uses same page; reload triggers handleReplyToParam)
   const url = new URL(location.href);
@@ -1466,7 +1552,7 @@ function clearFormSilent(){
   els.tags.value='#equities'; els.type.value='update'; els.type.disabled=false; els.assetClass.value='stocks';
   if (els.tgFormat) els.tgFormat.value='post';
   const banner = document.getElementById('parent-banner'); if (banner) banner.style.display='none';
-  state.images=[]; renderThumbs(); updateCounters(); updateReplyVisibility(); render();
+  state.images=[]; renderThumbs(); setRelated([]); updateCounters(); updateReplyVisibility(); render();
 }
 
 checkAdminAndShow();
