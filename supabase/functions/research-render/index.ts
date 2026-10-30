@@ -101,11 +101,11 @@ const BOT = "https://t.me/belfedbot";
 const T = {
   ru: {
     brand: "BelFed Analytics", site: "BelFed", skip: "Перейти к содержимому",
-    index_kicker: "// Публичные исследования BelFed", index_title: "Исследования",
+    index_kicker: "// Публичные обзоры BelFed", index_title: "Обзоры рынков",
     index_lead: "Независимые отчёты BelFed Analytics по секторам, отдельным компаниям, макроциклам и крипторынку. Публичные разделы открыты всем, разделы для участников отмечены.",
     index_empty: "Пока нет публичных отчётов. Загляните позже.",
-    index_meta_title: "Исследования | BelFed Analytics",
-    index_meta_desc: "Независимые исследовательские отчёты BelFed Analytics: акции, крипта, макро, сектора и отдельные темы.",
+    index_meta_title: "Обзоры рынков | BelFed Analytics",
+    index_meta_desc: "Независимые обзоры рынков BelFed Analytics: акции, крипта, макро, сектора и отдельные темы.",
     f_all: "Все", f_group: "Класс активов", f_search_label: "Поиск по отчётам", f_search_ph: "Поиск: Nvidia, биткоин, ФРС",
     f_clear: "Очистить поиск", f_reset: "Сбросить фильтры",
     f_count_all: "Отчётов: {t}", f_count_some: "Найдено: {n} из {t}",
@@ -117,7 +117,7 @@ const T = {
     latest: "Новое", archive: "Архив", results: "Результаты", by_date: "по дате", read: "Читать",
     min_read: "{n} мин чтения",
     sub_kicker: "// Бесплатно на почту", sub_title: "Бесплатные отчёты на почту",
-    sub_text: "Исследования BelFed Analytics приходят прямо на вашу почту. Бесплатно, без спама, отписка в один клик.",
+    sub_text: "Обзоры рынков BelFed Analytics приходят прямо на вашу почту. Бесплатно, без спама, отписка в один клик.",
     sub_email: "Ваш email", sub_btn: "Подписаться",
     sub_consent: "Я согласен получать на email бесплатные исследования BelFed Analytics. Отписаться можно в один клик в любом письме.",
     sub_privacy: "Политика конфиденциальности",
@@ -128,10 +128,10 @@ const T = {
     sub_invalid: "Проверьте адрес email.", sub_no_consent: "Отметьте согласие, чтобы подписаться.",
     sub_rate: "Слишком много попыток. Попробуйте через час.", sub_err: "Не получилось подписаться. Попробуйте, пожалуйста, ещё раз через минуту.",
     soc_kicker: "// Бесплатные каналы", soc_label: "BelFed в соцсетях", new_tab: "откроется в новой вкладке",
-    nl_kicker: "// Для участников", nl_title: "От исследований к сделкам",
+    nl_kicker: "// Для участников", nl_title: "От обзоров к сделкам",
     nl_text: "Участники получают входы, стопы и цели по этим темам в Telegram и на дашборде. Каждая закрытая сделка попадает в публичную историю сделок.",
     nl_trial: "14 дней бесплатно", nl_track: "История сделок",
-    crumb: "Все исследования", report_kicker: "// Исследовательский отчёт",
+    crumb: "Все обзоры", report_kicker: "// Обзор рынка",
     published: "Опубликовано", author: "Автор",
     copy: "Скопировать ссылку", copied: "Ссылка скопирована", share_tg: "Telegram", share_x: "X", share: "Поделиться",
     disc_short: "Аналитика, а не инвестиционная рекомендация. Независимое рыночное исследование в информационных целях, оно не учитывает вашу ситуацию. Рынки связаны с риском убытков.",
@@ -150,7 +150,7 @@ const T = {
     mid_text: "Пост только в момент публикации отчёта. Сделки участников со входами и стопами ведутся отдельно.",
     mid_btn: "Открыть бесплатный канал", mid_alt: "Или посмотреть публичную историю сделок",
     final_kicker: "// Следующий шаг", final_title: "Следите за темой дальше",
-    final_text: "Публичные исследования в Telegram бесплатны. Участники также получают входы, стопы и цели по этим темам в Telegram и на дашборде, а каждая закрытая сделка попадает в публичную историю сделок.",
+    final_text: "Публичные обзоры в Telegram бесплатны. Участники также получают входы, стопы и цели по этим темам в Telegram и на дашборде, а каждая закрытая сделка попадает в публичную историю сделок.",
     final_tg: "Бесплатный Telegram-канал", final_trial: "14 дней бесплатно",
     lead_kicker: "// Или по email",
     lead_title: "Получить уведомление, когда откроем позицию",
@@ -168,15 +168,15 @@ const T = {
     prev: "Предыдущий отчёт", next: "Следующий отчёт", related: "Похожие отчёты", related_sub: "по классу активов",
     banner_text: "Публичные отчёты бесплатно в Telegram.", banner_btn: "Открыть канал", banner_close: "Скрыть",
     section: "Раздел",
-    nf_title: "Отчёт не найден", nf_text: "Возможно, отчёт был снят с публикации или ссылка устарела.", nf_back: "К списку исследований",
+    nf_title: "Отчёт не найден", nf_text: "Возможно, отчёт был снят с публикации или ссылка устарела.", nf_back: "Ко всем обзорам",
   },
   en: {
     brand: "Belfed Analytics", site: "Belfed", skip: "Skip to main content",
-    index_kicker: "// Belfed public research", index_title: "Research",
+    index_kicker: "// Belfed public commentary", index_title: "Market Commentary",
     index_lead: "Independent Belfed Analytics reports on sectors, single-name themes, macro cycles and crypto. Public sections are open to everyone; member sections are marked.",
     index_empty: "No public reports yet. Check back soon.",
-    index_meta_title: "Research | Belfed Analytics",
-    index_meta_desc: "Independent Belfed Analytics research reports: equities, crypto, macro, sectors, and single-name themes.",
+    index_meta_title: "Market Commentary | Belfed Analytics",
+    index_meta_desc: "Independent Belfed Analytics market commentary: equities, crypto, macro, sectors, and single-name themes.",
     f_all: "All", f_group: "Asset class", f_search_label: "Search reports", f_search_ph: "Search: Nvidia, bitcoin, Fed",
     f_clear: "Clear search", f_reset: "Reset filters",
     f_count_all: "{t} reports", f_count_some: "{n} of {t} reports",
@@ -188,7 +188,7 @@ const T = {
     latest: "The latest", archive: "Archive", results: "Results", by_date: "by date", read: "Read",
     min_read: "{n} min read",
     sub_kicker: "// Free by email", sub_title: "Free reports in your inbox",
-    sub_text: "Belfed Analytics research delivered straight to your email. Free, no spam, unsubscribe in one click.",
+    sub_text: "Belfed Analytics market commentary delivered straight to your email. Free, no spam, unsubscribe in one click.",
     sub_email: "Your email", sub_btn: "Subscribe",
     sub_consent: "I agree to receive free Belfed Analytics research by email. I can unsubscribe in one click from any email.",
     sub_privacy: "Privacy policy",
@@ -199,10 +199,10 @@ const T = {
     sub_invalid: "Please check your email address.", sub_no_consent: "Please tick the consent box to subscribe.",
     sub_rate: "Too many attempts. Please try again in an hour.", sub_err: "Could not subscribe. Please try again in a minute.",
     soc_kicker: "// Free channels", soc_label: "Belfed on social media", new_tab: "opens in a new tab",
-    nl_kicker: "// For members", nl_title: "From research to trades",
+    nl_kicker: "// For members", nl_title: "From commentary to trades",
     nl_text: "Members get entries, stops and targets on these themes in Telegram and on the dashboard. Every closed trade is logged in the public track record.",
     nl_trial: "14-day free access", nl_track: "Track record",
-    crumb: "All research", report_kicker: "// Research report",
+    crumb: "All commentary", report_kicker: "// Market commentary",
     published: "Published", author: "Author",
     copy: "Copy link", copied: "Link copied", share_tg: "Telegram", share_x: "X", share: "Share",
     disc_short: "Analytics, not investment advice. Independent market research for information only; it does not consider your situation. Markets carry risk of loss.",
@@ -221,7 +221,7 @@ const T = {
     mid_text: "A post only when a report is published. Member trades with entries and stops are a separate service.",
     mid_btn: "Open free channel", mid_alt: "Or read the public track record",
     final_kicker: "// Next step", final_title: "Keep following this theme",
-    final_text: "Public research in Telegram is free. Members also get entries, stops and targets on these themes in Telegram and on the dashboard, and every closed trade is logged in the public track record.",
+    final_text: "Public commentary in Telegram is free. Members also get entries, stops and targets on these themes in Telegram and on the dashboard, and every closed trade is logged in the public track record.",
     final_tg: "Free Telegram channel", final_trial: "14-day free access",
     lead_kicker: "// Or by email",
     lead_title: "Get notified when we open the first position",
@@ -239,7 +239,7 @@ const T = {
     prev: "Previous report", next: "Next report", related: "Related reports", related_sub: "by asset class",
     banner_text: "Public reports are free in Telegram.", banner_btn: "Open channel", banner_close: "Dismiss",
     section: "Section",
-    nf_title: "Report not found", nf_text: "The report may have been unpublished or the link is out of date.", nf_back: "Back to research",
+    nf_title: "Report not found", nf_text: "The report may have been unpublished or the link is out of date.", nf_back: "Back to Market Commentary",
   },
 };
 type Dict = typeof T.ru;
@@ -997,7 +997,7 @@ function renderReport(lang: Lang, r: ReportRow, sections: SectionRow[], others: 
   const dateStr = fmtDate(lang, dateISO);
   const slugAd = r.slug.replace(/-/g, "_");
   const startPayload = `research_${slugAd}_${lang}`;
-  const metaTitle = `${title}${lang === "ru" ? " | Исследование BelFed" : " | Belfed Research"}`;
+  const metaTitle = `${title}${lang === "ru" ? " | Обзоры рынков BelFed" : " | Belfed Market Commentary"}`;
   const metaDesc = sub || title;
   const classes = reportClasses(r);
   const head = headBase(lang, {

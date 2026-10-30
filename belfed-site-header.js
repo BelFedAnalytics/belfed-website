@@ -31,7 +31,7 @@
           tour: 'Что вы получаете',
           how: 'Как это работает',
           trades: 'История сделок ↗',
-          research: 'Исследования',
+          research: 'Обзоры рынков',
           learn: 'Обучение',
           beta: 'бета',
           learnAria: 'Обучение, бета',
@@ -49,7 +49,7 @@
           tour: 'What you get',
           how: 'How it works',
           trades: 'Track record ↗',
-          research: 'Research',
+          research: 'Market Commentary',
           learn: 'Learn',
           beta: 'beta',
           learnAria: 'Learn, beta',
@@ -384,9 +384,9 @@
         display: none;
       }
       @media (max-width: 1380px) {
-        #bf-site-header .bf-links { gap: 18px; }
+        #bf-site-header .bf-links { gap: 16px; }
       }
-      @media (max-width: 1280px) {
+      @media (max-width: 1320px) {
         #bf-site-header .bf-toggle { display: inline-flex; }
         #bf-site-header .bf-links {
           display: none;
@@ -547,7 +547,7 @@
     header.addEventListener('focusout', function (e) {
       if (e.relatedTarget && !header.contains(e.relatedTarget)) close(false);
     });
-    window.matchMedia('(max-width: 1280px)').addEventListener('change', function () {
+    window.matchMedia('(max-width: 1320px)').addEventListener('change', function () {
       close(false);
     });
 
