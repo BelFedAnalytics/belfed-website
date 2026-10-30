@@ -152,10 +152,40 @@ h1, h2, h3 { font-family: var(--rs-serif); font-weight: 600; letter-spacing: -.0
 .latest li a:hover .t { text-decoration: underline; text-underline-offset: 3px; }
 .latest .t { display: block; font-family: var(--rs-serif); font-weight: 600; font-size: var(--rs-fs-latest); line-height: 1.3; margin: 6px 0 8px; letter-spacing: -.005em; }
 .latest .meta { font-size: 12px; }
-.briefings { border: 1px solid var(--rs-rule-ink); padding: var(--rs-s5); margin-top: var(--rs-s6); background: var(--rs-paper); }
-.briefings h3 { font-size: var(--rs-fs-h3); margin: var(--rs-s2) 0; }
-.briefings p { font-size: var(--rs-fs-small); color: var(--rs-ink-2); margin: 0 0 var(--rs-s4); line-height: 1.5; }
-.briefings .acts { display: flex; gap: var(--rs-s3); flex-wrap: wrap; align-items: center; }
+.sub { border: 1px solid var(--rs-rule-ink); padding: var(--rs-s5); margin-top: var(--rs-s6); background: var(--rs-paper); scroll-margin-top: calc(var(--hdr) + 80px); }
+.sub h3 { font-size: var(--rs-fs-h3); margin: var(--rs-s2) 0; }
+.sub > p { font-size: var(--rs-fs-small); color: var(--rs-ink-2); margin: 0 0 var(--rs-s4); line-height: 1.5; }
+.sub form { display: grid; gap: var(--rs-s3); }
+.sub-field { display: grid; grid-template-columns: minmax(0, 1fr) auto; border: 1px solid var(--rs-rule-ink); background: var(--rs-bg); }
+.sub-field[hidden] { display: none; }
+.sub-field input { min-width: 0; border: 0; background: transparent; color: var(--rs-ink); font: 400 14px var(--rs-mono); padding: 0 12px; min-height: 44px; }
+.sub-field input::placeholder { color: var(--rs-ink-3); opacity: 1; }
+.sub-field input:focus-visible { outline: 2px solid var(--rs-focus); outline-offset: -2px; }
+.sub-field .btn { min-height: 44px; border: 0; border-left: 1px solid var(--rs-rule-ink); }
+.sub .consent { display: flex; gap: 10px; align-items: flex-start; font-family: var(--rs-mono); font-size: 11px; color: var(--rs-ink-2); line-height: 1.5; cursor: pointer; }
+.sub .consent[hidden] { display: none; }
+.sub .consent input { margin-top: 2px; flex-shrink: 0; width: 16px; height: 16px; accent-color: var(--rs-green); }
+.sub .consent a { color: var(--rs-green-text); text-underline-offset: 2px; }
+.sub .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.sub .msg { font-family: var(--rs-mono); font-size: 12px; line-height: 1.5; padding: 10px 12px; border: 1px solid; }
+.sub .msg.ok { color: var(--rs-green-text); border-color: var(--rs-green); }
+.sub .msg.err { color: var(--rs-ink); border-color: #c0392b; }
+.sub { container-type: inline-size; }
+.sub .soc { margin-top: var(--rs-s5); padding-top: var(--rs-s4); border-top: 1px solid var(--rs-rule-strong); }
+.sub .soc ul { list-style: none; padding: 0; margin: var(--rs-s3) 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--rs-s2); }
+.sub .soc li { border: 0; }
+.sub a.soc-a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 92px; padding: 14px 6px 12px; border: 1px solid var(--rs-rule-strong); background: var(--rs-bg); color: var(--rs-ink); text-decoration: none; transition: background var(--rs-t), color var(--rs-t), border-color var(--rs-t), transform var(--rs-t); }
+.sub .soc-a .ic { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--rs-ink); color: var(--rs-bg); transition: background var(--rs-t), color var(--rs-t); }
+.sub .soc-a .nm { font: 500 10.5px/1 var(--rs-mono); letter-spacing: .1em; text-transform: uppercase; }
+.sub a.soc-a:hover { background: var(--rs-cta-bg); color: var(--rs-cta-fg); border-color: var(--rs-cta-bg); transform: translateY(-2px); }
+.sub a.soc-a:hover .ic { background: var(--rs-cta-fg); color: var(--rs-cta-bg); }
+.sub a.soc-a:focus-visible { outline: 2px solid var(--rs-focus); outline-offset: 2px; }
+@container (min-width: 560px) {
+  .sub form, .sub > p { max-width: 560px; }
+  .sub a.soc-a { flex-direction: row; justify-content: flex-start; min-height: 64px; padding: 10px 14px; gap: 12px; }
+  .sub .soc-a .nm { font-size: 11.5px; }
+}
+@media (prefers-reduced-motion: reduce) { .sub a.soc-a:hover { transform: none; } }
 @media (max-width: 1024px) { .top { grid-template-columns: minmax(0, 1fr); } }
 
 .list-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--rs-s3); padding: var(--rs-s4) 0; border-top: 2px solid var(--rs-rule-ink); }
@@ -389,8 +419,20 @@ dialog.rs-lb .lb-close { font: 600 11px var(--rs-mono); letter-spacing: .12em; t
         <div class="meta"><time datetime="2026-10-30">30 октября 2026</time><span>5 мин чтения</span><span class="go">Читать →</span></div>
       </a></section><aside class="latest" aria-labelledby="rsLatestH">
         <h2 id="rsLatestH">Новое</h2><ol><li><a href="/research/2026-10-29-1/"><div class="tags"><span class="tag type">Недельный обзор</span><span class="tag cls">Криптовалюты</span></div><span class="t">Недельный обзор криптосектора: признаки завершения коррекции?</span><span class="meta"><time datetime="2026-10-29">29 октября 2026</time><span>6 мин чтения</span></span></a></li><li><a href="/research/2026-10-28-pruzhina-v-zolote-szhimaetsya/"><div class="tags"><span class="tag type">Обзор</span><span class="tag cls">Сырьё</span></div><span class="t">Пружина в золоте сжимается</span><span class="meta"><time datetime="2026-10-28">28 октября 2026</time><span>2 мин чтения</span></span></a></li><li><a href="/research/2026-10-27-hudshiy-period-dlya-serebra-so-vremen-covid/"><div class="tags"><span class="tag type">Обзор</span><span class="tag cls">Сырьё</span></div><span class="t">Обвал серебра: техническая перепроданность и фундаментальное давление</span><span class="meta"><time datetime="2026-10-27">27 октября 2026</time><span>2 мин чтения</span></span></a></li><li><a href="/research/2026-10-26-positioning-wipeout/"><div class="tags"><span class="tag type">Обзор</span><span class="tag cls">Акции</span></div><span class="t">ТОТАЛЬНАЯ ЗАЧИСТКА ПОЗИЦИЙ</span><span class="meta"><time datetime="2026-10-26">26 октября 2026</time><span>3 мин чтения</span></span></a></li></ol>
-        <div class="briefings"><div class="kicker gold">// Бесплатный доступ</div><h3>Исследования в вашем Telegram</h3><p>Публичные отчёты выходят в бесплатном канале BelFed в момент публикации. Без расписания и лишнего шума.</p>
-          <div class="acts"><a class="btn sm primary" href="https://t.me/BelFedFreeRU" rel="noopener">Открыть бесплатный канал</a></div></div>
+        <section class="sub" id="rsSub" aria-labelledby="rsSubH">
+          <div class="kicker gold">// Бесплатно на почту</div>
+          <h3 id="rsSubH">Бесплатные отчёты на почту</h3>
+          <p>Исследования BelFed Analytics приходят прямо на вашу почту. Бесплатно, без спама, отписка в один клик.</p>
+          <form id="subForm" novalidate>
+            <label for="subEmail" class="rs-sr">Ваш email</label>
+            <div class="sub-field"><input type="email" id="subEmail" name="email" placeholder="you@example.com" required autocomplete="email" inputmode="email" spellcheck="false"><button type="submit" class="btn sm primary" id="subBtn">Подписаться</button></div>
+            <label class="consent"><input type="checkbox" id="subConsent"><span>Я согласен получать на email бесплатные исследования BelFed Analytics. Отписаться можно в один клик в любом письме. <a href="/privacy.html">Политика конфиденциальности</a></span></label>
+            <div class="hp" aria-hidden="true"><input type="text" id="subHp" tabindex="-1" autocomplete="off"></div>
+            <div class="msg ok" id="subOk" role="status" hidden></div>
+            <div class="msg err" id="subErr" role="alert" hidden></div>
+          </form>
+          <div class="soc"><div class="kicker">// Бесплатные каналы</div><ul aria-label="BelFed в соцсетях"><li><a class="soc-a soc-tradingview" href="https://www.tradingview.com/u/BelFed_Analytics/" target="_blank" rel="noopener" title="TradingView · BelFed_Analytics"><span class="ic"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path fill="currentColor" d="M15.8654 8.2789c0 1.3541-1.0978 2.4519-2.452 2.4519-1.354 0-2.4519-1.0978-2.4519-2.452 0-1.354 1.0978-2.4518 2.452-2.4518 1.3541 0 2.4519 1.0977 2.4519 2.4519zM9.75 6H0v4.9038h4.8462v7.2692H9.75Zm8.5962 0H24l-5.1058 12.173h-5.6538z"/></svg></span><span class="nm">TradingView</span><span class="rs-sr"> BelFed_Analytics, откроется в новой вкладке</span></a></li><li><a class="soc-a soc-telegram" href="https://t.me/BelFedFreeRU" target="_blank" rel="noopener" title="Telegram · @BelFedFreeRU"><span class="ic"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path fill="currentColor" d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg></span><span class="nm">Telegram</span><span class="rs-sr"> @BelFedFreeRU, откроется в новой вкладке</span></a></li><li><a class="soc-a soc-x" href="https://x.com/art_the_trader" target="_blank" rel="noopener" title="X · @art_the_trader"><span class="ic"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z"/></svg></span><span class="nm">X</span><span class="rs-sr"> @art_the_trader, откроется в новой вкладке</span></a></li></ul></div>
+        </section>
       </aside></div>
     <div class="list-head" id="rsListHead"><h2 id="rsListTitle">Архив</h2><span class="label">по дате</span></div>
     <div class="cards" id="rsCards">
@@ -557,6 +599,7 @@ dialog.rs-lb .lb-close { font: 600 11px var(--rs-mono); letter-spacing: .12em; t
   </section></div>
   </main>
   <script type="application/json" id="rsCfg">{"all":"Отчётов: {t}","some":"Найдено: {n} из {t}","archive":"Архив","results":"Результаты"}</script>
+  <script type="application/json" id="subCfg">{"lang":"ru","supaUrl":"https://obujqvqqmyfcfflhqvud.supabase.co","supaKey":"sb_publishable_jxfYpDWM88Ugyc2pR89b7A_zpyCQDNi","pending":"Почти готово. Мы отправили письмо со ссылкой для подтверждения. Откройте его, чтобы начать получать отчёты.","confirming":"Подтверждаем подписку…","confirmed":"Подписка подтверждена. Новые бесплатные отчёты будут приходить на вашу почту.","expired":"Ссылка для подтверждения устарела. Подпишитесь ещё раз, и мы пришлём новую.","invalid":"Проверьте адрес email.","noConsent":"Отметьте согласие, чтобы подписаться.","rate":"Слишком много попыток. Попробуйте через час.","err":"Не получилось подписаться. Попробуйте, пожалуйста, ещё раз через минуту."}</script>
   <script>(function(){function s(){var h=document.querySelector('#bf-site-header .bf-bar')||document.getElementById('bf-site-header');if(h&&h.offsetHeight)document.documentElement.style.setProperty('--hdr',h.offsetHeight+'px');}document.addEventListener('DOMContentLoaded',s);window.addEventListener('load',s);window.addEventListener('resize',s);setTimeout(s,400);})();</script>
   <script>(function(){
   var bar=document.getElementById('rsBar'); if(!bar) return;
@@ -594,6 +637,38 @@ dialog.rs-lb .lb-close { font: 600 11px var(--rs-mono); letter-spacing: .12em; t
   document.getElementById('rsReset').addEventListener('click',function(){q.value='';cls='';apply(true);q.focus();});
   try{var p=new URLSearchParams(location.search); var pc=p.get('class')||''; if(chips.some(function(b){return b.getAttribute('data-class')===pc;})) cls=pc; q.value=p.get('q')||'';}catch(e){}
   apply(false);
+})();</script>
+  <script>(function(){
+  var form=document.getElementById('subForm'); if(!form) return;
+  var C=JSON.parse(document.getElementById('subCfg').textContent);
+  var ok=document.getElementById('subOk'), err=document.getElementById('subErr'), btn=document.getElementById('subBtn');
+  var api=C.supaUrl+'/functions/v1/research-subscribe';
+  function show(el,msg){ok.hidden=true; err.hidden=true; if(el){el.textContent=msg; el.hidden=false;}}
+  function post(body){return fetch(api,{method:'POST',headers:{'Content-Type':'application/json','apikey':C.supaKey,'Authorization':'Bearer '+C.supaKey},body:JSON.stringify(body)}).then(function(r){return r.json().catch(function(){return {ok:false,error:'server_error'};}).then(function(j){j._s=r.status; return j;});});}
+  function errMsg(j){return j.error==='invalid_email'?C.invalid:j.error==='consent_required'?C.noConsent:j.error==='rate_limited'?C.rate:j.error==='expired'?C.expired:C.err;}
+  // confirmation link from the email: ?confirm=<token>
+  try{
+    var u=new URL(location.href), tok=u.searchParams.get('confirm');
+    if(tok){
+      u.searchParams.delete('confirm'); history.replaceState(null,'',u.pathname+u.search+'#rsSub');
+      show(ok,C.confirming);
+      var box=document.getElementById('rsSub'); if(box&&box.scrollIntoView) box.scrollIntoView({block:'center'});
+      post({action:'confirm',token:tok}).then(function(j){ if(j.ok){show(ok,C.confirmed); form.querySelector('.sub-field').hidden=true; form.querySelector('.consent').hidden=true; if(window.belfedTrack) window.belfedTrack('research_subscribe_confirmed',{});} else show(err,errMsg(j)); }).catch(function(){show(err,C.err);});
+    }
+  }catch(e){}
+  form.addEventListener('submit',function(e){
+    e.preventDefault();
+    var email=(document.getElementById('subEmail').value||'').trim();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){show(err,C.invalid); document.getElementById('subEmail').focus(); return;}
+    if(!document.getElementById('subConsent').checked){show(err,C.noConsent); document.getElementById('subConsent').focus(); return;}
+    var label=btn.textContent; btn.disabled=true; btn.textContent='…';
+    var payload={email:email,lang:C.lang,consent:true,page:location.pathname,website:document.getElementById('subHp').value||''};
+    post(payload).then(function(j){
+      btn.disabled=false; btn.textContent=label;
+      if(j.ok){show(ok,C.pending); form.reset(); if(window.belfedTrack) window.belfedTrack('research_subscribe_requested',{});}
+      else show(err,errMsg(j));
+    }).catch(function(){btn.disabled=false; btn.textContent=label; show(err,C.err);});
+  });
 })();</script>
   <script>
 (function(){
