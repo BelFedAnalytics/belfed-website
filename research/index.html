@@ -379,6 +379,22 @@
   apply(false);
 })();
 </script>
+  <script>
+(function(){
+  try{
+    var F="https://obujqvqqmyfcfflhqvud.supabase.co/functions/v1/", L="ru";
+    var have={}; [].forEach.call(document.querySelectorAll('a.card'),function(a){have[a.getAttribute('href')]=1;});
+    fetch(F+'research-list?lang='+L,{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){
+      var items=(j&&j.items)||[]; var miss=items.filter(function(it){return it&&it.slug&&!have['/research/'+it.slug+'/'];}).map(function(it){return it.slug;});
+      if(!miss.length) return;
+      var k='rs_fresh_'+L+'_'+miss.join(','); if(sessionStorage.getItem(k)) return; sessionStorage.setItem(k,'1');
+      return fetch(F+'research-render?lang='+L+'&v='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.text():null;}).then(function(h){
+        if(h&&h.indexOf('class="cards"')>-1){document.open();document.write(h);document.close();}
+      });
+    }).catch(function(){});
+  }catch(e){}
+})();
+</script>
   <script src="/belfed-analytics.js"></script>
 </body>
 </html>
