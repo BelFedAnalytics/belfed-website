@@ -1,7 +1,8 @@
 /* BelFed member trade history cards (dashboard only).
  *
  * Adds a "History / История" button to rows of the member dashboard tables
- * (open positions, opened this week, closed this week) and opens a card with
+ * (open positions, opened this week, closed this week, Scorecard closed-trade
+ * ledger) and opens a card with
  * the full lifecycle of that position: every published message verbatim,
  * the chart at the time of each operation and a link to the original
  * Telegram message.
@@ -149,6 +150,32 @@
   }
 
   // ------------------------------------------------------------------ data
+  // Private chart uploads -> short-lived signed image URLs (in place).
+  async function signMedia(c, list) {
+    var mediaItems = [];
+    list.forEach(function(p){ mediaItems.push.apply(mediaItems,(p.events||[]).concat(p.partial_closes||[])); });
+    var ids = [];
+    mediaItems.forEach(function(item){
+      try {
+        var u=new URL(item.chart_image_url);
+        if(u.origin==='https://obujqvqqmyfcfflhqvud.supabase.co'&&u.pathname==='/functions/v1/position-chart-media'){
+          var id=u.searchParams.get('id');if(id&&ids.indexOf(id)<0)ids.push(id);
+        }
+      } catch(e) {}
+    });
+    var signed = {};
+    try {
+      for(var offset=0;offset<ids.length;offset+=100){
+        var media=await c.functions.invoke('position-chart-media',{body:{ids:ids.slice(offset,offset+100)}});
+        if(media.error)throw media.error;
+        Object.assign(signed,media.data.urls||{});
+      }
+      mediaItems.forEach(function(item){
+        try { var id=new URL(item.chart_image_url).searchParams.get('id');if(signed[id])item.chart_image_url=signed[id]; } catch(e) {}
+      });
+    } catch(e) { console.warn('[BFD history] Chart access temporarily unavailable'); }
+  }
+
   var dataPromise = null;
   var positions = [];
   function load() {
@@ -166,28 +193,7 @@
           c.rpc("member_position_history").then(async function (res) {
             if (res.error || !res.data) { console.warn("[BFD history]", res.error); return resolve(null); }
             positions = res.data.positions || [];
-            var mediaItems = [];
-            positions.forEach(function(p){ mediaItems.push.apply(mediaItems,(p.events||[]).concat(p.partial_closes||[])); });
-            var ids = [];
-            mediaItems.forEach(function(item){
-              try {
-                var u=new URL(item.chart_image_url);
-                if(u.origin==='https://obujqvqqmyfcfflhqvud.supabase.co'&&u.pathname==='/functions/v1/position-chart-media'){
-                  var id=u.searchParams.get('id');if(id&&ids.indexOf(id)<0)ids.push(id);
-                }
-              } catch(e) {}
-            });
-            var signed = {};
-            try {
-              for(var offset=0;offset<ids.length;offset+=100){
-                var media=await c.functions.invoke('position-chart-media',{body:{ids:ids.slice(offset,offset+100)}});
-                if(media.error)throw media.error;
-                Object.assign(signed,media.data.urls||{});
-              }
-              mediaItems.forEach(function(item){
-                try { var id=new URL(item.chart_image_url).searchParams.get('id');if(signed[id])item.chart_image_url=signed[id]; } catch(e) {}
-              });
-            } catch(e) { console.warn('[BFD history] Chart access temporarily unavailable'); }
+            await signMedia(c, positions);
             resolve(positions);
           }, function (err) { console.warn("[BFD history]", err); resolve(null); });
         });
@@ -196,23 +202,60 @@
     return dataPromise;
   }
 
+  // Closed-trade ledger (Scorecard): a light index of every closed position
+  // and full cards fetched one at a time when a member opens them. If these
+  // RPCs are unavailable the ledger simply keeps its chart links.
+  var closedIndex = [];
+  var indexPromise = null;
+  var cards = {};
+  function loadIndex() {
+    if (indexPromise) return indexPromise;
+    var c = window.supaClient;
+    if (!c || !c.rpc) return Promise.resolve([]);
+    indexPromise = Promise.resolve(c.rpc("member_closed_position_index")).then(function (res) {
+      if (res && !res.error && Array.isArray(res.data)) closedIndex = res.data;
+      return closedIndex;
+    }, function () { return closedIndex; });
+    return indexPromise;
+  }
+  function loadCard(id) {
+    var known = positions.filter(function (x) { return x.id === id; })[0] || cards[id];
+    if (known) return Promise.resolve(known);
+    var c = window.supaClient;
+    if (!c || !c.rpc) return Promise.resolve(null);
+    return Promise.resolve(c.rpc("member_position_card", { p_id: id })).then(async function (res) {
+      if (!res || res.error || !res.data || !res.data.id) return null;
+      await signMedia(c, [res.data]);
+      cards[id] = res.data;
+      return res.data;
+    }, function () { return null; });
+  }
+
   // Match a dashboard row to a position. Primary key: asset|ticker|direction|date
   // (entry date for open rows, exit date for closed rows). Fallback: the only
   // candidate with the same asset|ticker|direction in the same state.
-  function findPosition(ticker, dir, dateStr, closed) {
+  function findPosition(ticker, dir, dateStr, closed, list, openStr) {
     var asset = assetOfTab();
     var tk = trim(ticker).toUpperCase();
     var d = dirOf(dir);
     var iso = isoSheet(dateStr);
-    var cands = positions.filter(function (p) {
+    var cands = (list || positions).filter(function (p) {
       if (trim(p.asset_class).toLowerCase() !== asset) return false;
       if (trim(p.ticker).toUpperCase() !== tk) return false;
       if (dirOf(p.direction) !== d) return false;
       return closed ? p.status === "closed" : p.status !== "closed";
     });
     var exact = cands.filter(function (p) { return isoMsk(closed ? p.closed_at : p.opened_at) === iso; });
+    if (exact.length > 1 && openStr) {
+      var both = exact.filter(function (p) { return isoMsk(p.opened_at) === isoSheet(openStr); });
+      if (both.length === 1) return both[0];
+    }
     if (exact.length === 1) return exact[0];
-    if (!exact.length && cands.length === 1) return cands[0];
+    if (!exact.length && openStr) {
+      var byOpen = cands.filter(function (p) { return isoMsk(p.opened_at) === isoSheet(openStr); });
+      if (byOpen.length === 1) return byOpen[0];
+    }
+    if (!exact.length && cands.length === 1 && !list) return cands[0];
     return exact[0] || null;
   }
 
@@ -417,19 +460,29 @@
     openBody:       { t: 0, d: 1, dt: 8, closed: false, col: 9, replace: true },
     openedWeekBody: { t: 0, d: 1, dt: 8, closed: false, col: 9, replace: true },
     closedWeekBody: { t: 0, d: 1, dt: 4, closed: true,  col: 6, replace: false },
-    watchlistBody:  { t: 0, d: 1, dt: 6, closed: false, col: 7, replace: true }
+    watchlistBody:  { t: 0, d: 1, dt: 6, closed: false, col: 7, replace: true },
+    // Scorecard ledger: ticker and side share a cell, so rows carry
+    // data-ticker / data-dir / data-date / data-open attributes.
+    scoreTradesBody: { t: 0, d: 0, dt: 2, closed: true, col: 4, replace: true, ledger: true }
   };
 
   function decorate(key) {
     var root = document.getElementById(key);
-    if (!root || !positions.length) return;
     var cfg = TABLES[key];
+    if (!root || (!positions.length && !(cfg.ledger && closedIndex.length))) return;
     Array.prototype.forEach.call(root.querySelectorAll("tr"), function (tr) {
       if (tr.cells.length <= Math.max(cfg.dt, cfg.col) || tr.querySelector(".mth-btn")) return;
-      var ticker = trim(tr.cells[cfg.t].textContent);
-      var dir = trim(tr.cells[cfg.d].textContent);
-      var date = trim(tr.cells[cfg.dt].textContent);
-      var p = findPosition(ticker, dir, date, cfg.closed);
+      var ds = tr.dataset || {};
+      var ticker = trim(ds.ticker || tr.cells[cfg.t].textContent);
+      var dir = trim(ds.dir || tr.cells[cfg.d].textContent);
+      var date = trim(ds.date || tr.cells[cfg.dt].textContent);
+      // Ledger rows span all history, so only exact matches count there.
+      var p = cfg.ledger ? findPosition(ticker, dir, date, true, positions, ds.open)
+                         : findPosition(ticker, dir, date, cfg.closed);
+      if (!p && cfg.ledger && closedIndex.length) {
+        p = findPosition(ticker, dir, date, true, closedIndex, ds.open);
+        if (p && p.has_history === false) p = null;
+      }
       if (!p) return;
       var b = document.createElement("button");
       b.type = "button";
@@ -449,14 +502,27 @@
     if (!b) return;
     e.preventDefault();
     var id = Number(b.getAttribute("data-position-id"));
-    var p = positions.filter(function (x) { return x.id === id; })[0];
-    if (!p) { openModal(b, T.btnAria, '<p class="mth-empty">' + esc(T.fail) + "</p>"); return; }
-    openModal(b, T.title(p.ticker), renderCard(p));
+    var p = positions.filter(function (x) { return x.id === id; })[0] || cards[id];
+    if (p) { openModal(b, T.title(p.ticker), renderCard(p)); return; }
+    openModal(b, T.btnAria, '<p class="mth-empty">' + esc(T.loading) + "</p>");
+    loadCard(id).then(function (full) {
+      if (overlay.hidden || lastFocused !== b) return;
+      if (!full) { bodyEl.innerHTML = '<p class="mth-empty">' + esc(T.fail) + "</p>"; return; }
+      titleEl.textContent = T.title(full.ticker);
+      bodyEl.innerHTML = renderCard(full);
+    });
   });
 
   function start() {
     load().then(function (list) {
-      if (!list || !list.length) return;
+      if (!list) return;
+      return (document.getElementById("scoreTradesBody") ? loadIndex() : Promise.resolve([])).then(function () {
+        if (!list.length && !closedIndex.length) return;
+        observe();
+      });
+    });
+  }
+  function observe() {
       decorateAll();
       if (!window.MutationObserver) return;
       var pending = false;
@@ -465,12 +531,12 @@
         pending = true;
         setTimeout(function () { pending = false; decorateAll(); }, 50);
       }).observe(document.body, { childList: true, subtree: true });
-    });
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
   else start();
 
   // Exposed for tests only.
   window.__BFD_MTH__ = { cleanText: cleanText, buildSteps: buildSteps, renderCard: renderCard,
-    findPosition: findPosition, _set: function (list) { positions = list; } };
+    findPosition: findPosition, _set: function (list) { positions = list; },
+    _setIndex: function (list) { closedIndex = list; } };
 })();

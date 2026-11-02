@@ -100,6 +100,42 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 .tg-bar .tg-status{font-size:11px;opacity:0.6}
 .tg-bar .tg-saved{color:#1a7a1a;font-size:11px;display:none}
 @media(max-width:900px){header{display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:26px;padding-bottom:16px}header h1{font-size:clamp(13px,4vw,16px);letter-spacing:1px;line-height:1.35;margin:0;max-width:100%;overflow-wrap:anywhere}.updated{font-size:11px}.header-actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:4px;width:100%}.members-link,.logout-btn{position:static;transform:none;display:inline-flex;align-items:center;justify-content:center;min-height:34px;min-width:104px;font-size:10px;letter-spacing:.8px;padding:7px 12px;line-height:1}.sub-nav,.tab-bar{justify-content:center;flex-wrap:wrap;row-gap:4px}.sub-nav a,.tab-btn{font-size:11px;letter-spacing:1px;padding:9px 10px}}
+/* Scorecard: closed trades in the selected period */
+.score-ledger{margin-top:28px}
+.sl-head{display:flex;justify-content:space-between;align-items:baseline;gap:6px 16px;flex-wrap:wrap;margin-bottom:8px}
+.sl-title{font-size:12px;font-weight:bold;letter-spacing:2px}
+.sl-meta{font-size:11px;opacity:.6;letter-spacing:1px}
+.score-ledger table{border:none;border-top:2px solid #000;border-bottom:1px solid #000;background:transparent;table-layout:auto}
+.score-ledger th{background:transparent;color:#000;opacity:.6;cursor:default;font-size:10px;letter-spacing:1.5px;padding:10px 14px 8px;border:none;border-bottom:1px solid #000;text-align:left}
+.score-ledger th:hover{background:transparent}
+.score-ledger td{border:none;border-bottom:1px solid #e2ddd0;padding:11px 14px;background:transparent;vertical-align:middle}
+.score-ledger tbody tr:last-child td{border-bottom:none}
+.score-ledger tr:nth-child(even){background:transparent}
+.score-ledger tbody tr:hover td{background:#fff}
+.score-ledger .sl-r{text-align:right}
+.score-ledger .sl-trade{width:36%}
+.sl-narrow{display:none}
+.score-ledger .sl-act{text-align:right;width:1%}
+.sl-tk{font-weight:bold;letter-spacing:.5px}
+.sl-side{font-size:10px;letter-spacing:1px;margin-left:8px;opacity:.55;font-weight:bold}
+.sl-dot{font-size:8px;margin-left:6px;vertical-align:2px}
+.sl-sub{display:none;font-size:10px;letter-spacing:.5px;opacity:.55;margin-top:3px}
+.sl-foot{display:flex;justify-content:space-between;align-items:center;gap:10px 16px;flex-wrap:wrap;margin-top:12px;font-size:11px;letter-spacing:1px}
+.sl-foot[hidden]{display:none}
+.sl-count{opacity:.6;text-transform:uppercase}
+.sl-more{font:inherit;font-size:11px;font-weight:bold;letter-spacing:1.5px;color:#000;background:transparent;border:1px solid #000;padding:7px 14px;cursor:pointer}
+.sl-more:hover,.sl-more:focus-visible{background:#000;color:#f5f2eb;outline:none}
+.score-ledger .no-data{text-align:center}
+@media(max-width:600px){
+.score-ledger th,.score-ledger td{padding-left:6px;padding-right:6px}
+.score-ledger .sl-open{display:none}
+.sl-sub{display:block}
+.sl-y4{display:none}
+.sl-side{margin-left:6px}
+.sl-foot{justify-content:center;text-align:center}
+.score-ledger .mth-btn{padding:2px 7px;letter-spacing:.5px}
+}
+@media(max-width:420px){.sl-wide{display:none}.sl-narrow{display:inline}.score-ledger th,.score-ledger td{padding-left:5px;padding-right:5px}}
 </style>
 <link rel="stylesheet" href="member-trade-history.css">
 </head>
@@ -265,7 +301,7 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 <div class="ytd-grid">
 <div class="ytd-box"><div class="ytd-label">СУММАРНЫЙ R</div><div class="ytd-value" id="ytdR">&mdash;</div></div>
 <div class="ytd-box"><div class="ytd-label">% ПРИБЫЛЬНЫХ</div><div class="ytd-value" id="ytdWR">&mdash;</div></div>
-<div class="ytd-box"><div class="ytd-label">ЗАКРЫТЫХ СДЕЛОК</div><div class="ytd-value" id="ytdTotal">&mdash;</div></div></div><div class="score-period-note" id="scorePeriodNote">ПЕРИОД: ВСЁ ВРЕМЯ</div><div style="display:none">
+<div class="ytd-box"><div class="ytd-label">ЗАКРЫТЫХ СДЕЛОК</div><div class="ytd-value" id="ytdTotal">&mdash;</div></div></div><div class="score-period-note" id="scorePeriodNote">ПЕРИОД: ВСЁ ВРЕМЯ</div><div class="score-ledger" id="scoreLedger"><div class="sl-head"><span class="sl-title">ЗАКРЫТЫЕ СДЕЛКИ ЗА ПЕРИОД</span><span class="sl-meta">СНАЧАЛА ПОСЛЕДНИЕ ЗАКРЫТЫЕ</span></div><table class="sl-table"><thead><tr><th scope="col">СДЕЛКА</th><th scope="col" class="sl-open">ВХОД</th><th scope="col">ВЫХОД &darr;</th><th scope="col" class="sl-r"><span class="sl-wide">РЕЗУЛЬТАТ</span><span class="sl-narrow" aria-hidden="true">R</span></th><th scope="col" class="sl-act"><span class="visually-hidden-sl" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">История</span></th></tr></thead><tbody id="scoreTradesBody"></tbody></table><div class="sl-foot" id="scoreLedgerFoot" hidden><span class="sl-count" id="scoreLedgerCount"></span><button type="button" class="sl-more" id="scoreLedgerMore" aria-controls="scoreTradesBody"></button></div></div><div style="display:none">
 </div>
 </div>
 <!-- ALERTS -->
@@ -281,7 +317,7 @@ footer{text-align:center;margin-top:60px;padding-top:18px;border-top:1px solid #
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="belfed-analytics.js"></script>
 <script src="belfed-auth.js"></script>
-<script src="member-trade-history.js?v=20261016" defer></script>
+<script src="member-trade-history.js?v=20261102" defer></script>
 <script src="belfed-account-menu.js"></script>
 <script src="belfed-payments.js"></script>
 <script>
@@ -521,8 +557,27 @@ var worst=results.length>0?Math.min.apply(null,results):NaN;
 document.getElementById('wBest').textContent=fmtR(best);
 document.getElementById('wWorst').textContent=fmtR(worst);
 }
+/* Scorecard ledger: the closed trades behind the stats, newest close first. */
+var SL_TXT={sub:'ВХОД ',empty:'Нет закрытых сделок за выбранный период',count:'Показано {n} из {t}',all:'ПОКАЗАТЬ ВСЕ {t}',less:'СВЕРНУТЬ',chart:'\u2197 График',dot:'Вход и выход отправлены участникам в реальном времени'};var SL_LIMIT=8;
+function slEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function slTime(s){var p=String(s||'').split('.');if(p.length!==3)return 0;var t=new Date(+p[2],+p[1]-1,+p[0]).getTime();return isNaN(t)?0:t;}
+function slDate(s){var m=String(s||'').match(/^(\d{1,2})\.(\d{1,2})\.(\d{2})(\d{2})$/);if(!m)return slEsc(s||'\u2014');return m[1].padStart(2,'0')+'.'+m[2].padStart(2,'0')+'.<span class="sl-y4">'+m[3]+'</span>'+m[4];}
+function slChart(url){if(!url||!/^https:\/\//.test(url))return '\u2014';return '<a class="tv-link" href="'+slEsc(url)+'" target="_blank" rel="noopener">'+SL_TXT.chart+'</a>';}
+function renderScoreLedger(closed,period,mode){var body=document.getElementById('scoreTradesBody');if(!body)return;
+var key=period+'|'+mode+'|'+(window.currentTab||'');if(window._bfdLedgerKey!==key){window._bfdLedgerKey=key;window._bfdLedgerAll=false;}
+var rows=closed.slice().sort(function(a,b){return(slTime(b.exitDate)-slTime(a.exitDate))||(slTime(b.entryDate)-slTime(a.entryDate))||String(a.ticker).localeCompare(String(b.ticker));});
+var total=rows.length,shown=window._bfdLedgerAll?total:Math.min(total,SL_LIMIT);
+var foot=document.getElementById('scoreLedgerFoot'),cnt=document.getElementById('scoreLedgerCount'),more=document.getElementById('scoreLedgerMore');
+if(!total){body.innerHTML=emptyRow(5,SL_TXT.empty);if(foot)foot.hidden=true;return;}
+body.innerHTML=rows.slice(0,shown).map(function(t){var dir=String(t.dir||'');var dot=(mode!=='members'&&t.membersSignal===true)?'<span class="sl-dot" title="'+slEsc(SL_TXT.dot)+'" aria-label="'+slEsc(SL_TXT.dot)+'">\u25cf</span>':'';
+return '<tr data-ticker="'+slEsc(t.ticker)+'" data-dir="'+slEsc(dir)+'" data-date="'+slEsc(t.exitDate)+'" data-open="'+slEsc(t.entryDate)+'">'+
+'<td class="sl-trade"><span class="sl-tk">'+slEsc(t.ticker)+'</span><span class="sl-side">'+slEsc(dir.toUpperCase())+'</span>'+dot+'<span class="sl-sub">'+SL_TXT.sub+slDate(t.entryDate)+'</span></td>'+
+'<td class="sl-open">'+slDate(t.entryDate)+'</td><td>'+slDate(t.exitDate)+'</td>'+
+'<td class="sl-r '+cls(t.result)+'">'+fmtR(t.result)+'</td><td class="sl-act">'+slChart(t.tvUrl)+'</td></tr>';}).join('');
+if(foot){foot.hidden=total<=SL_LIMIT;cnt.textContent=SL_TXT.count.replace('{n}',shown).replace('{t}',total);more.textContent=window._bfdLedgerAll?SL_TXT.less:SL_TXT.all.replace('{t}',total);more.setAttribute('aria-expanded',window._bfdLedgerAll?'true':'false');}
+if(!window._bfdLedgerBound&&more){window._bfdLedgerBound=true;more.addEventListener('click',function(){window._bfdLedgerAll=!window._bfdLedgerAll;if(window._bfdTrades)renderYTDScorecard(window._bfdTrades);if(!window._bfdLedgerAll){var box=document.getElementById('scoreLedger');if(box&&box.getBoundingClientRect().top<0)box.scrollIntoView({block:'start'});}});}}
 function renderYTDScorecard(trades){
-var _sp=(function(){try{return localStorage.getItem('bfd_score_period')||'all';}catch(e){return 'all';}})();var _sm=(function(){try{return localStorage.getItem('bfd_score_mode')||'all';}catch(e){return 'all';}})();window._bfdPeriod=_sp;window._bfdMode=_sm;window._bfdTrades=trades;function _pxd(s){if(!s)return null;var p=String(s).split('.');if(p.length!==3)return null;var d=parseInt(p[0],10),m=parseInt(p[1],10)-1,y=parseInt(p[2],10);return isNaN(d)||isNaN(m)||isNaN(y)?null:new Date(y,m,d);}function _fbp(arr,pp){if(pp==='all')return arr;var now=new Date();return arr.filter(function(t){var dt=_pxd(t.exitDate);if(!dt)return false;if(pp==='2025')return dt.getFullYear()===2025;if(pp==='2026')return dt.getFullYear()===2026;if(pp==='month')return dt>=new Date(now.getTime()-30*864e5);if(pp==='qtr')return dt>=new Date(now.getTime()-90*864e5);return true;});}var _allClosed=trades.filter(function(t){if(t.status!=='closed')return false;if(_sm==='members'&&t.membersSignal!==true)return false;return true;});var closed=_fbp(_allClosed,_sp);
+var _sp=(function(){try{return localStorage.getItem('bfd_score_period')||'all';}catch(e){return 'all';}})();var _sm=(function(){try{return localStorage.getItem('bfd_score_mode')||'all';}catch(e){return 'all';}})();window._bfdPeriod=_sp;window._bfdMode=_sm;window._bfdTrades=trades;function _pxd(s){if(!s)return null;var p=String(s).split('.');if(p.length!==3)return null;var d=parseInt(p[0],10),m=parseInt(p[1],10)-1,y=parseInt(p[2],10);return isNaN(d)||isNaN(m)||isNaN(y)?null:new Date(y,m,d);}function _fbp(arr,pp){if(pp==='all')return arr;var now=new Date();return arr.filter(function(t){var dt=_pxd(t.exitDate);if(!dt)return false;if(pp==='2025')return dt.getFullYear()===2025;if(pp==='2026')return dt.getFullYear()===2026;if(pp==='month')return dt>=new Date(now.getTime()-30*864e5);if(pp==='qtr')return dt>=new Date(now.getTime()-90*864e5);return true;});}var _allClosed=trades.filter(function(t){if(t.status!=='closed')return false;if(_sm==='members'&&t.membersSignal!==true)return false;return true;});var closed=_fbp(_allClosed,_sp);renderScoreLedger(closed,_sp,_sm);
 var results=closed.map(function(t){return t.result;}).filter(function(v){return!isNaN(v);});
 var totalR=results.reduce(function(a,b){return a+b;},0);
 var winners=results.filter(function(v){return v>0;}).length;
