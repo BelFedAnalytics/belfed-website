@@ -1,7 +1,9 @@
 // Add shared header and footer to user-facing HTML, including generated research.
-// Admin tools retain their private workflow navigation. Redirect shells stay lean.
+// Admin tools and the signed-in member area keep their own workflow navigation. Redirect shells stay lean.
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+// Member area pages (root level) keep their own navigation and footer.
+export const MEMBER_AREA_PAGES = new Set(["members.html","dashboard.html","analytics.html","analytics-view.html","asset-analysis.html","stock-analysis.html","billing.html","settings.html"]);
 export async function syncSiteHeader(root = process.cwd()) {
   let count = 0;
   const lang = (await readFile(path.join(root, 'CNAME'), 'utf8')).trim() === 'belfed.ru' ? 'ru' : 'en';
@@ -13,6 +15,7 @@ export async function syncSiteHeader(root = process.cwd()) {
       const file = path.join(dir, entry.name);
       if (entry.isDirectory()) { await walk(file); continue; }
       if (!entry.name.endsWith('.html') || entry.name.startsWith('admin')) continue;
+      if (dir === root && MEMBER_AREA_PAGES.has(entry.name)) continue;
       const html = await readFile(file, 'utf8');
       if (/http-equiv=["']refresh/i.test(html) || !/<\/head>/i.test(html)) continue;
       let updated = html.includes('src="/belfed-site-header.js"')

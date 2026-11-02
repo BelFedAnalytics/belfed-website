@@ -21,8 +21,7 @@ const path = require('node:path');
     await page.emulateMedia({ reducedMotion: 'reduce' });
     const base = `http://127.0.0.1:${server.address().port}`;
     await page.route('**/*', route => route.request().url().startsWith(base) ? route.continue() : route.abort());
-    const pages = ['/', '/members.html', '/dashboard.html', '/analytics.html', '/asset-analysis.html',
-      '/settings.html', '/about.html', '/research/', '/learn/', ru ? '/ru/trades.html' : '/trades.html',
+    const pages = ['/', '/about.html', '/research/', '/learn/', ru ? '/ru/trades.html' : '/trades.html',
       ru ? '/ru/privacy.html' : '/privacy.html', ru ? '/ru/oferta.html' : '/terms.html',
       ...fs.readdirSync('research', { withFileTypes: true }).filter(x => x.isDirectory()).slice(0, 2).map(x => `/research/${x.name}/`)];
     let expected;

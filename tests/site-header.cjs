@@ -20,8 +20,7 @@ const path = require('node:path');
     // No authenticated API calls, analytics, or third-party network side effects.
     await page.route('**/*', route => route.request().url().startsWith('http://127.0.0.1:') ? route.continue() : route.abort());
     const base = `http://127.0.0.1:${server.address().port}`;
-    const pages = ['/', '/members.html', '/dashboard.html', '/analytics.html',
-      '/asset-analysis.html', '/settings.html', '/about.html', '/research/',
+    const pages = ['/', '/about.html', '/research/',
       ...fs.readdirSync('research', { withFileTypes: true }).filter(x => x.isDirectory()).slice(0, 2).map(x => `/research/${x.name}/`)];
     if (fs.existsSync('ru/trades.html')) pages.push('/ru/trades.html', '/learn/');
     else pages.push('/trades.html', '/equities-trades.html');
