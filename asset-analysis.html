@@ -803,15 +803,41 @@ async function loadPosts() {
   var errorBox = document.getElementById('errorBox');
   errorBox.style.display = 'none';
   try {
-    var res = await supaClient.from('analysis_posts')
-      .select('id,ticker,company_name,asset_class,post_type,reply_name,reply_text,greeting_ru,greeting_en,body_ru,body_en,tradingview_url,hashtags,image_paths,related_links,published_at,created_at,message_id_ru,message_id_en,parent_post_id,slug')
-      .eq('status', 'published')
-      .eq('destination', 'asset')
-      .order('published_at', { ascending: false, nullsLast: true })
-      .order('created_at', { ascending: false })
-      .limit(200);
-    if (res.error) throw res.error;
-    state.posts = res.data || [];
+    // Load ALL published posts in pages. A single request is capped by the API
+    // (max rows per response), and the old fixed .limit(200) hid every post
+    // older than the newest 200. Filters, threads and permalinks work on the
+    // full list, so nothing else needs to change.
+    var PAGE_SIZE = 500, MAX_PAGES = 100;
+    var all = [], seen = {}, total = null, partial = false, offset = 0;
+    for (var pg = 0; pg < MAX_PAGES; pg++) {
+      var res = await supaClient.from('analysis_posts')
+        .select('id,ticker,company_name,asset_class,post_type,reply_name,reply_text,greeting_ru,greeting_en,body_ru,body_en,tradingview_url,hashtags,image_paths,related_links,published_at,created_at,message_id_ru,message_id_en,parent_post_id,slug', { count: 'exact' })
+        .eq('status', 'published')
+        .eq('destination', 'asset')
+        .order('published_at', { ascending: false, nullsLast: true })
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1);
+      if (res.error) {
+        if (pg === 0) throw res.error;
+        partial = true;
+        break;
+      }
+      if (total === null && typeof res.count === 'number') total = res.count;
+      var rows = res.data || [];
+      rows.forEach(function(r) { if (!seen[r.id]) { seen[r.id] = true; all.push(r); } });
+      if (!rows.length) break;
+      // Advance by rows actually returned: the API may cap a response below PAGE_SIZE.
+      offset += rows.length;
+      if (total !== null && offset >= total) break;
+      if (total === null && rows.length < PAGE_SIZE) break;
+    }
+    if (total === null) total = all.length;
+    state.posts = all;
+    if (partial) {
+      errorBox.textContent = 'Загружена только часть постов (' + all.length + ' из ' + total + '). Обновите страницу.';
+      errorBox.style.display = 'block';
+    }
     state.threads = buildThreads(state.posts);
     var pm = parsePermalink();
     if (pm) {
