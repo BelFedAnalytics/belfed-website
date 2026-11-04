@@ -1,5 +1,21 @@
 // =====================================================================
 // analysis-publish — BelFed Asset Analysis & Requests publisher
+// v29 — Automatic Telegram format for Timeline (lenta) posts (2026-11-04):
+//      - For destination=timeline posts the format is chosen by the server from the
+//        VISIBLE length of the Telegram message (tags and entities are not counted):
+//          with images, text <= 1024   -> regular post (photo/album + caption)
+//          with images, text  > 1024   -> ARTICLE (one rich message, charts inline)
+//          no images,   text <= 4096   -> regular text message
+//          no images,   text  > 4096   -> ARTICLE
+//        More than 4 images in a timeline post also switches it to an article.
+//        The decision is made once per post (all selected languages share the
+//        format, the longer language decides) and is stored in analysis_posts.tg_format
+//        after the first successful send, so edit / republish_missing keep it.
+//        Applies to publish (editor and scheduler), republish_missing and preview.
+//        Asset Analysis posts keep the manual tg_format switch from the admin form.
+//      - Length checks for regular posts now use the visible length (Telegram counts
+//        characters after entity parsing), the old check counted raw HTML.
+//      - publish / republish_missing / preview return format + visible_len.
 // v27 — Related post links + larger article galleries (2026-10-30):
 //      - New column analysis_posts.related_links jsonb
 //        [{url_ru,url_en,title_ru,title_en}] (separate links per language;
@@ -168,6 +184,17 @@ interface LangResult {
 
 function isTimeline(p: AnalysisPost): boolean {
   return (p.destination || "timeline") === "timeline" && !p.ticker;
+}
+
+// Telegram counts message / caption length after entity parsing: tags and HTML
+// entities do not count, only the visible characters.
+function tgVisibleLength(html: string): number {
+  const plain = String(html ?? "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, "\"")
+    .replace(/&amp;/g, "&");
+  return plain.length;
 }
 
 function publicImageUrl(path: string): string {
@@ -445,13 +472,33 @@ function preflightLang(p: AnalysisPost, lang: Lang, imageCount: number): LangRes
   return null;
 }
 
+// v29: automatic format for timeline posts. Returns the decision and, when the
+// post must go out as an article, switches p.tg_format in memory (callers persist
+// it after a successful send). Not applied to asset posts, to posts already
+// delivered in some language, or when text-only mode was chosen explicitly.
+interface AutoFormat { applied: boolean; changed: boolean; format: "post" | "article"; visible_len: number; limit: number }
+
+function applyAutoFormat(p: AnalysisPost, langs: Lang[]): AutoFormat {
+  const images = (p.image_paths ?? []).length;
+  const postLimit = images > 0 ? TG_CAPTION_LIMIT : TG_MESSAGE_LIMIT;
+  const lens = langs.map((l) => tgVisibleLength(buildText(p, l)));
+  const maxLen = lens.length ? Math.max(...lens) : 0;
+  if (!isTimeline(p) || p.tg_text_only === true || isArticle(p) || p.message_id_ru || p.message_id_en) {
+    const art = isArticle(p);
+    return { applied: false, changed: false, format: art ? "article" : "post", visible_len: maxLen, limit: art ? TG_RICH_LIMIT : postLimit };
+  }
+  const needArticle = images > MAX_POST_IMAGES || maxLen > postLimit;
+  if (needArticle) p.tg_format = "article";
+  return { applied: true, changed: needArticle, format: needArticle ? "article" : "post", visible_len: maxLen, limit: needArticle ? TG_RICH_LIMIT : postLimit };
+}
+
 function captionLimitForImages(imageCount: number): number {
   return imageCount > 0 ? TG_CAPTION_LIMIT : TG_MESSAGE_LIMIT;
 }
 
 function checkLength(text: string, imageCount: number): { ok: true } | { ok: false; length: number; limit: number; excess: number } {
   const limit = captionLimitForImages(imageCount);
-  const len = text.length;
+  const len = tgVisibleLength(text);
   if (len > limit) return { ok: false, length: len, limit, excess: len - limit };
   return { ok: true };
 }
@@ -736,8 +783,9 @@ async function actionPublish(postId: string, textOnlyOverride?: unknown) {
   if (p.status === "published") return { error: "already_published" };
 
   await ensureSlug(p);
-  { const ce = imageCountError(p); if (ce) return { error: ce, hint: isArticle(p) ? "В статье не больше 50 графиков." : "В обычном посте не больше 4 графиков: удалите лишние или переключите формат на статью." }; }
   await loadFooters();
+  const auto = applyAutoFormat(p, [...(p.publish_to_ru ? ["ru" as Lang] : []), ...(p.publish_to_en ? ["en" as Lang] : [])]);
+  { const ce = imageCountError(p); if (ce) return { error: ce, hint: isArticle(p) ? "В статье не больше 50 графиков." : "В обычном посте не больше 4 графиков: удалите лишние или переключите формат на статью." }; }
 
   const imageUrls = tgImageUrls(p);
 
@@ -750,7 +798,7 @@ async function actionPublish(postId: string, textOnlyOverride?: unknown) {
       failures: preflight,
       hint: isArticle(p)
         ? "Сократите текст до отправки. Лимит статьи — 32768 символов."
-        : "Сократите текст до отправки. Лимит подписи к фото — 1024 символа, текстового сообщения без фото — 4096.",
+        : "Сократите текст до отправки. Лимит подписи к фото — 1024 символа, текстового сообщения без фото — 4096. Посты ленты длиннее лимита уходят статьёй автоматически.",
     };
   }
 
@@ -765,6 +813,7 @@ async function actionPublish(postId: string, textOnlyOverride?: unknown) {
   const enMid = en?.ok ? (en.message_id ?? null) : null;
 
   const update: any = { message_id_ru: ruMid, message_id_en: enMid };
+  if (auto.changed && (ruMid != null || enMid != null)) update.tg_format = "article";
   if (allOk) {
     update.status = "published";
     update.published_at = new Date().toISOString();
@@ -781,7 +830,7 @@ async function actionPublish(postId: string, textOnlyOverride?: unknown) {
       hint: "Часть языков не опубликована. Используйте republish_missing после правки.",
     };
   }
-  return { ok: true, message_id_ru: ruMid, message_id_en: enMid, slug: p.slug };
+  return { ok: true, message_id_ru: ruMid, message_id_en: enMid, slug: p.slug, format: isArticle(p) ? "article" : "post", visible_len: auto.visible_len };
 }
 
 async function actionRepublishMissing(postId: string, textOnlyOverride?: unknown) {
@@ -789,12 +838,13 @@ async function actionRepublishMissing(postId: string, textOnlyOverride?: unknown
   let p = await loadPost(postId);
   if (!p) return { error: "post_not_found" };
   await ensureSlug(p);
-  { const ce = imageCountError(p); if (ce) return { error: ce, hint: isArticle(p) ? "В статье не больше 50 графиков." : "В обычном посте не больше 4 графиков: удалите лишние или переключите формат на статью." }; }
   await loadFooters();
 
   const needRu = p.publish_to_ru && !p.message_id_ru;
   const needEn = p.publish_to_en && !p.message_id_en;
   if (!needRu && !needEn) return { error: "nothing_missing", hint: "Все запрошенные языки уже опубликованы." };
+  const auto = applyAutoFormat(p, [...(needRu ? ["ru" as Lang] : []), ...(needEn ? ["en" as Lang] : [])]);
+  { const ce = imageCountError(p); if (ce) return { error: ce, hint: isArticle(p) ? "В статье не больше 50 графиков." : "В обычном посте не больше 4 графиков: удалите лишние или переключите формат на статью." }; }
 
   const imageUrls = tgImageUrls(p);
 
@@ -821,6 +871,7 @@ async function actionRepublishMissing(postId: string, textOnlyOverride?: unknown
   const update: any = {};
   if (ru?.ok && ru.message_id != null) update.message_id_ru = ru.message_id;
   if (en?.ok && en.message_id != null) update.message_id_en = en.message_id;
+  if (auto.changed && (update.message_id_ru != null || update.message_id_en != null)) update.tg_format = "article";
 
   const finalRu = update.message_id_ru ?? p.message_id_ru;
   const finalEn = update.message_id_en ?? p.message_id_en;
@@ -846,7 +897,7 @@ async function actionRepublishMissing(postId: string, textOnlyOverride?: unknown
       message_id_ru: finalRu, message_id_en: finalEn, slug: p.slug,
     };
   }
-  return { ok: true, message_id_ru: finalRu, message_id_en: finalEn, slug: p.slug, sent: results.map(r => r.lang) };
+  return { ok: true, message_id_ru: finalRu, message_id_en: finalEn, slug: p.slug, sent: results.map(r => r.lang), format: isArticle(p) ? "article" : "post", visible_len: auto.visible_len };
 }
 
 async function actionEdit(postId: string) {
@@ -867,7 +918,7 @@ async function actionEdit(postId: string) {
     return {
       error: preflight[0].error,
       failures: preflight,
-      hint: article ? "Сократите текст. Лимит статьи — 32768 символов." : "Сократите текст. Лимит подписи к фото — 1024 символа.",
+      hint: article ? "Сократите текст. Лимит статьи — 32768 символов." : "Сократите текст. Пост опубликован обычным сообщением (лимит подписи к фото — 1024, без фото — 4096). Чтобы выпустить его статьёй, удалите пост из Telegram и опубликуйте заново.",
     };
   }
 
@@ -939,8 +990,9 @@ async function actionSaveFooters(body: any) {
 async function actionPreview(postId: string) {
   const p = await loadPost(postId);
   if (!p) return { error: "post_not_found" };
-  { const ce = imageCountError(p); if (ce) return { error: ce, hint: isArticle(p) ? "В статье не больше 50 графиков." : "В обычном посте не больше 4 графиков: удалите лишние или переключите формат на статью." }; }
   await loadFooters();
+  const auto = applyAutoFormat(p, [...(p.publish_to_ru ? ["ru" as Lang] : []), ...(p.publish_to_en ? ["en" as Lang] : [])]);
+  { const ce = imageCountError(p); if (ce) return { error: ce, hint: isArticle(p) ? "В статье не больше 50 графиков." : "В обычном посте не больше 4 графиков: удалите лишние или переключите формат на статью." }; }
 
   const { data: prof } = await supabase
     .from("profiles")
@@ -977,7 +1029,7 @@ async function actionPreview(postId: string) {
   }
   const failed = out.filter((r) => !r.ok);
   if (failed.length) return { error: "preview_failed", results: out };
-  return { ok: true, format: article ? "article" : "post", results: out };
+  return { ok: true, format: article ? "article" : "post", visible_len: auto.visible_len, results: out };
 }
 
 Deno.serve(async (req) => {
