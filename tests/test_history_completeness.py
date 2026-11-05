@@ -86,3 +86,24 @@ def test_public_card_matches_published_row_without_mutating_db_result():
     R.refresh([p], _sheets(), man)
     assert "+2.62R" in man[CL_KEYS[0]]["ru"]
     assert p["result_rr"] == 3.6
+
+
+def test_final_fill_does_not_repeat_close_comment_and_hides_bot_tokens():
+    p = {
+        "ticker": "SPCX", "direction": "short", "opened_at": "2026-10-28T13:45:24Z",
+        "closed_at": "2026-11-05T16:06:48Z", "exit_price": 121.45, "result_rr": 3.26,
+        "comment_ru": "Открываем шорт.", "close_comment_ru": "Закрываем всю позицию.",
+        "events": [
+            {"id": 1, "event_type": "opened", "triggered_at": "2026-10-28T13:45:26Z", "triggered_price": 144.86, "message_id_ru": 11, "payload": {}},
+            {"id": 2, "event_type": "target_2_hit", "triggered_at": "2026-11-04T15:06:29Z", "triggered_price": 132.34, "message_id_ru": 12, "payload": {}},
+            {"id": 3, "event_type": "closed", "triggered_at": "2026-11-05T16:06:49Z", "triggered_price": None, "message_id_ru": 13, "payload": {}},
+        ],
+        "partial_closes": [
+            {"id": 30, "pct_closed": 35, "exit_price": 132.34, "closed_at": "2026-11-04T15:06:12Z", "comment_ru": "target_2_hit (pre-market touch)"},
+            {"id": 31, "pct_closed": 5, "exit_price": 121.45, "closed_at": "2026-11-05T16:06:48Z", "comment_ru": "Закрываем всю позицию."},
+        ],
+    }
+    html = B.build_card(p, {pc["id"]: pc for pc in p["partial_closes"]})
+    assert html.count("Закрываем всю позицию.") == 1
+    assert "Закрыто 5% по 121.45." in html
+    assert "target_2_hit" not in html

@@ -132,13 +132,20 @@ def _event_price(ev):
 
 
 def _system_comment(text):
-    return bool(re.search(r"^(auto |corrected |backfilled )|\(per sheet recap\)", str(text or ""), re.I))
+    v = str(text or "").strip()
+    # Bot event tokens written straight into the ledger, e.g.
+    # "target_2_hit (pre-market touch)": internal notes, never public copy.
+    return bool(re.search(r"^(auto |corrected |backfilled )|\(per sheet recap\)", v, re.I)
+                or re.search(r"^(target_[123]_hit|partial_stop_[12]_hit|stop_hit|partial_closed|closed)\b", v, re.I))
 
 
-def _partial_body(pc):
+def _partial_body(pc, already=""):
+    """`already` is escaped HTML the step already shows (e.g. the close
+    comment); an identical ledger comment is not repeated."""
     summary = "Закрыто %s%% по %s." % (num(pc.get("pct_closed")), num(pc.get("exit_price")))
-    comment = pc.get("comment_ru") or ""
-    return gen(summary) + (("\n\n" + stored(comment)) if comment and not _system_comment(comment) and comment != summary else "")
+    comment = (pc.get("comment_ru") or "").strip()
+    dup = bool(already) and stored(comment) in already
+    return gen(summary) + (("\n\n" + stored(comment)) if comment and not _system_comment(comment) and comment != summary and not dup else "")
 
 
 def _match_partials(events, partials, pos):
@@ -340,7 +347,7 @@ def _card_from_events(pos, events, pc_by_id):
             local_ev["payload"]["partial_close_id"] = pc["id"]
         body = step_body(pos, local_ev, pc_by_id)
         if pc and ev.get("event_type") not in ("partial_closed", "partial_stop_1_hit", "partial_stop_2_hit"):
-            body += "\n\n" + _partial_body(pc)
+            body += "\n\n" + _partial_body(pc, body)
         ts = dd(ev.get("triggered_at")) or dd(pos.get("opened_at"))
         chart = step_chart(local_ev, pc_by_id) or (_https(pc.get("chart_url")) if pc else "")
         steps.append((_timestamp(ev.get("triggered_at")), _step_html(step_label(ev), ts, body,
