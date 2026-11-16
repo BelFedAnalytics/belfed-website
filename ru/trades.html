@@ -349,6 +349,10 @@ tbody td{padding:14px 14px;font-size:13px;vertical-align:middle}
       dataRows.push(r);
     }
 
+    // Sort by entry date (oldest first); stable for equal dates
+    function entryKey(r){var m=(r[4]||'').trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);return m?(+m[3])*10000+(+m[2])*100+(+m[1]):99999999;}
+    dataRows=dataRows.map(function(r,i){return {r:r,i:i,k:entryKey(r)};}).sort(function(a,b){return a.k-b.k||a.i-b.i;}).map(function(o){return o.r;});
+
     var tbody=document.querySelector('tbody');
     tbody.innerHTML='';
 
