@@ -639,7 +639,7 @@ function renderOpenList() {
     // Кнопка частичного закрытия — только для open/partial и есть остаток.
     const canPartial = (p.status === 'open' || p.status === 'partial' || p.status === 'partially_closed') && rem > 0;
     const partialBtn = canPartial
-      ? `<button class="secondary" style="color:#ff9500;border-color:#ff9500" data-tooltip="Закрыть часть позиции" onclick="openPartial(${p.id},'${p.ticker}',${p.entry_price},${p.stop_price},'${p.direction}',${rem})">🔻</button>`
+      ? `<button class="secondary" style="color:#ff9500;border-color:#ff9500" data-tooltip="Закрыть часть позиции" onclick="openPartial(${p.id},'${p.ticker}',${p.entry_price},${p.stop_price},'${p.direction}',${rem},${initialRiskPerUnit(p)})">🔻</button>`
       : '';
     // Бейдж частичных стопов рядом со стопом
     const psList = [
@@ -1250,12 +1250,35 @@ async function confirmComment() {
 }
 
 // ========== Частичное закрытие ==========
+// Первоначальный риск на единицу — неизменный знаменатель любого R.
+// Берётся от initial_stop_price (не от текущего, возможно подтянутого стопа).
+// Если риск был ступенчатым (частичные стопы PS1..PS3 с долей в %), то это
+// среднее, взвешенное по размеру: sum(доля_i * |вход - ps_i|) по частичным
+// стопам + (100 - sum долей) * |вход - начальный стоп|, делённое на 100.
+function initialRiskPerUnit(p) {
+  const entry = parseFloat(p.entry_price);
+  const fullStop = parseFloat(p.initial_stop_price != null ? p.initial_stop_price : p.stop_price);
+  if (!isFinite(entry) || !isFinite(fullStop)) return 0;
+  let usedPct = 0, weighted = 0;
+  for (const i of [1, 2, 3]) {
+    const price = parseFloat(p['partial_stop_' + i + '_price']);
+    const pct = parseFloat(p['partial_stop_' + i + '_pct']);
+    if (isFinite(price) && price > 0 && isFinite(pct) && pct > 0 && usedPct < 100) {
+      const w = Math.min(pct, 100 - usedPct);
+      usedPct += w;
+      weighted += w * Math.abs(entry - price);
+    }
+  }
+  weighted += (100 - usedPct) * Math.abs(entry - fullStop);
+  return Math.round(weighted * 1e6) / 1e8;
+}
+
 // Открывает модалку частичного закрытия. currentRem — текущий remaining_pct (1–100);
 // пользователь может закрыть от 1 до currentRem процентов.
-function openPartial(id, ticker, entry, stop, direction, currentRem) {
-  modalCtx = { id, ticker, entry, stop, direction, currentRem };
+function openPartial(id, ticker, entry, stop, direction, currentRem, initRisk) {
+  modalCtx = { id, ticker, entry, stop, direction, currentRem, initRisk };
   document.getElementById('partial-info').textContent =
-    `#${id} ${ticker} (вход ${fmt(entry)}, стоп ${fmt(stop)}, остаток ${Math.round(currentRem)}%)`;
+    `#${id} ${ticker} (вход ${fmt(entry)}, стоп ${fmt(stop)}, остаток ${Math.round(currentRem)}%) · база R: первоначальный риск ${fmt(initRisk)}`;
   const pctInput = document.getElementById('partial-pct');
   pctInput.max = Math.max(1, Math.round(currentRem));
   pctInput.value = Math.min(33, pctInput.max);
@@ -1282,11 +1305,12 @@ function updatePartialPreview() {
   const entry = parseFloat(ctx.entry);
   const stop = parseFloat(ctx.stop);
   const rrEl = document.getElementById('partial-rr');
-  if (!isFinite(exit) || !isFinite(entry) || !isFinite(stop) || entry === stop) {
+  // R denominator = initial risk (stepped initial risk is averaged), NOT the current stop.
+  const risk = isFinite(parseFloat(ctx.initRisk)) && parseFloat(ctx.initRisk) > 0 ? parseFloat(ctx.initRisk) : Math.abs(entry - stop);
+  if (!isFinite(exit) || !isFinite(entry) || !isFinite(risk) || risk <= 0) {
     rrEl.value = '';
     return;
   }
-  const risk = Math.abs(entry - stop);
   const rr = ctx.direction === 'long' ? (exit - entry) / risk : (entry - exit) / risk;
   rrEl.value = (rr >= 0 ? '+' : '') + rr.toFixed(2) + 'R';
 }
