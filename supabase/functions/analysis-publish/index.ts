@@ -27,6 +27,12 @@
 //        attachments in one rich message). Regular posts stay at 4 because
 //        sendMediaGroup is capped to 4 here; more than 4 in a regular post
 //        is rejected with too_many_images instead of being silently cut.
+// v30 — Separate charts per language for Timeline posts (2026-11-17):
+//      - New column analysis_posts.image_paths_en (jsonb, aligned with
+//        image_paths by index). A filled entry replaces the RU/shared chart
+//        for the EN Telegram message / article only; null or missing = the
+//        shared chart. RU keeps image_paths. Image counts are identical for
+//        both languages, so format/limit logic is unchanged.
 // v25 — Upload fallback for images (2026-10-07):
 //      - Telegram keeps a negative cache per image URL: once its fetcher fails
 //        on a URL ("failed to get HTTP URL content"), every retry of the SAME
@@ -129,6 +135,8 @@ interface AnalysisPost {
   tradingview_url: string | null;
   hashtags: string | null;
   image_paths: string[];
+  // v30: optional EN-specific chart per image_paths index (null/empty = same as image_paths)
+  image_paths_en?: Array<string | null> | null;
   publish_to_ru: boolean;
   publish_to_en: boolean;
   status: string;
@@ -214,16 +222,28 @@ function tgTextOnly(p: AnalysisPost): boolean {
   return p.tg_text_only === true && (p.image_paths ?? []).length > 0;
 }
 
+// v30: storage paths for one language. image_paths is the RU/shared set;
+// image_paths_en[i], when filled, replaces image_paths[i] for EN only.
+function pathsFor(p: AnalysisPost, lang: Lang): string[] {
+  const base = p.image_paths ?? [];
+  if (lang !== "en") return base;
+  const en = Array.isArray(p.image_paths_en) ? p.image_paths_en : [];
+  return base.map((b, i) => {
+    const e = en[i];
+    return typeof e === "string" && e.trim() ? e.trim() : b;
+  });
+}
+
 // Image URLs actually attached to the Telegram message (none in text-only mode).
-function tgImageUrls(p: AnalysisPost): string[] {
+function tgImageUrls(p: AnalysisPost, lang: Lang): string[] {
   if (isArticle(p)) return []; // attached inline as <img> instead
   if (tgTextOnly(p)) return [];
-  return (p.image_paths ?? []).map(publicImageUrl);
+  return pathsFor(p, lang).map(publicImageUrl);
 }
 
 // "Изображения: 1 · 2" / "Images: 1 · 2" — clickable links, raw HTML.
 function imageLinksLine(p: AnalysisPost, lang: Lang): string {
-  const urls = (p.image_paths ?? []).map(publicImageUrl);
+  const urls = pathsFor(p, lang).map(publicImageUrl);
   if (urls.length === 0) return "";
   const label = lang === "ru"
     ? (urls.length > 1 ? "Изображения" : "Изображение")
@@ -433,11 +453,12 @@ function buildRich(p: AnalysisPost, lang: Lang): string {
   const paths = p.image_paths ?? [];
   const meta = Array.isArray(p.image_meta) ? p.image_meta : [];
   const fallbackUrl = (p.tradingview_url ?? "").trim();
+  const langPaths = pathsFor(p, lang);
   const charts = paths.map((path, i) => {
     const m = meta.find((x) => x && x.path === path) ?? meta[i] ?? {};
     const title = String((lang === "ru" ? m.title_ru : m.title_en) ?? "").trim();
     const webUrl = String(m.tv_url ?? "").trim() || fallbackUrl;
-    return richChartBlock(publicImageUrl(path), title, webUrl, lang);
+    return richChartBlock(publicImageUrl(langPaths[i] ?? path), title, webUrl, lang);
   });
   if (charts.length) out.push(RICH_GAP + charts.join(RICH_GAP));
 
@@ -529,7 +550,9 @@ async function loadPost(postId: string): Promise<AnalysisPost | null> {
   if (error) { console.error("loadPost", error); return null; }
   const ip = (data as any).image_paths;
   const norm = Array.isArray(ip) ? ip : [];
-  return { ...(data as any), image_paths: norm } as AnalysisPost;
+  const ipe = (data as any).image_paths_en;
+  const normEn = Array.isArray(ipe) ? ipe : [];
+  return { ...(data as any), image_paths: norm, image_paths_en: normEn } as AnalysisPost;
 }
 
 function slugifyText(s: string): string {
@@ -761,7 +784,7 @@ async function sendOneLang(p: AnalysisPost, lang: Lang, imageUrls: string[]): Pr
   }
 
   const text = buildText(p, lang);
-  const sent = await tgPublish(topic.chat_id, topic.thread_id, text, imageUrls, replyTo);
+  const sent = await tgPublish(topic.chat_id, topic.thread_id, text, tgImageUrls(p, lang), replyTo);
   if (!sent.ok) return { lang, ok: false, error: sent.error };
   return { lang, ok: true, message_id: sent.message_id };
 }
@@ -787,7 +810,7 @@ async function actionPublish(postId: string, textOnlyOverride?: unknown) {
   const auto = applyAutoFormat(p, [...(p.publish_to_ru ? ["ru" as Lang] : []), ...(p.publish_to_en ? ["en" as Lang] : [])]);
   { const ce = imageCountError(p); if (ce) return { error: ce, hint: isArticle(p) ? "В статье не больше 50 графиков." : "В обычном посте не больше 4 графиков: удалите лишние или переключите формат на статью." }; }
 
-  const imageUrls = tgImageUrls(p);
+  const imageUrls = tgImageUrls(p, "ru"); // count only; per-language URLs are resolved in sendOneLang
 
   const preflight: LangResult[] = [];
   if (p.publish_to_ru) { const f = preflightLang(p, "ru", imageUrls.length); if (f) preflight.push(f); }
@@ -846,7 +869,7 @@ async function actionRepublishMissing(postId: string, textOnlyOverride?: unknown
   const auto = applyAutoFormat(p, [...(needRu ? ["ru" as Lang] : []), ...(needEn ? ["en" as Lang] : [])]);
   { const ce = imageCountError(p); if (ce) return { error: ce, hint: isArticle(p) ? "В статье не больше 50 графиков." : "В обычном посте не больше 4 графиков: удалите лишние или переключите формат на статью." }; }
 
-  const imageUrls = tgImageUrls(p);
+  const imageUrls = tgImageUrls(p, "ru"); // count only; per-language URLs are resolved in sendOneLang
 
   const preflight: LangResult[] = [];
   if (needRu) { const f = preflightLang(p, "ru", imageUrls.length); if (f) preflight.push(f); }
@@ -1010,7 +1033,7 @@ async function actionPreview(postId: string) {
   if (langs.length === 0) langs.push("ru");
 
   const article = isArticle(p);
-  const imageUrls = tgImageUrls(p);
+  const imageUrls = tgImageUrls(p, "ru"); // count only; per-language URLs are resolved in sendOneLang
   const out: any[] = [];
   for (const lang of langs) {
     if (article) {
@@ -1023,7 +1046,7 @@ async function actionPreview(postId: string) {
       const text = buildText(p, lang);
       const c = checkLength(text, imageUrls.length);
       if (!c.ok) { out.push({ lang, ok: false, error: "caption_too_long", length: c.length, limit: c.limit }); continue; }
-      const r = await tgPublish(chatId, null, text, imageUrls, null);
+      const r = await tgPublish(chatId, null, text, tgImageUrls(p, lang), null);
       out.push({ lang, ok: r.ok, length: text.length, ...(r.ok ? { message_id: r.message_id } : { error: r.error }) });
     }
   }

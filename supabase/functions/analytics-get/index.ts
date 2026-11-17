@@ -1,3 +1,4 @@
+// analytics-get v20 (2026-11-17): linked_post also returns image_paths_en (EN chart per image_paths index).
 // analytics-get v18 (2026-10-26): slug_aliases fallback for renamed reports.
 // analytics-get v11
 // v11 (2026-08-17): expand linked_post enrichment with body_ru/en, image_paths,
@@ -92,7 +93,7 @@ async function enrichSectionsWithLinkedPosts(sections: any[]): Promise<any[]> {
 
   const { data: posts, error } = await supa
     .from("analysis_posts")
-    .select("id, slug, ticker, company_name, destination, headline_ru, headline_en, body_ru, body_en, image_paths, tradingview_url, status, message_id_ru, message_id_en, publish_to_ru, publish_to_en, published_at")
+    .select("id, slug, ticker, company_name, destination, headline_ru, headline_en, body_ru, body_en, image_paths, image_paths_en, tradingview_url, status, message_id_ru, message_id_en, publish_to_ru, publish_to_en, published_at")
     .in("id", ids);
   if (error) {
     // Fail soft: don't blow up the whole GET if enrichment fails; log server-side

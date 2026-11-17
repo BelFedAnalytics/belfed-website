@@ -246,5 +246,37 @@ async function bodyForVisible(base, target) {
     assert.equal(state.updates.filter(u => 'tg_format' in u).length, 0, 'preview does not persist the format');
   }
 
+  // 13. v30: separate charts per language. RU keeps image_paths, EN uses image_paths_en[i] where filled.
+  {
+    const base = mkPost({ image_paths: ['u1/ru0.png', 'u1/ru1.png'], image_paths_en: ['u1/en0.png', null] });
+    const { res, raw, state } = await scenario(base, 'actionPublish("p1")');
+    assert.equal(res.ok, true, JSON.stringify(res));
+    const mg = raw.filter(c => c.method === 'sendMediaGroup');
+    assert.equal(mg.length, 2, 'RU and EN albums');
+    const media = c => JSON.stringify(c.body && c.body.media || c.body);
+    assert.ok(media(mg[0]).includes('ru0.png') && media(mg[0]).includes('ru1.png'), 'RU uses RU charts');
+    assert.ok(media(mg[1]).includes('en0.png') && !media(mg[1]).includes('ru0.png'), 'EN uses EN chart where filled');
+    assert.ok(media(mg[1]).includes('ru1.png'), 'EN falls back to RU chart where not filled');
+    assert.equal(state.post.status, 'published');
+  }
+  // 13b. Article mode embeds the per-language chart.
+  {
+    const base = mkPost({ image_paths: ['u1/ru0.png'], image_paths_en: ['u1/en0.png'], tg_format: 'article' });
+    const { res, raw } = await scenario(base, 'actionPublish("p1")');
+    assert.equal(res.ok, true, JSON.stringify(res));
+    const rich = raw.filter(c => c.method === 'sendRichMessage').map(c => c.body.rich_message.html);
+    assert.equal(rich.length, 2);
+    assert.ok(rich[0].includes('ru0.png') && !rich[0].includes('en0.png'));
+    assert.ok(rich[1].includes('en0.png') && !rich[1].includes('ru0.png'));
+  }
+  // 13c. Posts without image_paths_en behave as before (EN reuses RU charts).
+  {
+    const base = mkPost({ image_paths: ['u1/ru0.png'] });
+    const { res, raw } = await scenario(base, 'actionPublish("p1")');
+    assert.equal(res.ok, true, JSON.stringify(res));
+    const photos = raw.filter(c => c.method === 'sendPhoto');
+    assert.equal(photos.length, 2);
+  }
+
   console.log('timeline-auto-format: all checks passed');
 })().catch(e => { console.error(e); process.exit(1); });

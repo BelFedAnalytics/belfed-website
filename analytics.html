@@ -797,7 +797,10 @@ function renderTimeline(items, append) {
     const tagsHtml = cats.length
       ? `<div class="tags">${cats.map(c => `<span>${escapeHtml(c)}</span>`).join('')}</div>` : '';
     let chartHtml = '';
-    const imgs = p.image_paths || [];
+    // Charts per language: image_paths is the RU/shared set; image_paths_en[i], when filled, replaces it for EN.
+    const imgsBase = p.image_paths || [];
+    const imgsEn = state.lang === 'en' && Array.isArray(p.image_paths_en) ? p.image_paths_en : [];
+    const imgs = imgsBase.map((im, i) => (typeof imgsEn[i] === 'string' && imgsEn[i].trim()) ? imgsEn[i].trim() : im);
     if (imgs.length) {
       // image_paths may hold either a storage path (analysis-images bucket) or a full URL
       // (report-derived posts reference charts in the analytics-charts bucket).

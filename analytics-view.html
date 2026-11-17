@@ -250,7 +250,11 @@ function renderReport() {
             .join('') + '</div>'
         : '';
       // image_paths is a jsonb array of storage keys under the analysis-images bucket.
-      const imagePaths = Array.isArray(lp.image_paths) ? lp.image_paths.filter(p => typeof p === 'string' && p.length > 0) : [];
+      // image_paths_en[i], when filled, replaces image_paths[i] in the EN view.
+      const imagePathsEn = state.lang === 'en' && Array.isArray(lp.image_paths_en) ? lp.image_paths_en : [];
+      const imagePaths = (Array.isArray(lp.image_paths) ? lp.image_paths : [])
+        .map((p, i) => (typeof imagePathsEn[i] === 'string' && imagePathsEn[i].trim()) ? imagePathsEn[i].trim() : p)
+        .filter(p => typeof p === 'string' && p.length > 0);
       const chartsHtml = imagePaths.length > 0
         ? `<div class="section-charts">${imagePaths.map(p => `
             <div class="section-chart">

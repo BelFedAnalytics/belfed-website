@@ -1,3 +1,4 @@
+// analytics-publish v46 (2026-11-17): linked Timeline posts publish the EN chart (analysis_posts.image_paths_en) in the EN report.
 // analytics-publish v45
 // v45 (2026-10-30): Automatic Telegram format per report section.
 //   - Incident: the editor blocked any section body over 900 characters, and the publisher cut
@@ -506,10 +507,13 @@ function linkedHeadline(post: any, lang: string): string {
   return post.slug ?? "";
 }
 
-function linkedCharts(post: any): any[] {
+function linkedCharts(post: any, lang = "ru"): any[] {
   const raw = Array.isArray(post?.image_paths) ? post.image_paths : [];
+  // v46: image_paths_en[i], when filled, replaces image_paths[i] for the EN publication.
+  const rawEn = lang === "en" && Array.isArray(post?.image_paths_en) ? post.image_paths_en : [];
   const out: any[] = [];
-  for (const it of raw) {
+  for (let i = 0; i < raw.length; i++) {
+    const it = typeof rawEn[i] === "string" && rawEn[i].trim() ? rawEn[i].trim() : raw[i];
     let path: string | null = null;
     if (typeof it === "string" && it) path = it;
     else if (it && typeof it === "object" && typeof it.path === "string" && it.path) path = it.path;
@@ -548,7 +552,7 @@ function materializeLinkedSection(
     headline_en: lang === "en" ? headline : section.headline_en,
     body_ru: lang === "ru" ? body : section.body_ru,
     body_en: lang === "en" ? body : section.body_en,
-    chart_images: linkedCharts(post),
+    chart_images: linkedCharts(post, lang),
     chart_image_url: null,
     extra_html: extraHtml,
     is_conclusion: false,
@@ -838,7 +842,7 @@ Deno.serve(async (req) => {
     if (ids.length > 0) {
       const { data: posts, error: pErr } = await supa
         .from("analysis_posts")
-        .select("id, slug, ticker, company_name, destination, headline_ru, headline_en, body_ru, body_en, hashtags, image_paths, status, message_id_ru, message_id_en, publish_to_ru, publish_to_en")
+        .select("id, slug, ticker, company_name, destination, headline_ru, headline_en, body_ru, body_en, hashtags, image_paths, image_paths_en, status, message_id_ru, message_id_en, publish_to_ru, publish_to_en")
         .in("id", ids);
       if (pErr) {
         console.warn(`[analytics-publish v30] linked post fetch failed: ${pErr.message}`);

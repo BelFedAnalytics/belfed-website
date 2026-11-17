@@ -65,6 +65,17 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 .tl-grid .tl-col-head{font-size:10px;letter-spacing:2px;font-weight:bold;opacity:0.7;margin-bottom:12px;border-bottom:1px dashed #999;padding-bottom:8px}
 @media(max-width:760px){.tl-grid{grid-template-columns:1fr}}
 /* Timeline chart thumbs (multi-image upload) */
+.tl-split-wrap{margin-top:10px}
+.tl-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px;border:1px solid #ddd;background:#fafafa;padding:10px;margin-top:10px}
+.tl-pair-head{grid-column:1 / -1;display:flex;justify-content:space-between;align-items:center;font-size:10px;letter-spacing:2px;opacity:0.7}
+.tl-pair .tl-slot-label{font-size:10px;letter-spacing:2px;opacity:0.7;margin-bottom:4px}
+.tl-pair .thumb{width:100%;height:120px}
+.tl-pair .thumb img{object-fit:contain}
+.tl-pair .thumb .rep{position:absolute;right:0;bottom:0;background:#000;color:#fff;font-size:10px;letter-spacing:1px;padding:2px 6px;cursor:pointer;border:none;font-family:inherit}
+.tl-en-drop{height:120px;border:2px dashed #000;background:#f5f2eb;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:pointer;font-size:10px;letter-spacing:2px}
+.tl-en-drop:hover,.tl-en-drop.dragover{background:#fff}
+.tl-en-drop .sub{opacity:0.5;letter-spacing:1px;margin-top:4px}
+@media(max-width:700px){.tl-pair{grid-template-columns:1fr}}
 .thumbs{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
 .thumb{position:relative;width:120px;height:80px;border:1px solid #000;background:#000;overflow:hidden}
 .thumb img{width:100%;height:100%;object-fit:cover;display:block}
@@ -308,13 +319,15 @@ header h1{font-size:16px;letter-spacing:3px;font-weight:bold}
 
     <!-- ── Chart / image upload (shared RU/EN → analysis-images → image_paths) ── -->
     <div class="field">
-      <label>// ГРАФИК · CHART (1–4 файла, первый — главный)</label>
+      <label>// ГРАФИК · CHART (1–4 файла, первый — главный; RU-версия или общая для обоих языков)</label>
       <div class="dropzone" id="tl-dropzone">
         <div class="dz-icon">⬆</div>
         <div class="dz-text">[ ПЕРЕТАЩИТЕ ИЛИ КЛИКНИТЕ · DRAG &amp; DROP OR CLICK ]</div>
         <div class="dz-sub">PNG, JPG, WEBP · до 5 MB · первое изображение станет главным</div>
         <input type="file" id="tl-files" accept="image/png,image/jpeg,image/webp,image/gif" multiple style="display:none">
       </div>
+      <label class="toggle-block charts-split-toggle"><input type="checkbox" id="tl-charts-split"> РАЗНЫЕ ГРАФИКИ ДЛЯ RU И EN</label>
+      <div class="charts-split-hint" id="tl-charts-split-hint" hidden>RU-график идёт в belfed.ru и RU-канал, EN-график в belfed.com и EN-канал. Если EN не загружен, используется RU.</div>
       <div class="thumbs" id="tl-thumbs"></div>
     </div>
 
@@ -642,7 +655,8 @@ const TL_CATEGORIES = [
 const state = {
   destination: 'timeline',   // 'timeline' | 'report'
   tlCategories: new Set(),   // selected Timeline categories
-  tlImages: [],              // Timeline chart images [{file,url,name,isUploaded,path}]
+  tlImages: [],              // Timeline chart images [{file,url,name,isUploaded,path, fileEn,urlEn,pathEn,isUploadedEn}]
+  tlChartsSplit: false,      // separate EN chart per image (analysis_posts.image_paths_en)
   id: null,
   slug: null,
   status: 'draft',
@@ -723,43 +737,151 @@ function tlAddFiles(list) {
   tlRenderThumbs();
 }
 
+function tlCheckImageFile(f) {
+  if (!/^image\/(png|jpe?g|webp|gif)$/.test(f.type || '')) { showTopMsg('Только PNG, JPG, WEBP, GIF.', 'err'); return false; }
+  if (f.size > 5 * 1024 * 1024) { showTopMsg('Файл больше 5MB.', 'err'); return false; }
+  return true;
+}
+
+function tlSetEnImage(i, f) {
+  const im = state.tlImages[i];
+  if (!im || !f || !tlCheckImageFile(f)) return;
+  im.fileEn = f; im.urlEn = URL.createObjectURL(f); im.pathEn = null; im.isUploadedEn = false;
+  tlRenderThumbs();
+}
+
+function tlPickEnFile(i) {
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = 'image/png,image/jpeg,image/webp,image/gif';
+  inp.onchange = () => { if (inp.files[0]) tlSetEnImage(i, inp.files[0]); };
+  inp.click();
+}
+
 function tlRenderThumbs() {
   const host = document.getElementById('tl-thumbs');
   if (!host) return;
-  host.innerHTML = state.tlImages.map((im, i) => `
+  const cb = document.getElementById('tl-charts-split');
+  if (cb) cb.checked = !!state.tlChartsSplit;
+  const hint = document.getElementById('tl-charts-split-hint');
+  if (hint) hint.hidden = !state.tlChartsSplit;
+
+  if (!state.tlChartsSplit) {
+    host.className = 'thumbs';
+    host.innerHTML = state.tlImages.map((im, i) => `
     <div class="thumb">
       <img src="${im.url}" alt="">
       <span class="ix">${i === 0 ? 'ГЛ' : (i + 1)}</span>
       <button type="button" class="x" data-i="${i}" title="Удалить">×</button>
     </div>`).join('');
-  host.querySelectorAll('.x').forEach(b => b.addEventListener('click', () => {
+    host.querySelectorAll('.x').forEach(b => b.addEventListener('click', () => {
+      state.tlImages.splice(+b.dataset.i, 1);
+      tlRenderThumbs();
+    }));
+    if (typeof updateTimelineCounters === 'function') updateTimelineCounters();
+    return;
+  }
+
+  // Split mode: one RU/EN pair per chart. EN falls back to RU when not uploaded.
+  host.className = 'tl-split-wrap';
+  host.innerHTML = state.tlImages.map((im, i) => `
+    <div class="tl-pair" data-pair="${i}">
+      <div class="tl-pair-head"><span>// ГРАФИК ${i + 1}${i === 0 ? ' · ГЛАВНЫЙ' : ''}</span>
+        <button type="button" class="icon-btn" data-act="del" data-i="${i}">УДАЛИТЬ</button></div>
+      <div>
+        <div class="tl-slot-label">ГРАФИК · RU</div>
+        <div class="thumb"><img src="${im.url}" alt="График RU"></div>
+      </div>
+      <div>
+        <div class="tl-slot-label">CHART · EN</div>
+        ${im.urlEn ? `
+        <div class="thumb"><img src="${im.urlEn}" alt="Chart EN">
+          <button type="button" class="x" data-act="en-del" data-i="${i}" title="Удалить EN-график">×</button>
+          <button type="button" class="rep" data-act="en-pick" data-i="${i}">ЗАМЕНИТЬ EN</button>
+        </div>` : `
+        <div class="tl-en-drop" data-act="en-pick" data-i="${i}" tabindex="0" role="button" aria-label="Загрузить EN-версию графика">
+          <div>[ DROP EN CHART ]</div><div class="sub">пока используется RU</div>
+        </div>`}
+      </div>
+    </div>`).join('');
+  host.querySelectorAll('[data-act="del"]').forEach(b => b.addEventListener('click', () => {
     state.tlImages.splice(+b.dataset.i, 1);
     tlRenderThumbs();
   }));
+  host.querySelectorAll('[data-act="en-del"]').forEach(b => b.addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation();
+    const im = state.tlImages[+b.dataset.i];
+    if (im) { im.fileEn = null; im.urlEn = null; im.pathEn = null; im.isUploadedEn = false; }
+    tlRenderThumbs();
+  }));
+  host.querySelectorAll('[data-act="en-pick"]').forEach(el => {
+    const i = +el.dataset.i;
+    el.addEventListener('click', () => tlPickEnFile(i));
+    if (el.classList.contains('tl-en-drop')) {
+      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tlPickEnFile(i); } });
+      el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('dragover'); });
+      el.addEventListener('dragleave', () => el.classList.remove('dragover'));
+      el.addEventListener('drop', e => {
+        e.preventDefault(); el.classList.remove('dragover');
+        if (e.dataTransfer.files[0]) tlSetEnImage(i, e.dataTransfer.files[0]);
+      });
+    }
+  });
   if (typeof updateTimelineCounters === 'function') updateTimelineCounters();
 }
 
-// Uploads any pending Timeline images to the analysis-images bucket,
-// returns an array of storage paths (member feed renders image_paths[0]).
+function tlOnSplitToggle(on) {
+  if (!on) {
+    const hasEn = state.tlImages.some(im => im.urlEn);
+    if (hasEn && !confirm('Отключить раздельные графики? Загруженные EN-версии графиков будут удалены, обе версии поста получат RU-графики.')) {
+      document.getElementById('tl-charts-split').checked = true;
+      return;
+    }
+    state.tlImages.forEach(im => { im.fileEn = null; im.urlEn = null; im.pathEn = null; im.isUploadedEn = false; });
+  }
+  state.tlChartsSplit = !!on;
+  tlRenderThumbs();
+}
+
+async function tlUploadOne(file, userId, tag) {
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const path = `${userId}/${Date.now()}_${tag}.${ext || 'jpg'}`;
+  const { error } = await sb.storage.from('analysis-images').upload(path, file, {
+    cacheControl: '3600', upsert: false, contentType: file.type || 'image/jpeg'
+  });
+  if (error) throw new Error('upload_failed: ' + error.message);
+  return path;
+}
+
+// Uploads any pending Timeline images (RU/shared and EN) to the analysis-images bucket.
+// Returns { paths, pathsEn }: paths → analysis_posts.image_paths (member feed renders [0]);
+// pathsEn → analysis_posts.image_paths_en, aligned by index, null where EN reuses the RU chart.
+// pathsEn is empty unless "different charts for RU and EN" is on and at least one EN chart exists.
 async function tlUploadPendingImages() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) throw new Error('no_session');
   const userId = session.user.id;
   const paths = [];
+  const pathsEn = [];
   for (let i = 0; i < state.tlImages.length; i++) {
     const im = state.tlImages[i];
-    if (im.isUploaded && im.path) { paths.push(im.path); continue; }
-    if (!im.file) continue;
-    const ext = (im.file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
-    const path = `${userId}/${Date.now()}_${i}.${ext || 'jpg'}`;
-    const { error } = await sb.storage.from('analysis-images').upload(path, im.file, {
-      cacheControl: '3600', upsert: false, contentType: im.file.type || 'image/jpeg'
-    });
-    if (error) throw new Error('upload_failed: ' + error.message);
-    im.isUploaded = true; im.path = path;
-    paths.push(path);
+    if (!(im.isUploaded && im.path)) {
+      if (!im.file) continue;
+      im.path = await tlUploadOne(im.file, userId, String(i));
+      im.isUploaded = true;
+    }
+    paths.push(im.path);
+    if (state.tlChartsSplit && im.urlEn) {
+      if (!(im.isUploadedEn && im.pathEn) && im.fileEn) {
+        im.pathEn = await tlUploadOne(im.fileEn, userId, i + '_en');
+        im.isUploadedEn = true;
+      }
+      pathsEn.push(im.pathEn || null);
+    } else {
+      pathsEn.push(null);
+    }
   }
-  return paths;
+  return { paths, pathsEn: pathsEn.some(Boolean) ? pathsEn : [] };
 }
 
 function wireTimelineDropzone() {
@@ -767,6 +889,8 @@ function wireTimelineDropzone() {
   const inp = document.getElementById('tl-files');
   if (!dz || !inp || dz.dataset.wired) return;
   dz.dataset.wired = '1';
+  const splitCb = document.getElementById('tl-charts-split');
+  if (splitCb) splitCb.addEventListener('change', () => tlOnSplitToggle(splitCb.checked));
   dz.addEventListener('click', () => inp.click());
   inp.addEventListener('change', () => { if (inp.files.length) tlAddFiles(inp.files); inp.value = ''; });
   dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
@@ -1184,13 +1308,23 @@ async function loadTimelinePost(id) {
 
   // existing chart images -> thumbs (already uploaded; keep their stored path/url)
   const paths = Array.isArray(post.image_paths) ? post.image_paths : [];
-  state.tlImages = paths.map(p => ({
-    file: null,
-    url: tlResolveImageUrl(p),
-    name: (typeof p === 'string' ? p.split('/').pop() : 'image'),
-    isUploaded: true,
-    path: p,
-  })).filter(im => !!im.url);
+  const pathsEn = Array.isArray(post.image_paths_en) ? post.image_paths_en : [];
+  state.tlImages = paths.map((p, i) => {
+    const pe = (typeof pathsEn[i] === 'string' && pathsEn[i].trim()) ? pathsEn[i].trim() : null;
+    return {
+      file: null,
+      url: tlResolveImageUrl(p),
+      name: (typeof p === 'string' ? p.split('/').pop() : 'image'),
+      isUploaded: true,
+      path: p,
+      fileEn: null,
+      urlEn: pe ? tlResolveImageUrl(pe) : null,
+      pathEn: pe,
+      isUploadedEn: !!pe,
+    };
+  }).filter(im => !!im.url);
+  state.tlChartsSplit = state.tlImages.some(im => im.urlEn);
+  tlRenderThumbs();
 
   document.getElementById('page-title').textContent =
     `— ПОСТ ЛЕНТЫ: ${post.headline_ru || post.headline_en || '(без заголовка)'} —`;
@@ -2498,7 +2632,9 @@ async function saveTimelinePost(returnId) {
   try {
     // upload any pending chart images first → store storage paths in image_paths
     showTopMsg('Загрузка изображений…', 'info');
-    payload.image_paths = await tlUploadPendingImages();
+    const up = await tlUploadPendingImages();
+    payload.image_paths = up.paths;
+    payload.image_paths_en = up.pathsEn;
     showTopMsg('Сохранение…', 'info');
     let id = state.id;
     if (id) {
