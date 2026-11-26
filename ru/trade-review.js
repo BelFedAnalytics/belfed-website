@@ -440,7 +440,7 @@
 
   function openFor(trigger) {
     var data = JSON.parse(trigger.getAttribute("data-brc") || "{}");
-    var title = (data.ticker || "") + " — " + T.review;
+    var title = (data.ticker || "") + " · " + T.review;
     var k = keyFor(data);
     getManifest().then(function (m) {
       var entry = (k.safe && m[k.safe]) || m[k.full] || m[k.pair];

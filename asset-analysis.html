@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co; img-src 'self' data: https://*.supabase.co; frame-src 'none';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BELFED ANALYTICS — Анализ активов и запросы</title>
+<title>BELFED ANALYTICS | Анализ активов и запросы</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#f5f2eb;font-family:'Courier New',Courier,monospace;color:#000;padding:24px 20px;line-height:1.6;font-size:14px}
@@ -997,7 +997,7 @@ function reqStatusLabel(s) {
 function reqErrLabel(code) {
   switch (code) {
     case 'quota_exceeded':    return 'Лимит 3 запросов в сутки исчерпан. Повторите позже.';
-    case 'invalid_ticker':    return 'Некорректный тикер (1–8 букв/цифр).';
+    case 'invalid_ticker':    return 'Некорректный тикер (1-8 букв/цифр).';
     case 'not_paid':          return 'Доступно только для платных подписок.';
     case 'unauthorized':      return 'Сессия истекла. Обновите страницу.';
     default: return 'Ошибка: ' + code;
@@ -1057,7 +1057,7 @@ async function submitChartRequest() {
   var ticker = (input.value || '').trim().toUpperCase();
   msg.textContent = ''; msg.className = 'req-msg';
   if (!/^[A-Z0-9]{1,8}$/.test(ticker)) {
-    msg.textContent = 'Некорректный тикер (1–8 букв/цифр).';
+    msg.textContent = 'Некорректный тикер (1-8 букв/цифр).';
     msg.className = 'req-msg err';
     return;
   }
