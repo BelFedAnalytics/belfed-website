@@ -71,8 +71,27 @@ def esc(s):
             .replace('"', "&quot;"))
 
 
+_LEDGER_NOTE = re.compile(r"^\s*\[(?:Пересч[её]т|Recalculat\w*)[^\]]*\]", re.I)
+
+
+def strip_ledger_notes(text):
+    """Drop ledger recalculation notes ("[Пересчёт 03.08.2026] ...").
+
+    They are appended to a comment as their own paragraph and explain internal
+    R corrections; they are not public copy. Only those paragraphs go, the rest
+    of the comment stays verbatim.
+    """
+    if not text:
+        return ""
+    paras = re.split(r"\n[ \t]*\n", str(text).strip())
+    return "\n\n".join(p for p in paras if not _LEDGER_NOTE.match(p)).strip()
+
+
 def stored(text):
-    """Verbatim subscriber text: escape only, never de-anglicize."""
+    """Verbatim subscriber text: escape only, never de-anglicize.
+
+    Ledger recalculation notes are removed first (see strip_ledger_notes)."""
+    text = strip_ledger_notes(text)
     return esc(text) if text else ""
 
 
@@ -145,7 +164,7 @@ def _partial_body(pc, already=""):
     """`already` is escaped HTML the step already shows (e.g. the close
     comment); an identical ledger comment is not repeated."""
     summary = "Закрыто %s%% по %s." % (num(pc.get("pct_closed")), num(pc.get("exit_price")))
-    comment = (pc.get("comment_ru") or "").strip()
+    comment = strip_ledger_notes(pc.get("comment_ru"))
     dup = bool(already) and stored(comment) in already
     return gen(summary) + (("\n\n" + stored(comment)) if comment and not _system_comment(comment) and comment != summary and not dup else "")
 
@@ -404,8 +423,25 @@ def _card_from_evidence(pos, pc_by_id):
     return _wrap(pos, steps)
 
 
+def _public_copy(pos):
+    """Copy of `pos` whose comment fields carry no ledger recalculation notes,
+    so a note-only comment counts as empty and the generated fallback is used."""
+    def clean(d, keys):
+        out = dict(d)
+        for k in keys:
+            if out.get(k):
+                out[k] = strip_ledger_notes(out[k])
+        return out
+    out = clean(pos, ("comment_ru", "close_comment_ru"))
+    out["events"] = [dict(clean(e, ()), payload=clean(e.get("payload") or {}, ("comment_ru",)))
+                      for e in (pos.get("events") or [])]
+    out["partial_closes"] = [clean(pc, ("comment_ru",)) for pc in (pos.get("partial_closes") or [])]
+    return out
+
+
 def build_card(pos, pc_by_id):
     """Return the RU bot-card HTML for one position, or None if no steps."""
+    pos = _public_copy(pos)
     linked = [e for e in (pos.get("events") or []) if e.get("message_id_ru")]
     if linked:
         return _card_from_events(pos, linked, pc_by_id)
@@ -417,6 +453,7 @@ def is_eligible(pos):
     exists. A lone position.comment_ru with no events/partials/close is NOT
     enough (that is a bare idea note, not a lifecycle) and stays a legacy card.
     """
+    pos = _public_copy(pos)
     evs = pos.get("events") or []
     if any(e.get("message_id_ru") for e in evs):
         return True

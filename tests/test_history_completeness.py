@@ -130,3 +130,23 @@ def test_backfill_bookkeeping_notes_never_reach_public_cards():
     assert "восстановлени" not in html.lower()
     assert "backfilled" not in html.lower()
     assert B._system_comment("Закрываем остаток позиции.") is False
+
+
+def test_ledger_recalculation_notes_are_hidden_but_rest_of_comment_stays():
+    note = "[Пересчёт 03.08.2026] Итоговый R пересчитан по фактическим частичным фиксациям: +0,88R вместо +0,42R."
+    p = _cl331()
+    p["comment_ru"] = "Добавляем к позиции.\n\n" + note
+    p["close_comment_ru"] = note
+    p["partial_closes"].append({
+        "id": 988, "closed_at": "2026-07-24T10:00:00Z", "pct_closed": 5,
+        "exit_price": 88, "comment_ru": "Фиксируем часть.\n\n" + note,
+    })
+    html = B.build_card(p, {pc["id"]: pc for pc in p["partial_closes"]})
+    assert "Пересчёт" not in html and "пересчитан" not in html
+    assert "Добавляем к позиции." in html
+    assert "Фиксируем часть." in html
+    assert B.strip_ledger_notes(note) == ""
+    assert B.strip_ledger_notes("Обычный комментарий.") == "Обычный комментарий."
+    only = _cl331()
+    only["comment_ru"] = note
+    assert "Пересчёт" not in B.build_card(only, {})
