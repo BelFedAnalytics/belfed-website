@@ -107,3 +107,26 @@ def test_final_fill_does_not_repeat_close_comment_and_hides_bot_tokens():
     assert html.count("Закрываем всю позицию.") == 1
     assert "Закрыто 5% по 121.45." in html
     assert "target_2_hit" not in html
+
+
+def test_backfill_bookkeeping_notes_never_reach_public_cards():
+    p = {
+        "ticker": "HOOD", "direction": "short", "opened_at": "2026-07-16T13:46:00Z",
+        "closed_at": "2026-07-28T20:23:49Z", "exit_price": 91.83, "result_rr": 3.14,
+        "comment_ru": "Открываем среднесрочный шорт.",
+        "events": [
+            {"id": 1, "event_type": "opened", "triggered_at": "2026-07-16T13:46:26Z", "triggered_price": 111.27, "message_ru": 1, "message_id_ru": 1179, "payload": {}},
+        ],
+        "partial_closes": [
+            {"id": 50, "pct_closed": 83, "exit_price": 94.77, "closed_at": "2026-07-24T14:20:04Z", "comment_ru": "Фиксируем часть позиции."},
+            {"id": 51, "pct_closed": 17, "exit_price": 91.83, "closed_at": "2026-07-28T20:23:49Z",
+             "comment_ru": "Закрытие остатка позиции (восстановление пропущенной записи, 2026-08-03)."},
+            {"id": 52, "pct_closed": 5, "exit_price": 91.0, "closed_at": "2026-07-28T20:30:00Z",
+             "comment_ru": "Remainder closed at the final exit price (backfilled record, 2026-08-03)."},
+        ],
+    }
+    html = B.build_card(p, {pc["id"]: pc for pc in p["partial_closes"]})
+    assert "Фиксируем часть позиции." in html
+    assert "восстановлени" not in html.lower()
+    assert "backfilled" not in html.lower()
+    assert B._system_comment("Закрываем остаток позиции.") is False

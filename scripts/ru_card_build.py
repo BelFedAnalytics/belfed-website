@@ -135,7 +135,9 @@ def _system_comment(text):
     v = str(text or "").strip()
     # Bot event tokens written straight into the ledger, e.g.
     # "target_2_hit (pre-market touch)": internal notes, never public copy.
-    return bool(re.search(r"^(auto |corrected |backfilled )|\(per sheet recap\)", v, re.I)
+    # Ledger bookkeeping that must never read as public copy, e.g.
+    # "... (backfilled record, 2026-08-03)" or its Russian rendering.
+    return bool(re.search(r"^(auto |corrected |backfilled )|\(per sheet recap\)|backfilled record|восстановлени\S* пропущенн", v, re.I)
                 or re.search(r"^(target_[123]_hit|partial_stop_[12]_hit|stop_hit|partial_closed|closed)\b", v, re.I))
 
 
