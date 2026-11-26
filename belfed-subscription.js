@@ -76,7 +76,7 @@
     box.innerHTML =
       '<div class="bf-card">' +
         '<div class="bf-status bf-status--trial">⏳ Подтверждаем оплату…</div>' +
-        '<div class="bf-row">Это занимает 5–20 секунд. Страница обновится автоматически.</div>' +
+        '<div class="bf-row">Это занимает 5-20 секунд. Страница обновится автоматически.</div>' +
       '</div>';
   }
 
@@ -177,7 +177,7 @@
     } else if (isTrial) {
       html += `<div class="bf-status bf-status--trial">🎁 ПРОБНЫЙ ДОСТУП · 14 дней</div>`;
       html += `<div class="bf-row">Действует до: <b>${fmt(trialEnd)}</b> · осталось ${daysLeft(trialEnd)} дн.</div>`;
-      html += `<div class="bf-row bf-muted">После триала — подписка ${PRICE_RUB} ₽ / мес. Карта не привязана: оплата только по вашему действию.</div>`;
+      html += `<div class="bf-row bf-muted">После триала подписка ${PRICE_RUB} ₽ / мес. Карта не привязана: оплата только по вашему действию.</div>`;
     } else {
       // Covers subscription_status in ('expired', 'none') and any other
       // non-access state. Show an explicit expired label when appropriate
@@ -195,15 +195,15 @@
     // ====== ACTION BUTTONS ======
     html += '<div class="bf-actions">';
     if (!profile?.telegram_id) {
-      html += '<div class="bf-row bf-muted" style="margin-bottom:10px">Доступ открыт по простой регистрации — без привязки карты. Если пользуетесь Telegram, можно привязать @BelfedBot для торговых возможностей, аналитики и обзоров рынка.</div>';
+      html += '<div class="bf-row bf-muted" style="margin-bottom:10px">Доступ открыт по простой регистрации, без привязки карты. Если пользуетесь Telegram, можно привязать @BelfedBot для торговых возможностей, аналитики и обзоров рынка.</div>';
       html += '<button id="bfLinkTg" class="login-btn">🔗 Привязать Telegram (опционально)</button>';
     }
     if (!isPaid && !isAdmin) {
       // Two explicit Tribute checkout channels so users can pick the one they trust.
       // Both open Tribute in a new tab; no data ever hits belfed.ru servers.
       html +=
-        '<div class="bf-pay-title">💳 Оформить подписку — ' + PRICE_RUB + ' ₽ / мес</div>' +
-        '<div class="bf-pay-sub">Оплата через Tribute — выберите удобный вариант:</div>' +
+        '<div class="bf-pay-title">💳 Оформить подписку: ' + PRICE_RUB + ' ₽ / мес</div>' +
+        '<div class="bf-pay-sub">Оплата через Tribute. Выберите удобный вариант:</div>' +
         '<div class="bf-pay-grid">' +
           '<a class="bf-pay-btn bf-pay-btn--primary" href="' + TRIBUTE_TG_URL_RU + '" target="_blank" rel="noopener" data-belfed-pay="tg">' +
             '<span class="bf-pay-icon" aria-hidden="true">' +
@@ -218,7 +218,7 @@
             '<span class="bf-pay-text"><b>Через браузер</b><small>Web-чекаут Tribute</small></span>' +
           '</a>' +
         '</div>' +
-        '<div class="bf-pay-foot">Отмена в любой момент — через <a href="https://t.me/tribute" target="_blank" rel="noopener">@tribute</a>. Платежи защищены Tribute.</div>';
+        '<div class="bf-pay-foot">Отмена в любой момент через <a href="https://t.me/tribute" target="_blank" rel="noopener">@tribute</a>. Платежи защищены Tribute.</div>';
     }
     // Отмена автопродления и отвязка карты живут на /billing.html — здесь только ссылка.
     if (isPaid || isTrial) {

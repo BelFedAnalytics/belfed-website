@@ -6,9 +6,9 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co; img-src 'self'; frame-src 'none';">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, follow">
-  <title>Настройки аккаунта — Belfed Analytics</title>
+  <title>Настройки аккаунта | Belfed Analytics</title>
   <link rel="canonical" href="https://belfed.ru/settings.html" />
-  <meta name="description" content="Управление аккаунтом Belfed — пароль, e-mail, Telegram, язык и выход из системы." />
+  <meta name="description" content="Управление аккаунтом Belfed: пароль, e-mail, Telegram, язык и выход из системы." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" onload="this.onload=null;this.rel='stylesheet'">
@@ -187,7 +187,7 @@
     <div class="settings-hero">
       <div class="tag">// Аккаунт</div>
       <h1>Настройки</h1>
-      <p>Управляйте паролем, e-mail, привязкой Telegram и языком. Подписка и оплата — в <a href="/members.html#subscription" style="color:inherit;text-decoration:underline">кабинете</a> и через Tribute.</p>
+      <p>Управляйте паролем, e-mail, привязкой Telegram и языком. Подписка и оплата в <a href="/members.html#subscription" style="color:inherit;text-decoration:underline">кабинете</a> и через Tribute.</p>
     </div>
 
     <div class="settings-wrap">
@@ -262,10 +262,10 @@
       <div class="settings-card" id="language">
         <h2>// Язык</h2>
         <h3>Язык интерфейса</h3>
-        <p class="card-lead">У Belfed есть две версии сайта — русская и английская. Выберите, где вам удобнее.</p>
+        <p class="card-lead">У Belfed есть две версии сайта: русская и английская. Выберите, где вам удобнее.</p>
         <div class="lang-links">
-          <a href="https://belfed.ru/settings.html" class="btn active">Русский &mdash; belfed.ru</a>
-          <a href="https://belfed.com/settings.html" class="btn">Английский &mdash; belfed.com</a>
+          <a href="https://belfed.ru/settings.html" class="btn active">Русский &middot; belfed.ru</a>
+          <a href="https://belfed.com/settings.html" class="btn">Английский &middot; belfed.com</a>
         </div>
       </div>
 
@@ -280,7 +280,7 @@
     </div>
 
     <footer>
-      <span>&copy; 2025&ndash;2026 Belfed Analytics. Все права защищены.</span>
+      <span>&copy; 2025-2026 Belfed Analytics. Все права защищены.</span>
       <div class="footer-links">
         <a href="/disclaimer.html">Дисклеймер</a>
         <a href="/privacy.html">Конфиденциальность</a>
@@ -329,7 +329,7 @@
           var tgBtn = document.getElementById('tgConnectBtn');
           if (profile.telegram_id || profile.telegram_username) {
             var handle = profile.telegram_username ? ('@' + String(profile.telegram_username).replace(/^@/, '')) : ('id ' + profile.telegram_id);
-            tgEl.textContent = 'Подключён — ' + handle;
+            tgEl.textContent = 'Подключён: ' + handle;
             if (tgBtn) { tgBtn.textContent = 'Переподключить Telegram \u2192'; }
           }
         }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BELFED ANALYTICS — Аналитика</title>
+<title>BELFED ANALYTICS | Аналитика</title>
 <meta name="description" content="Профессиональная аналитика финансовых рынков от BelFed">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="belfed-analytics.js"></script>
@@ -945,7 +945,7 @@ async function fetchList() {
     renderCards(json.items);
     const from = json.items.length ? state.offset + 1 : 0;
     const to = state.offset + json.items.length;
-    document.getElementById('resultsCount').textContent = `// ${t.found}: ${state.total} ${t.reports} · ${t.showing} ${from}–${to}`;
+    document.getElementById('resultsCount').textContent = `// ${t.found}: ${state.total} ${t.reports} · ${t.showing} ${from}-${to}`;
     document.getElementById('prevBtn').disabled = state.offset <= 0;
     document.getElementById('nextBtn').disabled = state.offset + PAGE_SIZE >= state.total;
   } catch (e) {
