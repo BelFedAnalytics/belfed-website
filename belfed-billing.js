@@ -61,6 +61,38 @@
     if (!isFinite(n)) return '—';
     return n.toLocaleString('ru-RU') + ' ₽';
   }
+  // Сумма в валюте платежа: рубли для RU-продуктов, доллары для EN.
+  function fmtMoney(amount, currency) {
+    const n = Number(amount);
+    if (amount == null || !isFinite(n)) return fmtRub(amount);
+    const cur = String(currency || 'RUB').toUpperCase();
+    if (cur === 'RUB') return fmtRub(n);
+    if (cur === 'USD') return '$' + (Number.isInteger(n) ? String(n) : n.toFixed(2));
+    return n.toLocaleString('ru-RU') + ' ' + cur;
+  }
+  // Tribute продаёт периоды 1, 3, 6 и 12 месяцев.
+  function periodLabel(months) {
+    const m = Number(months) || 1;
+    if (m === 1) return '1 месяц';
+    if (m >= 2 && m <= 4) return m + ' месяца';
+    return m + ' месяцев';
+  }
+  function priceLabel(amount, currency, months) {
+    const m = Number(months) || 1;
+    return m === 1
+      ? fmtMoney(amount, currency) + ' / мес'
+      : fmtMoney(amount, currency) + ' за ' + periodLabel(m);
+  }
+  // Ссылки на оплату. Со-основатели платят через отдельный продукт Tribute
+  // со скидкой 30%, остальные через стандартный.
+  const TRIBUTE_LINKS = {
+    standard: { tg: 'https://t.me/tribute/app?startapp=sZH9', web: 'https://web.tribute.tg/s/ZH9' },
+    founding: { tg: 'https://t.me/tribute/app?startapp=sXHG', web: 'https://web.tribute.tg/s/XHG' },
+  };
+  const PERIOD_NOTE =
+    '<b>Обратите внимание:</b> период подписки (1, 3, 6 или 12 месяцев) выбирается на странице оплаты Tribute. ' +
+    'По умолчанию там отмечен вариант на 12 месяцев, поэтому перед оплатой выберите нужный вам срок.';
+
   function brandLabel(brand) {
     if (!brand) return 'CARD';
     const map = {
@@ -98,7 +130,7 @@
         .order('current_period_end', { ascending: false, nullsFirst: false })
         .limit(10),
       c.from('payments')
-        .select('id, provider, amount, currency, status, paid_at, created_at, is_recurring, provider_payment_id')
+        .select('id, provider, amount, currency, status, paid_at, created_at, is_recurring, provider_payment_id, period_months')
         .eq('user_id', session.user.id)
         .order('created_at', { ascending: false })
         .limit(24),
@@ -109,7 +141,7 @@
   }
 
   function renderSubscription(state) {
-    const { profile, subscription } = state;
+    const { profile, subscription, payments } = state;
     const block = document.getElementById('subscriptionBlock');
     const actions = document.getElementById('subscriptionActions');
     const hint = document.getElementById('subscriptionHint');
@@ -126,9 +158,16 @@
     const provider = subscription?.provider || 'tribute';
     const autorenew = isPaid && !subscription.cancel_at_period_end;
 
-    // Pricing label — founding members keep 30% off forever
+    // Со-основатели сохраняют скидку 30% навсегда.
     const isFounding = !!profile?.founding_member;
-    const monthlyAmount = subscription?.amount_rub || (isFounding ? 1050 : 1500);
+    const monthlyAmount = isFounding ? 1050 : 1500;
+    // Оплаченный период и сумма берутся из последнего успешного платежа:
+    // подписка может быть на 1, 3, 6 или 12 месяцев.
+    const lastPay = (payments || []).find(p => p.status === 'succeeded') || null;
+    const paidMonths = Number(lastPay?.period_months) || 1;
+    const paidAmount = lastPay?.amount ?? subscription?.amount_rub ?? monthlyAmount;
+    const paidCurrency = lastPay?.currency || 'RUB';
+    const links = isFounding ? TRIBUTE_LINKS.founding : TRIBUTE_LINKS.standard;
 
     let rows = '';
     if (isAdmin) {
@@ -136,17 +175,18 @@
       rows += `<div class="billing-row"><span class="label">Доступ</span><span class="value">Полный, без подписки</span></div>`;
     } else if (isPaid) {
       rows += `<div class="billing-row"><span class="label">Статус</span><span class="value"><span class="status-badge">Активна</span></span></div>`;
-      rows += `<div class="billing-row"><span class="label">План</span><span class="value">${isFounding ? 'BelFed · Founding Member' : 'BelFed · Месячный'}</span></div>`;
-      rows += `<div class="billing-row"><span class="label">Стоимость</span><span class="value">${fmtRub(monthlyAmount)} / мес</span></div>`;
+      rows += `<div class="billing-row"><span class="label">План</span><span class="value">${isFounding ? 'BelFed · Founding Member' : 'BelFed · Подписка'}</span></div>`;
+      rows += `<div class="billing-row"><span class="label">Период</span><span class="value">${periodLabel(paidMonths)}</span></div>`;
+      rows += `<div class="billing-row"><span class="label">Стоимость</span><span class="value">${priceLabel(paidAmount, paidCurrency, paidMonths)}</span></div>`;
       rows += `<div class="billing-row"><span class="label">${autorenew ? 'Следующее списание' : 'Доступ до'}</span><span class="value">${fmtDate(exp)}</span></div>`;
       rows += `<div class="billing-row"><span class="label">Автопродление</span><span class="value">${autorenew ? '<span class="status-badge">Включено</span>' : '<span class="status-badge off">Отключено</span>'}</span></div>`;
     } else if (isTrial) {
       rows += `<div class="billing-row"><span class="label">Статус</span><span class="value"><span class="status-badge trial">Пробный доступ</span></span></div>`;
       rows += `<div class="billing-row"><span class="label">Триал до</span><span class="value">${fmtDate(trialEnd)}</span></div>`;
-      rows += `<div class="billing-row"><span class="label">После триала</span><span class="value muted">${fmtRub(isFounding ? 1050 : 1500)} / мес</span></div>`;
+      rows += `<div class="billing-row"><span class="label">После триала</span><span class="value muted">${fmtRub(monthlyAmount)} / мес</span></div>`;
     } else {
       rows += `<div class="billing-row"><span class="label">Статус</span><span class="value"><span class="status-badge expired">Подписки нет</span></span></div>`;
-      rows += `<div class="billing-row"><span class="label">Стоимость</span><span class="value muted">${fmtRub(isFounding ? 1050 : 1500)} / мес</span></div>`;
+      rows += `<div class="billing-row"><span class="label">Стоимость</span><span class="value muted">${fmtRub(monthlyAmount)} / мес</span></div>`;
     }
     block.innerHTML = rows;
 
@@ -158,13 +198,13 @@
     if (!isPaid && !isAdmin) {
       // Two explicit Tribute checkout channels — pick your route.
       actHtml +=
-        '<a class="bill-pay-btn bill-pay-btn--primary" href="https://t.me/tribute/app?startapp=sZH9" target="_blank" rel="noopener" data-belfed-pay="tg">' +
+        '<a class="bill-pay-btn bill-pay-btn--primary" href="' + links.tg + '" target="_blank" rel="noopener" data-belfed-pay="tg">' +
           '<span class="bill-pay-icon" aria-hidden="true">' +
             '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.78 15.27 9.6 18.9c.36 0 .52-.15.72-.34l1.72-1.64 3.56 2.6c.65.36 1.11.17 1.29-.6l2.33-10.94c.22-.99-.36-1.38-.99-1.15L4.05 10.9c-.96.37-.95.9-.16 1.14l3.8 1.18 8.82-5.56c.42-.27.8-.12.48.16z"/></svg>' +
           '</span>' +
           '<span class="bill-pay-text"><b>Оплатить через Telegram</b><small>' + fmtRub(monthlyAmount) + ' / мес · Tribute-бот</small></span>' +
         '</a>' +
-        '<a class="bill-pay-btn bill-pay-btn--secondary" href="https://web.tribute.tg/s/ZH9" target="_blank" rel="noopener" data-belfed-pay="web">' +
+        '<a class="bill-pay-btn bill-pay-btn--secondary" href="' + links.web + '" target="_blank" rel="noopener" data-belfed-pay="web">' +
           '<span class="bill-pay-icon" aria-hidden="true">' +
             '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a13.5 13.5 0 010 18M12 3a13.5 13.5 0 000 18"/></svg>' +
           '</span>' +
@@ -188,13 +228,13 @@
     });
 
     if (isPaid && autorenew) {
-      hint.innerHTML = `Доступ продлится автоматически <b>${fmtDate(exp)}</b>. Чтобы отменить автопродление, откройте подписку в боте <b>@tribute</b> → My subscriptions. Доступ сохранится до этой даты, дальше выключится.`;
+      hint.innerHTML = `Доступ продлится автоматически <b>${fmtDate(exp)}</b>${paidMonths > 1 ? ' на тот же срок: ' + periodLabel(paidMonths) + ', ' + fmtMoney(paidAmount, paidCurrency) : ''}. Чтобы отменить автопродление, откройте подписку в боте <b>@tribute</b> → My subscriptions. Доступ сохранится до этой даты, дальше выключится.`;
     } else if (isPaid && !autorenew) {
       hint.innerHTML = `Автопродление отключено. Доступ сохранится до <b>${fmtDate(exp)}</b>, после чего отключится. Чтобы продолжить, оформите подписку заново.`;
     } else if (isTrial) {
-      hint.innerHTML = `Карта не привязана. После окончания триала доступ завершится. Подписка оформляется в Tribute по вашему действию.`;
+      hint.innerHTML = `Карта не привязана. После окончания триала доступ завершится. Подписка оформляется в Tribute по вашему действию.<span class="billing-note">${PERIOD_NOTE}</span>`;
     } else if (!isAdmin) {
-      hint.innerHTML = `Подпишитесь через Tribute, чтобы получить доступ в закрытый Telegram-канал и к полной аналитике.`;
+      hint.innerHTML = `Подпишитесь через Tribute, чтобы получить доступ в закрытый Telegram-канал и к полной аналитике.<span class="billing-note">${PERIOD_NOTE}</span>`;
     } else {
       hint.textContent = '';
     }
@@ -230,17 +270,18 @@
     for (const p of succeeded) {
       const s = statusMap[p.status] || { label: p.status, cls: 'off' };
       const when = p.paid_at || p.created_at;
-      const type = p.is_recurring ? 'Автосписание' : 'Оплата';
+      const months = Number(p.period_months) || 1;
+      const type = (p.is_recurring ? 'Автосписание' : 'Оплата') + (months > 1 ? ' · ' + periodLabel(months) : '');
       rows += `<tr>
         <td>${fmtDateTime(when)}</td>
-        <td class="amount">${fmtRub(p.amount)}</td>
+        <td class="amount">${fmtMoney(p.amount, p.currency)}</td>
         <td>${type}</td>
         <td class="status-cell"><span class="status-badge ${s.cls}">${s.label}</span></td>
       </tr>`;
       cards += `<div class="history-item">
         <div class="history-item-top">
           <span class="history-item-date">${fmtDateTime(when)}</span>
-          <span class="history-item-amount">${fmtRub(p.amount)}</span>
+          <span class="history-item-amount">${fmtMoney(p.amount, p.currency)}</span>
         </div>
         <div class="history-item-bottom">
           <span class="history-item-type">${type}</span>
