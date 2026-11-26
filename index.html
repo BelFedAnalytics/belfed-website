@@ -535,6 +535,13 @@
     .price-amount { display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px; }
     .price-amount .num { font-family: var(--font-mono); font-size: 52px; font-weight: 700; color: var(--black); letter-spacing: -0.02em; line-height: 1; }
     .price-amount .per { font-family: var(--font-mono); font-size: 13px; color: var(--gray-soft); }
+    .price-periods-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gray-soft); margin: 0 0 6px; }
+    .price-periods { list-style: none; margin: 0 0 10px; border-top: 1px solid var(--rule); }
+    .price-periods li { display: grid; grid-template-columns: 1fr auto 46px; gap: 12px; align-items: baseline; padding: 9px 0; border-bottom: 1px solid var(--rule); font-family: var(--font-mono); font-size: 13px; color: var(--ink); }
+    .price-periods .pp-sum { font-weight: 700; white-space: nowrap; }
+    .price-periods .pp-save { color: var(--green-strong); font-weight: 700; text-align: right; white-space: nowrap; }
+    .price-periods-note { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-2); margin: 14px 0 24px; padding: 10px 12px; border-left: 2px solid var(--green-strong); background: var(--rule); line-height: 1.6; }
+    .price-periods-note b { color: var(--ink); font-weight: 700; }
     .price-desc { font-family: var(--font-sans); font-size: 13px; color: var(--ink-2); margin-bottom: 24px; line-height: 1.7; max-width: 44ch; letter-spacing: 0.005em; }
     .price-feats { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-bottom: 28px; }
     .pf { display: flex; align-items: flex-start; gap: 12px; font-family: var(--font-mono); font-size: 13px; color: var(--ink); }
@@ -982,7 +989,7 @@
           "priceCurrency": "RUB",
           "url": "https://belfed.ru/#pricing",
           "availability": "https://schema.org/InStock",
-          "description": "Подписка 1500 ₽ в месяц. Первые 14 дней бесплатно, привязка карты не требуется. Отмена в любой момент."
+          "description": "Подписка 1500 ₽ в месяц. При оплате за 3, 6 или 12 месяцев: 4050 ₽, 7650 ₽ или 13500 ₽ (скидка 10%, 15% и 25%). Первые 14 дней бесплатно, привязка карты не требуется. Отмена в любой момент."
         }
       }
     ]
@@ -1262,7 +1269,7 @@
     <div class="tour-row flip">
       <div class="tour-text r">
         <span class="label">Доставка в Telegram и Email</span>
-        <h3>Мгновенные оповещения о сделках — плюс место для общения с другими участниками.</h3>
+        <h3>Мгновенные оповещения о сделках и аналитике, плюс место для общения с другими участниками.</h3>
         <p>Вход, стоп и цели отправляются в момент срабатывания торговой возможности. Внутри сообщества выделен <b>отдельный топик для обсуждений</b>, где подписчики делятся идеями, публикуют свои разборы, задают вопросы и общаются напрямую — это разговор, а не односторонняя лента.</p>
         <div class="tour-meta">
           <span>Уведомления за секунды</span>
@@ -1406,7 +1413,7 @@
     <div class="sec-head" style="text-align:center;margin-inline:auto;">
       <span class="label">Тарифы</span>
       <h2>Два тарифа. Без сюрпризов.</h2>
-      <p style="margin-inline:auto;">Большую часть нашей работы мы публикуем открыто. Подписчики получают всё — аналитику, запросы активов и сделки, которые мы берём.</p>
+      <p style="margin-inline:auto;">Большую часть нашей работы мы публикуем открыто. Подписчики получают всё: сделки, которые мы берём, аналитику и запросы активов.</p>
     </div>
     <div class="price-grid">
       <div class="price-card r">
@@ -1415,8 +1422,8 @@
         <p class="price-desc">Следите за нашей публичной работой в TradingView и Telegram-каналах на английском и русском.</p>
         <ul class="price-feats">
           <li class="pf"><span class="ck">✓</span> Публичный трек-рекорд на TradingView</li>
-          <li class="pf"><span class="ck">✓</span> Telegram-канал — Английский</li>
-          <li class="pf"><span class="ck">✓</span> Telegram-канал — Русский</li>
+          <li class="pf"><span class="ck">✓</span> Telegram-канал на английском</li>
+          <li class="pf"><span class="ck">✓</span> Telegram-канал на русском</li>
           <li class="pf"><span class="ck">✓</span> Еженедельный публичный обзор рынка</li>
           <li class="pf"><span class="ck">✓</span> Комментарии рынка в X / Twitter</li>
         </ul>
@@ -1426,16 +1433,23 @@
         <span class="price-tag">★ Стартовая цена</span>
         <p class="price-plan">Подписчик</p>
         <div class="price-amount"><span class="num">1500 ₽</span><span class="per">/ месяц</span></div>
-        <p class="price-desc">Полный опыт участника Belfed. Отличная цена за глубину исследований — стоимость отражает фазу запуска.</p>
+        <p class="price-desc">Полный доступ ко всей работе команды Belfed.</p>
+        <p class="price-periods-label">При оплате за период</p>
+        <ul class="price-periods">
+          <li><span>3 месяца</span><span class="pp-sum">4&nbsp;050&nbsp;₽</span><span class="pp-save">−10%</span></li>
+          <li><span>6 месяцев</span><span class="pp-sum">7&nbsp;650&nbsp;₽</span><span class="pp-save">−15%</span></li>
+          <li><span>12 месяцев</span><span class="pp-sum">13&nbsp;500&nbsp;₽</span><span class="pp-save">−25%</span></li>
+        </ul>
+        <p class="price-periods-note"><b>Обратите внимание:</b> период подписки выбирается на странице оплаты Tribute. По умолчанию там отмечен вариант на 12 месяцев, поэтому перед оплатой выберите нужный вам срок.</p>
         <ul class="price-feats">
+          <li class="pf"><span class="ck">✓</span> Все наши сделки, лонг и шорт</li>
           <li class="pf"><span class="ck">✓</span> Ежедневная и еженедельная рыночная аналитика</li>
           <li class="pf"><span class="ck">✓</span> Запросы активов от подписчиков</li>
-          <li class="pf"><span class="ck">✓</span> Все наши сделки — лонг и шорт</li>
           <li class="pf"><span class="ck">✓</span> Веб-область для участников (дашборд, отчёты, разборы активов)</li>
-          <li class="pf"><span class="ck">✓</span> Мгновенная доставка сделок в Telegram</li>
+          <li class="pf"><span class="ck">✓</span> Мгновенные оповещения в Telegram о сделках и всей аналитике</li>
         </ul>
-        <a href="/members.html#signup" class="btn btn-primary">Начать 14-дневный бесплатный доступ — без карты</a>
-        <a href="#" data-belfed-checkout="month" data-belfed-locale="ru" class="btn btn-ghost" style="margin-top:10px;">Оформить подписку — 1500 ₽/мес →</a>
+        <a href="/members.html#signup" class="btn btn-primary">Начать 14-дневный бесплатный доступ без карты</a>
+        <a href="#" data-belfed-checkout="month" data-belfed-locale="ru" class="btn btn-ghost" style="margin-top:10px;">Оформить подписку →</a>
       </div>
     </div>
     <p class="price-foot">14-дневный бесплатный доступ · Отмена в любой момент · Без скрытых платежей · Платежи защищены <span class="tribute">Tribute ↗</span></p>
