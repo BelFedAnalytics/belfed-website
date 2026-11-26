@@ -258,6 +258,12 @@
     .bf-pay-btn--secondary:hover { background: var(--black); color: #fff; transform: translateY(-1px); }
     .bf-pay-btn--secondary:hover .bf-pay-text small { color: rgba(255,255,255,0.7); }
     .bf-pay-foot { font-size: 11px; color: var(--gray); margin-top: 14px; max-width: 720px; line-height: 1.5; }
+    .bf-pay-note { font-size: 12px; color: #333; margin-top: 14px; max-width: 720px; line-height: 1.6; padding: 10px 12px; border-left: 2px solid var(--green, #1a6b3a); background: var(--light-gray, #e8e8e3); box-sizing: border-box; }
+    .bf-pay-note b { color: var(--black); font-weight: 700; }
+    /* Pay picker lives inside the flex row .bf-actions: keep each part on its own line. */
+    .bf-actions > .bf-pay-title, .bf-actions > .bf-pay-sub, .bf-actions > .bf-pay-grid,
+    .bf-actions > .bf-pay-note, .bf-actions > .bf-pay-foot { flex: 0 0 100%; margin-top: 0; margin-bottom: 0; }
+    .bf-actions > .bf-pay-title { margin-top: 8px; }
     .bf-pay-foot a { color: var(--black); text-decoration: underline; }
     .bf-trial-banner { background: var(--light-gray); border: 1px solid var(--border); border-left: 4px solid #b8860b; padding: 18px 24px; margin: 0 40px 24px; max-width: 1060px; font-size: 14px; line-height: 1.5; }
     .bf-trial-banner b { font-weight: 700; }

@@ -5,13 +5,42 @@
 
   const SUPABASE_URL = 'https://obujqvqqmyfcfflhqvud.supabase.co';
   const FN_LINK      = SUPABASE_URL + '/functions/v1/telegram-link-start';
-  const PRICE_RUB    = 1500;
+  const PRICE_RUB          = 1500;
+  const PRICE_RUB_FOUNDING = 1050;   // со-основатели, скидка 30%
 
   // Tribute checkout URLs — kept in sync with belfed-payments.js. When the
   // user has already picked a channel we can open the exact URL directly
   // without relying on the auto-detected in-app / web branch.
   const TRIBUTE_TG_URL_RU  = 'https://t.me/tribute/app?startapp=sZH9';
   const TRIBUTE_WEB_URL_RU = 'https://web.tribute.tg/s/ZH9';
+  // Отдельный продукт Tribute для со-основателей.
+  const TRIBUTE_TG_URL_RU_FM  = 'https://t.me/tribute/app?startapp=sXHG';
+  const TRIBUTE_WEB_URL_RU_FM = 'https://web.tribute.tg/s/XHG';
+
+  const PERIOD_NOTE =
+    '<b>Обратите внимание:</b> период подписки (1, 3, 6 или 12 месяцев) выбирается на странице оплаты Tribute. ' +
+    'По умолчанию там отмечен вариант на 12 месяцев, поэтому перед оплатой выберите нужный вам срок.';
+
+  function fmtRub(n) { return Number(n).toLocaleString('ru-RU') + ' ₽'; }
+  function fmtMoney(amount, currency) {
+    const n = Number(amount);
+    const cur = String(currency || 'RUB').toUpperCase();
+    if (cur === 'RUB') return fmtRub(n);
+    if (cur === 'USD') return '$' + (Number.isInteger(n) ? String(n) : n.toFixed(2));
+    return n.toLocaleString('ru-RU') + ' ' + cur;
+  }
+  function periodLabel(months) {
+    const m = Number(months) || 1;
+    if (m === 1) return '1 месяц';
+    if (m >= 2 && m <= 4) return m + ' месяца';
+    return m + ' месяцев';
+  }
+  function priceLabel(amount, currency, months) {
+    const m = Number(months) || 1;
+    return m === 1
+      ? fmtMoney(amount, currency) + ' / мес'
+      : fmtMoney(amount, currency) + ' за ' + periodLabel(m);
+  }
 
   // Legacy no-op. BelFed no longer operates yookassa-cancel-subscription
   // (all billing is on Tribute; cancellation lives in the @tribute bot).
@@ -51,19 +80,27 @@
     // BelFed migrated fully off YooKassa on 2026-07-03; historical yookassa rows may still exist.
     // Users may legitimately have multiple rows across providers/history — prefer active,
     // otherwise fall back to the most recent by current_period_end.
-    const [{ data: prof }, { data: subs }] = await Promise.all([
+    const [{ data: prof }, { data: subs }, { data: pays }] = await Promise.all([
       c.from('profiles')
-        .select('subscription_status, subscription_plan, subscription_expires_at, telegram_id, telegram_username, trial_started_at, trial_end')
+        .select('subscription_status, subscription_plan, subscription_expires_at, telegram_id, telegram_username, trial_started_at, trial_end, founding_member')
         .eq('id', session.user.id).maybeSingle(),
       c.from('subscriptions')
         .select('status, plan_code, provider, current_period_end, cancel_at_period_end, payment_method_id')
         .eq('user_id', session.user.id)
         .order('current_period_end', { ascending: false, nullsFirst: false })
         .limit(5),
+      // Последний успешный платёж: из него берём оплаченный период и сумму.
+      c.from('payments')
+        .select('amount, currency, period_months, status, created_at')
+        .eq('user_id', session.user.id)
+        .eq('status', 'succeeded')
+        .order('created_at', { ascending: false })
+        .limit(1),
     ]);
     const list = Array.isArray(subs) ? subs : [];
     const sub = list.find(s => s.status === 'active') || list[0] || null;
-    return { profile: prof, subscription: sub };
+    const lastPayment = Array.isArray(pays) && pays.length ? pays[0] : null;
+    return { profile: prof, subscription: sub, lastPayment };
   }
 
   function fmt(d) { return new Date(d).toLocaleDateString('ru-RU'); }
@@ -143,6 +180,7 @@
             '<a class="bf-pay-btn bf-pay-btn--primary" href="' + TRIBUTE_TG_URL_RU + '" target="_blank" rel="noopener"><span class="bf-pay-text"><b>Через Telegram</b><small>' + PRICE_RUB + ' ₽ / мес</small></span></a>' +
             '<a class="bf-pay-btn bf-pay-btn--secondary" href="' + TRIBUTE_WEB_URL_RU + '" target="_blank" rel="noopener"><span class="bf-pay-text"><b>Через браузер</b><small>' + PRICE_RUB + ' ₽ / мес</small></span></a>' +
           '</div>' +
+          '<div class="bf-pay-note">' + PERIOD_NOTE + '</div>' +
         '</div>';
       return;
     }
@@ -152,7 +190,14 @@
       return;
     }
 
-    const { profile, subscription } = state;
+    const { profile, subscription, lastPayment } = state;
+    const isFounding = !!profile?.founding_member;
+    const monthlyPrice = isFounding ? PRICE_RUB_FOUNDING : PRICE_RUB;
+    const payTgUrl  = isFounding ? TRIBUTE_TG_URL_RU_FM  : TRIBUTE_TG_URL_RU;
+    const payWebUrl = isFounding ? TRIBUTE_WEB_URL_RU_FM : TRIBUTE_WEB_URL_RU;
+    const paidLabel = lastPayment
+      ? priceLabel(lastPayment.amount, lastPayment.currency, lastPayment.period_months)
+      : fmtRub(monthlyPrice) + ' / мес';
     const exp = profile?.subscription_expires_at ? new Date(profile.subscription_expires_at) : null;
     const trialEnd = profile?.trial_end ? new Date(profile.trial_end) : null;
     const isAdmin = profile?.subscription_status === 'admin';
@@ -171,13 +216,13 @@
       html += `<div class="bf-row">Полный доступ ко всем разделам без подписки.</div>`;
     } else if (isPaid) {
       html += `<div class="bf-status bf-status--ok">✅ ПОДПИСКА АКТИВНА</div>`;
-      html += `<div class="bf-row">План: месячный · ${PRICE_RUB} ₽ / мес</div>`;
+      html += `<div class="bf-row">План: ${isFounding ? 'Founding Member' : 'подписка'} · ${paidLabel}</div>`;
       html += `<div class="bf-row">Действует до: <b>${fmt(exp)}</b></div>`;
       html += `<div class="bf-row">Автопродление: <b class="${autorenew?'bf-on':'bf-off'}">${autorenew?'включено':'отключено'}</b></div>`;
     } else if (isTrial) {
       html += `<div class="bf-status bf-status--trial">🎁 ПРОБНЫЙ ДОСТУП · 14 дней</div>`;
       html += `<div class="bf-row">Действует до: <b>${fmt(trialEnd)}</b> · осталось ${daysLeft(trialEnd)} дн.</div>`;
-      html += `<div class="bf-row bf-muted">После триала подписка ${PRICE_RUB} ₽ / мес. Карта не привязана: оплата только по вашему действию.</div>`;
+      html += `<div class="bf-row bf-muted">После триала подписка ${fmtRub(monthlyPrice)} / мес. Карта не привязана: оплата только по вашему действию.</div>`;
     } else {
       // Covers subscription_status in ('expired', 'none') and any other
       // non-access state. Show an explicit expired label when appropriate
@@ -185,7 +230,7 @@
       var isExpired = profile && profile.subscription_status === 'expired';
       html += `<div class="bf-status">${isExpired ? '⏳ ДОСТУП ЗАВЕРШЁН' : '❌ ПОДПИСКИ НЕТ'}</div>`;
       html += `<div class="bf-row bf-muted">${isExpired
-        ? 'Ваш пробный / платный доступ завершён. Оформите подписку, чтобы вернуть доступ к торговым сигналам и аналитике.'
+        ? 'Ваш пробный / платный доступ завершён. Оформите подписку, чтобы вернуть доступ к нашим сделкам и аналитике.'
         : 'Оформите подписку, чтобы получить доступ в закрытый канал.'
       }</div>`;
     }
@@ -202,22 +247,23 @@
       // Two explicit Tribute checkout channels so users can pick the one they trust.
       // Both open Tribute in a new tab; no data ever hits belfed.ru servers.
       html +=
-        '<div class="bf-pay-title">💳 Оформить подписку: ' + PRICE_RUB + ' ₽ / мес</div>' +
+        '<div class="bf-pay-title">💳 Оформить подписку: ' + fmtRub(monthlyPrice) + ' / мес</div>' +
         '<div class="bf-pay-sub">Оплата через Tribute. Выберите удобный вариант:</div>' +
         '<div class="bf-pay-grid">' +
-          '<a class="bf-pay-btn bf-pay-btn--primary" href="' + TRIBUTE_TG_URL_RU + '" target="_blank" rel="noopener" data-belfed-pay="tg">' +
+          '<a class="bf-pay-btn bf-pay-btn--primary" href="' + payTgUrl + '" target="_blank" rel="noopener" data-belfed-pay="tg">' +
             '<span class="bf-pay-icon" aria-hidden="true">' +
               '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.78 15.27 9.6 18.9c.36 0 .52-.15.72-.34l1.72-1.64 3.56 2.6c.65.36 1.11.17 1.29-.6l2.33-10.94c.22-.99-.36-1.38-.99-1.15L4.05 10.9c-.96.37-.95.9-.16 1.14l3.8 1.18 8.82-5.56c.42-.27.8-.12.48.16z"/></svg>' +
             '</span>' +
             '<span class="bf-pay-text"><b>Через Telegram</b><small>Откроется Tribute-бот</small></span>' +
           '</a>' +
-          '<a class="bf-pay-btn bf-pay-btn--secondary" href="' + TRIBUTE_WEB_URL_RU + '" target="_blank" rel="noopener" data-belfed-pay="web">' +
+          '<a class="bf-pay-btn bf-pay-btn--secondary" href="' + payWebUrl + '" target="_blank" rel="noopener" data-belfed-pay="web">' +
             '<span class="bf-pay-icon" aria-hidden="true">' +
               '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a13.5 13.5 0 010 18M12 3a13.5 13.5 0 000 18"/></svg>' +
             '</span>' +
             '<span class="bf-pay-text"><b>Через браузер</b><small>Web-чекаут Tribute</small></span>' +
           '</a>' +
         '</div>' +
+        '<div class="bf-pay-note">' + PERIOD_NOTE + '</div>' +
         '<div class="bf-pay-foot">Отмена в любой момент через <a href="https://t.me/tribute" target="_blank" rel="noopener">@tribute</a>. Платежи защищены Tribute.</div>';
     }
     // Отмена автопродления и отвязка карты живут на /billing.html — здесь только ссылка.
