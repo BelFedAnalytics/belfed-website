@@ -29,6 +29,11 @@ const TG_TOKEN     = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
 const FM_LINK_RU = "https://t.me/tribute/app?startapp=sXHG";
 const FM_LINK_EN = "https://t.me/tribute/app?startapp=sXIq";
 
+// Tribute preselects the longest period on its checkout page, so every pay link
+// carries a short reminder to pick the period first.
+const PERIOD_NOTE_RU = "Обратите внимание: период подписки (1, 3, 6 или 12 месяцев) выбирается на странице оплаты Tribute. По умолчанию там отмечен вариант на 12 месяцев, поэтому перед оплатой выберите нужный вам срок.";
+const PERIOD_NOTE_EN = "Please note: you choose the subscription period (1, 3, 6 or 12 months) on the Tribute checkout page. The 12-month option is preselected there, so pick the period you want before paying.";
+
 // Plain renewal fallback (no founding seats left) — public members page
 const MEMBERS_RU = "https://belfed.ru/members.html#subscribe";
 const MEMBERS_EN = "https://belfed.com/members.html#subscribe";
@@ -70,6 +75,12 @@ async function sendTg(
 
 type Msg = { text: string; button?: { text: string; url: string } };
 
+// Adds the period reminder to messages whose button opens the Tribute checkout.
+function withPeriodNote(m: Msg, lang: "ru" | "en"): Msg {
+  if (!m.button || (m.button.url !== FM_LINK_RU && m.button.url !== FM_LINK_EN)) return m;
+  return { ...m, text: m.text + "\n\n" + (lang === "en" ? PERIOD_NOTE_EN : PERIOD_NOTE_RU) };
+}
+
 // ─── Win-back copy ───────────────────────────────────────────────
 // Leads with Founding-Member status & privileges (not price). Founding offer is
 // shown only while seats remain; otherwise a plain renewal nudge.
@@ -85,7 +96,7 @@ function buildMsg(lang: "ru" | "en", seatsRemaining: number): Msg {
           "You were one of our earliest members — so a *Founding Member* seat is still open for you " +
           `(only *${seatsRemaining} of 50* left):\n\n` +
           "• *Founding Member status* tied to your account: if you ever need to pause again, you'll have up to 30 days to come back without losing your status or discount\n" +
-          "• *Priority processing* of your asset-analysis requests\n" +
+          "• *Priority processing*: 1 asset-analysis request per day\n" +
           "• *30% lifetime discount* off the current price — *$10.50/mo* instead of $15, locked in for as long as your subscription stays active\n\n" +
           "Reactivate now and your seat is reserved for good.",
         button: { text: "⭐ Become a Founding Member", url: FM_LINK_EN },
@@ -106,7 +117,7 @@ function buildMsg(lang: "ru" | "en", seatsRemaining: number): Msg {
         "Вы были одним из первых подписчиков — поэтому место *Founding Member* (со-основателя сервиса) всё ещё закреплено за вами " +
         `(осталось *${seatsRemaining} из 50*):\n\n` +
         "• *Статус Founding Member* закреплён за аккаунтом: при необходимости паузы у вас есть до 30 дней, чтобы вернуться без потери статуса и скидки\n" +
-        "• *Приоритетная обработка* ваших запросов на анализ активов\n" +
+        "• *Приоритетная обработка*: 1 запрос на анализ активов в день\n" +
         "• *Пожизненная скидка 30%* от текущего прайс-листа — *1 050 ₽/мес* вместо 1 500 ₽, пока подписка активна\n\n" +
         "Возобновите сейчас — и место закрепится за вами навсегда.",
       button: { text: "⭐ Стать Founding Member", url: FM_LINK_RU },
@@ -136,7 +147,7 @@ Deno.serve(async (req: Request) => {
 
   if (forceTgId) {
     const lang = forceLang ?? "ru";
-    const m = buildMsg(lang, forceSeats ?? 10);
+    const m = withPeriodNote(buildMsg(lang, forceSeats ?? 10), lang);
     const res = await sendTg(forceTgId, m.text, m.button);
     return json({ ok: res.ok, lang, seats: forceSeats ?? 10, error: res.error });
   }
@@ -151,7 +162,7 @@ Deno.serve(async (req: Request) => {
   for (const row of list ?? []) {
     const lang: "ru" | "en" = row.lang === "en" ? "en" : "ru";
     const seats = Number(row.seats_remaining ?? 0);
-    const m = buildMsg(lang, seats);
+    const m = withPeriodNote(buildMsg(lang, seats), lang);
     const res = await sendTg(row.telegram_id as string, m.text, m.button);
     if (res.ok) {
       await admin.from("profiles")
